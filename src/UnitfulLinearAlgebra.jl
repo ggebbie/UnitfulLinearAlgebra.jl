@@ -1,5 +1,7 @@
 module UnitfulLinearAlgebra
 
+using Unitful
+
 export scaling_matrix_unitful, svd_unitful, inv_unitful
 
 """
