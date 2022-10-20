@@ -72,8 +72,7 @@ using Test
         @test 𝓛 == ustrip(𝓛) # nondimensional?
 
         # check if it runs
-        SET*(iESET*y)
-
+        SET*μ
     end
 
     @testset "svd" begin
