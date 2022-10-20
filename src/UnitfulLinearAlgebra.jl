@@ -12,16 +12,21 @@ export scaling_matrix_unitful, svd_unitful,
 	   Form a weighting or scaling matrix that has the proper units
 	   Note that the off-diagonals are zero but they must have units
 """
-function diagonal_matrix(γ2)
-    γ = .√γ2
-    S = γ*γ'
+function diagonal_matrix(s)
+    #γ = .√γ2 # problematic statement; complex type error
+
+    # get matrix of types/units
+    S = 0.0 *s*s' # should use zeros or equivalent
     N = size(S,1)
     for i = 1:N
 	for j = 1:N
-	    if i != j
+	    #if i != j
 		# make off-diagonals zero, but keep units
-                S[i,j] -= S[i,j]
-	    end
+            #    S[i,j] -= S[i,j]
+	    #end
+            if i == j
+                S[i,j] += s[i].^2
+            end
 	end
     end
     return S

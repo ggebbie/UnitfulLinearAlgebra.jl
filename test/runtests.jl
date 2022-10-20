@@ -59,7 +59,7 @@ using Test
         # rectangular (wide) matrices
         E = hcat(randn(K),randn(K)u1/u2,randn(K)u1/u3)
 
-        s = vcat(randn()u1^2,randn()u2^2,randn()u3^2)
+        s = vcat(randn()u1,randn()u2,randn()u3) # sqrt of diagonal elements
         S = diagonal_matrix(s)
         SET = S*E'
         ESET = E*SET        
