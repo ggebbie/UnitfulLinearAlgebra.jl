@@ -45,4 +45,33 @@ using Test
         [@test isapprox(x̃[i],x[i]) for i in 1:length(x)]
     end    
 
+    @testset "underdetermined problems" begin
+
+        # matrix with columns of like type
+
+        # any two combinations of units will work
+        # can't easily get a list of units to draw from
+        u1 = u"m"
+        u2 = u"m/s"
+        u3 = u"m/s^2"
+
+        K = 2 # rank
+        # rectangular (wide) matrices
+        E = hcat(randn(K),randn(K)u1/u2,randn(K)u1/u3)
+
+        s = vcat(randn()u1^2,randn()u2^2,randn()u3^2)
+        S = diagonal_matrix(s)
+        SET = S*E'
+        ESET = E*SET        
+
+        μ = inv_unitful(ESET)*y
+
+        𝓛 = μ'*y
+        @test 𝓛 == ustrip(𝓛) # nondimensional?
+
+        # check if it runs
+        SET*(iESET*y)
+
+    end
+
 end
