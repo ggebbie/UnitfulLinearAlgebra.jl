@@ -1,9 +1,8 @@
 module UnitfulLinearAlgebra
 
-using Unitful
+using Unitful, LinearAlgebra
 
-export scaling_matrix_unitful, svd_unitful,
-    inv_unitful, diagonal_matrix 
+export svd_unitful, inv_unitful, diagonal_matrix 
 
 """
    function diagonal_matrix(γ)
@@ -31,30 +30,6 @@ function diagonal_matrix(s)
     end
     return S
 end
-
-"""
-   function scaling_matrix_unitful(γ)
-
-	   Take diagonal dimensional elements γ
-	   Form a weighting or scaling matrix that has the proper units
-	   Note that the off-diagonals are zero but they must have units
-"""
-function scaling_matrix_unitful(γ)
-	γsqrt = .√γ
-	
-	S = γsqrt*γsqrt'
-	N = size(S,1)
-	for i = 1:N
-		for j = 1:N
-			if i != j
-			   # make off-diagonals zero, but keep units
-               S[i,j] -= S[i,j]
-			end
-		end
-	end
-	return S
-end
-
 
 """
 	function inv_unitful(E) 

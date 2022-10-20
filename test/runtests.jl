@@ -1,6 +1,7 @@
 using Revise
 using UnitfulLinearAlgebra
 using Unitful
+using LinearAlgebra
 using Test
 
 @testset "UnitfulLinearAlgebra.jl" begin
@@ -63,7 +64,8 @@ using Test
         S = diagonal_matrix(s)
         SET = S*E'
         ESET = E*SET        
-
+        y = randn(K)u1
+ 
         μ = inv_unitful(ESET)*y
 
         𝓛 = μ'*y
@@ -74,4 +76,17 @@ using Test
 
     end
 
+    @testset "svd" begin
+	E = [1/2 1/2; 1/4 3/4; 3/4 1/4]u"dbar*s"
+	U,λ,V = svd_unitful(E)
+	Λ = Diagonal(λ)
+        K = length(λ) # rank
+	y = 5randn(3)u"s"
+	σₙ = randn(3)u"s"
+	Cₙₙ = diagonal_matrix(σₙ)
+	W⁻¹ = diagonal_matrix([1,1,1]u"1/s^2")
+	x̃ = inv_unitful(E'*W⁻¹*E)*(E'*W⁻¹*y)
+        [@test isequal(x̃[i]/ustrip(x̃[i]),1.0u"dbar^-1") for i in 1:length(x̃)]
+    end
+    
 end
