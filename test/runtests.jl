@@ -22,7 +22,7 @@ using Test
         y = randn(2)u1
         x = [randn()u1; randn()u2] 
 
-        E⁻¹ = inv_unitful(E)
+        E⁻¹ = inv(E)
         x̃ = E⁻¹ * (E * x)
 
         [@test isapprox(x̃[i],x[i]) for i in 1:length(x)]
@@ -40,7 +40,7 @@ using Test
         y = randn(K)u1
         x = [randn()u1; randn()u2; randn()u3] 
 
-        E⁻¹ = inv_unitful(E)
+        E⁻¹ = inv(E)
         x̃ = E⁻¹ * (E * x)
 
         [@test isapprox(x̃[i],x[i]) for i in 1:length(x)]
@@ -52,25 +52,26 @@ using Test
 
         # any two combinations of units will work
         # can't easily get a list of units to draw from
-        u1 = u"m"
-        u2 = u"m/s"
-        u3 = u"m/s^2"
+        u1 = u"m/s"
+        u2 = u"m/s^2"
+        u3 = u"m/s^3"
 
         K = 2 # rank
         # rectangular (wide) matrices
-        E = hcat(randn(K),randn(K)u1/u2,randn(K)u1/u3)
+        E = hcat(randn(K)*100u"percent",randn(K)u1/u2,randn(K)u1/u3)
 
         s = vcat(randn()u1,randn()u2,randn()u3) # sqrt of diagonal elements
         S = diagonal_matrix(s)
         SET = S*E'
         ESET = E*SET        
         y = randn(K)u1
- 
+
+        #inv_unitful(ESET) # use unitful for Matrix{Any}
         μ = inv_unitful(ESET)*y
 
         𝓛 = μ'*y
         @test 𝓛 == ustrip(𝓛) # nondimensional?
-
+        @test dimension(𝓛) == NoDims
         # check if it runs
         SET*μ
     end
@@ -84,7 +85,7 @@ using Test
 	σₙ = randn(3)u"s"
 	Cₙₙ = diagonal_matrix(σₙ)
 	W⁻¹ = diagonal_matrix([1,1,1]u"1/s^2")
-	x̃ = inv_unitful(E'*W⁻¹*E)*(E'*W⁻¹*y)
+	x̃ = inv(E'*W⁻¹*E)*(E'*W⁻¹*y)
         [@test isequal(x̃[i]/ustrip(x̃[i]),1.0u"dbar^-1") for i in 1:length(x̃)]
     end
     

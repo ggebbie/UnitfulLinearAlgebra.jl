@@ -2,7 +2,9 @@ module UnitfulLinearAlgebra
 
 using Unitful, LinearAlgebra
 
-export svd_unitful, inv_unitful, diagonal_matrix 
+export svd_unitful, inv, inv_unitful, diagonal_matrix 
+
+import LinearAlgebra.inv
 
 """
    function diagonal_matrix(γ)
@@ -31,13 +33,70 @@ function diagonal_matrix(s)
     return S
 end
 
+# """
+# 	function inv_unitful(E) 
+
+# 	Take the inverse of a matrix and respect units
+#     The second part of the equation string is a way to grab the inverse transpose units
+# """
+# inv_unitful(E::Matrix{Quantity{Float64}}) = inv(ustrip.(E)) .* unit.( 1 ./ E' ) 
+
 """
-	function inv_unitful(E) 
+	function UnitfulLinearAlgebra.inv(E) 
 
 	Take the inverse of a matrix and respect units
     The second part of the equation string is a way to grab the inverse transpose units
 """
-inv_unitful(E) = inv(ustrip.(E)) .* unit.( 1 ./ E' )
+#inv(E::Matrix{Quantity{Float64}}) = inv(ustrip.(E)) .* unit.( 1 ./ E' ) 
+function inv(E::Matrix{Quantity{T}}) where T <: Real
+
+    M,N = size(E)
+    Einv = Matrix{Quantity{Float64}}(undef,M,N)
+    Enumber = inv(ustrip.(E))
+    Eunit = unit.( 1 ./ E' )
+    for i in 1:M
+        for j in 1:N
+             if dimension(Eunit[i,j]) == NoDims
+                Einv[i,j] = Quantity(Enumber[i,j]*100,u"percent")
+                Einv[i,j] = Quantity(Enumber[i,j],Unitful.NoUnits)
+            else
+                Einv[i,j] = Quantity(Enumber[i,j],Eunit[i,j])
+            end
+        end
+    end
+    
+    return Einv
+end
+
+"""
+	function UnitfulLinearAlgebra.inv_unitful(E) 
+
+	Take the inverse of a matrix and respect units
+    The second part of the equation string is a way to grab the inverse transpose units
+
+No multiple dispatch here, problem with Matrix{Any}
+"""
+#inv(E::Matrix{Quantity{Float64}}) = inv(ustrip.(E)) .* unit.( 1 ./ E' ) 
+function inv_unitful(E) 
+
+    M,N = size(E)
+    Einv = Matrix{Quantity{Float64}}(undef,M,N)
+    Enumber = inv(ustrip.(E))
+    Eunit = unit.( 1 ./ E' )
+    for i in 1:M
+        for j in 1:N
+             if dimension(Eunit[i,j]) == NoDims
+                Einv[i,j] = Quantity(Enumber[i,j]*100,u"percent")
+                Einv[i,j] = Quantity(Enumber[i,j],Unitful.NoUnits)
+            else
+                Einv[i,j] = Quantity(Enumber[i,j],Eunit[i,j])
+            end
+        end
+    end
+    
+    return Einv
+end
+
 
 """
 	function svd_unitful(E)
