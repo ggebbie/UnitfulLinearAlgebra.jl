@@ -2,11 +2,12 @@ module UnitfulLinearAlgebra
 
 using Unitful, LinearAlgebra
 
-export similarity, parallel, ∥
+export similar, parallel, ∥
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
 
 import LinearAlgebra.inv
 import Base:(~)
+import Base.similar
 
 """
     function similarity(a::Quantity{T},b::Quantity{T}) where T <: Number
@@ -17,8 +18,8 @@ import Base:(~)
 
     pp. 184, Hart
 """
-similarity(a::Quantity,b::Quantity) = isequal(unit(a),unit(b))
-~(a::Quantity,b::Quantity) = similarity(a,b)
+similar(a::Quantity,b::Quantity) = isequal(dimension(a),dimension(b))
+~(a::Quantity,b::Quantity) = similar(a,b)
 
 """
     function similarity(a::Quantity{T},b::Quantity{T}) where T <: Number
@@ -27,13 +28,9 @@ similarity(a::Quantity,b::Quantity) = isequal(unit(a),unit(b))
 
     pp. 184, Hart
 """
-function similarity(a::Vector{Quantity{T}},b::Vector{Quantity{T}})::Bool where T <: Number 
-    return isequal(unit.(a),unit.(b))
-end
+similar(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where T <: Number = isequal(dimension(a),dimension(b))
 
-function ~(a::Vector{Quantity{T}},b::Vector{Quantity{T}})::Bool where T <: Number 
-    return similarity(a,b)
-end
+~(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where T <: Number = similar(a,b)
 
 """
     function parallel
@@ -47,7 +44,7 @@ end
 function parallel(a::Vector{Quantity{T}},b::Vector{Quantity{T}})::Bool where T <: Number 
 
     if isequal(length(a),length(b))
-        Δdim = unit.(a)./unit.(b)
+        Δdim = dimension(a)./dimension(b)
         for i = 2:length(a)
             if Δdim[i] ≠ Δdim[1]
                 return false
@@ -60,10 +57,8 @@ function parallel(a::Vector{Quantity{T}},b::Vector{Quantity{T}})::Bool where T <
     
 end
 
-function ∥(a::Vector{Quantity{T}},b::Vector{Quantity{T}})::Bool where T <: Number 
-    return parallel(a,b)
-end
-
+∥(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where {T <: Number} = parallel(a,b)
+#end
 
 """
     function diagonal_matrix(γ)
