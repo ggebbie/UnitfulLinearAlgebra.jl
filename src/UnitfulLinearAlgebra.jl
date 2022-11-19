@@ -2,14 +2,73 @@ module UnitfulLinearAlgebra
 
 using Unitful, LinearAlgebra
 
+export similarity, parallel, ∥
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
 
 import LinearAlgebra.inv
+import Base:(~)
 
 """
-   function diagonal_matrix(γ)
+    function similarity(a::Quantity{T},b::Quantity{T}) where T <: Number
 
-	   Take diagonal dimensional elements γ
+    Dimensional similarity of scalars, a binary relation
+
+    Make it a one-liner?
+
+    pp. 184, Hart
+"""
+similarity(a::Quantity,b::Quantity) = isequal(unit(a),unit(b))
+~(a::Quantity,b::Quantity) = similarity(a,b)
+
+"""
+    function similarity(a::Quantity{T},b::Quantity{T}) where T <: Number
+
+    Dimensional similarity of vectors, a binary relation
+
+    pp. 184, Hart
+"""
+function similarity(a::Vector{Quantity{T}},b::Vector{Quantity{T}})::Bool where T <: Number 
+    return isequal(unit.(a),unit.(b))
+end
+
+function ~(a::Vector{Quantity{T}},b::Vector{Quantity{T}})::Bool where T <: Number 
+    return similarity(a,b)
+end
+
+"""
+    function parallel
+
+    Vector a is dimensionally parallel to vector b if
+    they have the same length and a consistent dimensional
+    change relates corresponding components.
+
+    pp. 188, Hart
+"""
+function parallel(a::Vector{Quantity{T}},b::Vector{Quantity{T}})::Bool where T <: Number 
+
+    if isequal(length(a),length(b))
+        Δdim = unit.(a)./unit.(b)
+        for i = 2:length(a)
+            if Δdim[i] ≠ Δdim[1]
+                return false
+            end
+        end
+        return true
+    else
+        return false
+    end
+    
+end
+
+function ∥(a::Vector{Quantity{T}},b::Vector{Quantity{T}})::Bool where T <: Number 
+    return parallel(a,b)
+end
+
+
+"""
+    function diagonal_matrix(γ)
+
+	       Take diagonal dimensional elements γ
 	   Form a weighting or scaling matrix that has the proper units
 	   Note that the off-diagonals are zero but they must have units
 """
