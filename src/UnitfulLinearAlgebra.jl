@@ -4,7 +4,7 @@ using Unitful, LinearAlgebra
 
 export similar, parallel, ∥, uniform
 export invdimension, dottable, MultipliableMatrix
-export element, expand
+export element, expand, convert_range, convert_domain
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
 
 import LinearAlgebra.inv
@@ -71,7 +71,7 @@ end
 
     Unitful also handles this case, but here there is added efficiency in the storage of units/dimensions by accounting for the necessary structure of the matrix.
 """
-*(A::MultipliableMatrix,b) = dimension(A.domain) == dimension(b) ? c = (A.numbers*ustrip.(b)).*A.range : error("Dimensions of A and b not compatible")
+*(A::MultipliableMatrix,b) = dimension(A.domain) == dimension(b) ? c = (A.numbers*ustrip.(b)).*A.range : error("Dimensions of MultipliableMatrix and pair not compatible")
 
 """
     function similar(a,b)::Bool
@@ -162,7 +162,24 @@ invdimension(a) = dimension(1 ./ a)
     to take a dot product?
 """
 dottable(a,b) = parallel(a, 1 ./ b)
-    
+
+function convert_domain(A::MultipliableMatrix, newdomain::Vector)::MultipliableMatrix
+    if parallel(A.domain,newdomain)
+        shift = newdomain./A.domain
+        newrange = A.range.*shift
+        B = MultipliableMatrix(A.numbers,newrange,newdomain,A.exact)
+    end
+end
+
+function convert_range(A::MultipliableMatrix, newrange::Vector)::MultipliableMatrix
+    if A.range ∥ newrange
+        shift = newrange./A.range
+        newdomain = A.domain.*shift
+        B = MultipliableMatrix(A.numbers,newrange,newdomain,A.exact)
+    end
+end
+
+
 """
     function diagonal_matrix(γ)
 

@@ -101,7 +101,34 @@ using Test
             C = expand(B)
             @test A==C
         end
-        
+
+        @testset "exact" begin
+            p = [1.0u"m", 3.0u"s"]
+            q̃ = [-1.0u"K", 2.0]
+
+            q = ustrip.(q̃).*unit.(1 ./q̃)
+            
+            # outer product to make a multipliable matrix
+            A = p*q̃'
+            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            C = expand(B)
+            @test A==C
+
+            # test multiplication
+            @test isequal(A*q,B*q)
+
+            # new domain
+            qnew = (q)u"K"
+            D = convert_domain(B,unit.(qnew))
+            @test B*q ∥ D*qnew
+
+            pnew = (p)u"s"
+            qnew = (q)u"s"
+            E = convert_range(B,unit.(pnew))
+            E*qnew
+            @test B*q ∥ E*qnew
+
+            
+        end
     end
-    
 end
