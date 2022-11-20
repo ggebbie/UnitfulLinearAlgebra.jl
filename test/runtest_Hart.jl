@@ -44,7 +44,7 @@ using Test
         @test a~b
         @test parallel(a,b)
         @test a ∥ b
-        a ⋅ b
+        #a ⋅ b
         @test ~uniform(b)
         
         c = [1u"m", 1u"s", 10u"K"]
@@ -52,7 +52,7 @@ using Test
         @test ~similar(c,d)
         @test ~(c~d)
         @test ~(c∥d)
-        c ⋅ d
+        #c ⋅ d
 
         # inverse dimension
         invdimension(a)
@@ -64,43 +64,44 @@ using Test
     end
 
     @testset "matrices" begin
+        @testset "heterogeneous" begin
+            p = [1.0u"m", 3.0u"s"]
+            q̃ = [-1.0u"K", 2.0]
 
-        p = [1.0u"m", 3.0u"s"]
-        q̃ = [-1.0u"K", 2.0]
+            q = ustrip.(q̃).*unit.(1 ./q̃)
+            
+            # outer product to make a multipliable matrix
+            A = p*q̃'
+            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
+            C = expand(B)
+            @test A==C
 
-        q = ustrip.(q̃).*unit.(1 ./q̃)
-        
-        # outer product to make a multipliable matrix
-        A = p*q̃'
-        B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
-        C = expand(B)
-        @test A==C
+            # test multiplication
+            @test isequal(A*q,B*q)
+        end
 
-        # test multiplication
-        A*q
-        B*q
+        @testset "column vector" begin
+            p = [1.0u"m", 3.0u"s", 5.0u"m/s"]
+            q = [-1.0u"K"]
+            # outer product to make a multipliable matrix
 
-        p = [1.0u"m", 3.0u"s", 5.0u"m/s"]
-        q = [-1.0u"K"]
-        # outer product to make a multipliable matrix
+            # A = column vector
+            A = p*q'
+            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.( 1 ./q))
+            C = expand(B)
+            @test A==C
+        end
 
-        # A = column vector
-        A = p*q'
-        B = MultipliableMatrix(ustrip.(A),unit.(p),unit.( 1 ./q))
-        C = expand(B)
-        @test A==C
-
-        # range is nondimensional
-        p = [1.0u"m", 3.0u"s"]
-        q = [-1.0, 2.0]
-        # outer product to make a multipliable matrix
-        A = p*q'
-        B = MultipliableMatrix(ustrip.(A),unit.(p),unit.( 1 ./q))
-        C = expand(B)
-        @test A==C
-
+        @testset "nondimensional range" begin
+            p = [1.0u"m", 3.0u"s"]
+            q = [-1.0, 2.0]
+            # outer product to make a multipliable matrix
+            A = p*q'
+            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.( 1 ./q))
+            C = expand(B)
+            @test A==C
+        end
         
     end
-    
     
 end

@@ -20,20 +20,41 @@ import Base.similar
     Multipliable matrices have dimensions that are consistent with many linear algebraic manipulations, including multiplication.
 
     Hart suggests that these matrices simply be called "matrices", and that matrices with dimensional values that cannot be multiplied should be called "arrays."
+
+# Attributes
+- `numbers`: numerical (dimensionless) matrix
+- `range`: dimensional range in terms of units
+- `domain`: dimensional domain in terms of units
+- `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
 struct MultipliableMatrix
     numbers::Matrix
     range::Vector
     domain::Vector
+    exact::Bool
 end
 
+"""
+    MultipliableMatrix(numbers,range,domain;exact=false)
+
+    Constructor where `exact` is a keyword argument. One may construct a MultipliableMatrix without specifying exact, in which case it defaults to `false`. 
+"""
+MultipliableMatrix(numbers,range,domain;exact=false) =
+    MultipliableMatrix(numbers,range,domain,exact)
+    
 element(A::MultipliableMatrix,i::Integer,j::Integer) = Quantity(A.numbers[i,j],A.range[i]./A.domain[j])
 
+"""
+    function expand(A::MultipliableMatrix)
+
+    Expand A into array form
+    Useful for tests, display
+    pp. 193, Hart
+"""
 function expand(A::MultipliableMatrix)
 
     M = length(A.range)
     N = length(A.domain)
-
     B = Matrix{Quantity}(undef,M,N)
     for m = 1:M
         for n = 1:N
