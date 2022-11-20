@@ -186,20 +186,36 @@ end
 
     There must be a way to inspect the Unitful type to answer this.
 """
-function uniform(a)
-    # handle scalars
-    if length(a) == 1
-        return true # by default
-    else
-        dima = dimension(a)
-        for dd = 2:length(dima)
-            if dima[dd] ≠ dima[1]
-                return false
-            end
+uniform(a::T) where T <: Number = true # all scalars by default
+function uniform(a::Vector)
+    dima = dimension(a)
+    for dd = 2:length(dima)
+        if dima[dd] ≠ dima[1]
+            return false
         end
     end
     return true
 end
+function uniform(A::Matrix)
+    B = MultipliableMatrix(A)
+    isnothing(B) ? false : uniform(B)
+end
+uniform(A::MultipliableMatrix) = (uniform(A.range) && uniform(A.domain)) ? true : false
+
+# function uniform(a)
+#     # handle scalars
+#     if length(a) == 1
+#         return true # by default
+#     else
+#         dima = dimension(a)
+#         for dd = 2:length(dima)
+#             if dima[dd] ≠ dima[1]
+#                 return false
+#             end
+#         end
+#     end
+#     return true
+# end
 
 """
     function invdimension
