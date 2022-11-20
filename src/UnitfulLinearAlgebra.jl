@@ -3,7 +3,7 @@ module UnitfulLinearAlgebra
 using Unitful, LinearAlgebra
 
 export similar, parallel, ∥, uniform
-export invdimension
+export invdimension, dottable
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
 
 import LinearAlgebra.inv
@@ -26,16 +26,6 @@ import Base.similar
  similar(a,b) = isequal(dimension(a),dimension(b))
  ~(a,b) = similar(a,b)
 
-# similar(a::T,b::T) where T <: Number = isequal(dimension(a),dimension(b))
-# ~(a::T,b::T) where T <: Number = similar(a,b)
-
-# similar(a::Quantity,b::Quantity) = isequal(dimension(a),dimension(b))
-# ~(a::Quantity,b::Quantity) = similar(a,b)
-
-# similar(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where T <: Number = isequal(dimension(a),dimension(b))
-
-# ~(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where T <: Number = similar(a,b)
-
 """
     function parallel
 
@@ -51,7 +41,7 @@ import Base.similar
 
     Note: Hart uses ≈, but this conflicts with an existing Julia function.
 """
-function parallel(a::Union{T,Quantity,Quantity{T},Vector{Quantity},Vector{Quantity{T}}},b::Union{T,Quantity,Quantity{T},Vector{Quantity},Vector{Quantity{T}}})::Bool where T <: Number 
+function parallel(a,b)::Bool
 
     if isequal(length(a),length(b))
         if length(a) == 1
@@ -68,10 +58,8 @@ function parallel(a::Union{T,Quantity,Quantity{T},Vector{Quantity},Vector{Quanti
     else
         return false
     end
-    
 end
-
-∥(a::Union{T,Quantity,Quantity{T},Vector{Quantity},Vector{Quantity{T}}},b::Union{T,Quantity,Quantity{T},Vector{Quantity},Vector{Quantity{T}}}) where {T <: Number} = parallel(a,b)
+∥(a,b)  = parallel(a,b)
 
 """
     function uniform(a)
@@ -81,7 +69,6 @@ end
     There must be a way to inspect the Unitful type to answer this.
 """
 function uniform(a)
-
     # handle scalars
     if length(a) == 1
         return true # by default
@@ -103,10 +90,7 @@ end
       
     pp. 64, Hart, `a~` in his notation
 """
-invdimension(a::Union{Quantity,Vector{Quantity},Vector{Quantity{T}}}) where T <: Number = dimension(1 ./ a)
-
-# uniform vectors and scalars are not dispatched to previous definition
-invdimension(a) = uniform(a) ? dimension(1 ./ a) : error("inverse dimension not computable")
+invdimension(a) = dimension(1 ./ a)
 
 """
     function dottable(a,b)
@@ -114,11 +98,7 @@ invdimension(a) = uniform(a) ? dimension(1 ./ a) : error("inverse dimension not 
     Are two quantities dimensionally compatible
     to take a dot product?
 """
-function dottable(a,b)
-
-    parallel(a, 1 ./ b)
-end
-
+dottable(a,b) = parallel(a, 1 ./ b)
     
 """
     function diagonal_matrix(γ)
