@@ -64,42 +64,28 @@ using Test
     end
 
     @testset "matrices" begin
-        @testset "heterogeneous" begin
-            p = [1.0u"m", 3.0u"s"]
-            q̃ = [-1.0u"K", 2.0]
 
+        for i = 1:3
+            if i == 1
+                p = [1.0u"m", 3.0u"s"]
+                q̃ = [-1.0u"K", 2.0]
+            elseif i == 2
+                p = [1.0u"m", 3.0u"s", 5.0u"m/s"]
+                q̃ = [-1.0u"K"]
+            elseif i == 3
+                p = [1.0u"m", 3.0u"s"]
+                q̃ = [-1.0, 2.0]
+            end
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
             # outer product to make a multipliable matrix
             A = p*q̃'
             B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
-            C = expand(B)
-            @test A==C
+
+            @test A==array(B)
 
             # test multiplication
             @test isequal(A*q,B*q)
-        end
-
-        @testset "column vector" begin
-            p = [1.0u"m", 3.0u"s", 5.0u"m/s"]
-            q = [-1.0u"K"]
-            # outer product to make a multipliable matrix
-
-            # A = column vector
-            A = p*q'
-            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.( 1 ./q))
-            C = expand(B)
-            @test A==C
-        end
-
-        @testset "nondimensional range" begin
-            p = [1.0u"m", 3.0u"s"]
-            q = [-1.0, 2.0]
-            # outer product to make a multipliable matrix
-            A = p*q'
-            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.( 1 ./q))
-            C = expand(B)
-            @test A==C
         end
 
         @testset "exact" begin
@@ -111,10 +97,7 @@ using Test
             # outer product to make a multipliable matrix
             A = p*q̃'
             B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
-            C = expand(B)
-            @test A==C
-
-            # test multiplication
+            @test A==array(B)
             @test isequal(A*q,B*q)
 
             # new domain
@@ -122,12 +105,14 @@ using Test
             D = convert_domain(B,unit.(qnew))
             @test B*q ∥ D*qnew
 
+            # update B?
+            #convert_domain!(B,unit.(qnew))
+            #@test B*qnew ∥ D*qnew
+            
             pnew = (p)u"s"
             qnew = (q)u"s"
             E = convert_range(B,unit.(pnew))
-            E*qnew
             @test B*q ∥ E*qnew
-
             
         end
     end

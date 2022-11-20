@@ -4,7 +4,10 @@ using Unitful, LinearAlgebra
 
 export similar, parallel, ∥, uniform
 export invdimension, dottable, MultipliableMatrix
-export element, expand, convert_range, convert_domain
+export element, array
+export convert_range, convert_domain
+#export convert_range!, convert_domain!
+export exact, multipliable
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
 
 import LinearAlgebra.inv
@@ -45,13 +48,13 @@ MultipliableMatrix(numbers,range,domain;exact=false) =
 element(A::MultipliableMatrix,i::Integer,j::Integer) = Quantity(A.numbers[i,j],A.range[i]./A.domain[j])
 
 """
-    function expand(A::MultipliableMatrix)
+    function array(A::MultipliableMatrix)
 
     Expand A into array form
     Useful for tests, display
     pp. 193, Hart
 """
-function expand(A::MultipliableMatrix)
+function array(A::MultipliableMatrix)
 
     M = length(A.range)
     N = length(A.domain)
@@ -63,6 +66,8 @@ function expand(A::MultipliableMatrix)
     end
     return B
 end
+
+multipliable(A::MultipliableMatrix) = true
 
 """
     function *(A::MultipliableMatrix,b)
@@ -164,21 +169,55 @@ invdimension(a) = dimension(1 ./ a)
 dottable(a,b) = parallel(a, 1 ./ b)
 
 function convert_domain(A::MultipliableMatrix, newdomain::Vector)::MultipliableMatrix
-    if parallel(A.domain,newdomain)
+    if A.domain ∥ newdomain
         shift = newdomain./A.domain
         newrange = A.range.*shift
         B = MultipliableMatrix(A.numbers,newrange,newdomain,A.exact)
+    else
+        error("New domain not parallel to domain of Multipliable Matrix")
     end
 end
+
+#ERROR: setfield!: immutable struct of type MultipliableMatrix cannot be changed
+# function convert_domain!(A::MultipliableMatrix, newdomain::Vector)::MultipliableMatrix
+#     if A.domain ∥ newdomain
+#         shift = newdomain./A.domain
+#         newrange = A.range.*shift
+#         A.domain = newdomain
+#         A.range = newrange
+#     else
+#         error("New domain not parallel to domain of Multipliable Matrix")
+#     end
+# end
 
 function convert_range(A::MultipliableMatrix, newrange::Vector)::MultipliableMatrix
     if A.range ∥ newrange
         shift = newrange./A.range
         newdomain = A.domain.*shift
         B = MultipliableMatrix(A.numbers,newrange,newdomain,A.exact)
+    else
+        error("New range not parallel to range of Multipliable Matrix")
     end
 end
 
+#ERROR: setfield!: immutable struct of type MultipliableMatrix cannot be changed
+# function convert_range!(A::MultipliableMatrix, newrange::Vector)::MultipliableMatrix
+#     if A.range ∥ newrange
+#         shift = newrange./A.range
+#         newdomain = A.domain.*shift
+#         A = MultipliableMatrix(A.numbers,newrange,newdomain,A.exact)
+#     else
+#         error("New range not parallel to range of Multipliable Matrix")
+#     end
+# end
+
+"""
+    function exact(A::MultipliableMatrix) = A.exact
+
+-    `exact=true`: geometric interpretation of domain and range
+-    `exact=false`: algebraic interpretation
+"""
+exact(A::MultipliableMatrix) = A.exact
 
 """
     function diagonal_matrix(γ)
