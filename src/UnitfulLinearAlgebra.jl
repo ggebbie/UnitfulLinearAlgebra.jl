@@ -44,7 +44,58 @@ end
 """
 MultipliableMatrix(numbers,range,domain;exact=false) =
     MultipliableMatrix(numbers,range,domain,exact)
+
+"""
+     MultipliableMatrix(array)
+
+    Transform array to MultipliableMatrix
+"""
+function MultipliableMatrix(A::Matrix)
+
+    numbers = ustrip.(A)
+    M,N = size(numbers)
+    domain = Vector(undef,N)
+    range = Vector(undef,M)
+
+    for i = 1:M
+        range[i] = unit(A[i,1])
+    end
     
+    for j = 1:N
+        domain[j] = unit(A[1,1])/unit(A[1,j])
+    end
+    B = MultipliableMatrix(numbers,range,domain,exact=false)
+    # if the array is not multipliable, return nothing
+    if array(B) == A
+        return B
+    else
+        return nothing
+    end
+end
+
+#multipliable(A::Matrix) = (array(MultipliableMatrix(A)) == A)
+"""
+    function multipliable(A::Matrix)::Bool
+
+    Is an array multipliable?
+    It requires a particular structure of the units/dimensions in the array. 
+"""
+multipliable(A::Matrix) = ~isnothing(MultipliableMatrix(A))
+multipliable(A::MultipliableMatrix) = true
+
+"""
+    function element(A::MultipliableMatrix,i::Integer,j::Integer)
+
+    Recover element (i,j) of a MultipliableMatrix.
+
+#Input
+- `A::MultipliableMatrix`
+- `i::Integer`: row index
+- `j::Integer`: column index
+
+#Output
+- `Quantity`: numerical value and units
+"""
 element(A::MultipliableMatrix,i::Integer,j::Integer) = Quantity(A.numbers[i,j],A.range[i]./A.domain[j])
 
 """
@@ -67,7 +118,6 @@ function array(A::MultipliableMatrix)
     return B
 end
 
-multipliable(A::MultipliableMatrix) = true
 
 """
     function *(A::MultipliableMatrix,b)

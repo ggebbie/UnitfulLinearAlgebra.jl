@@ -115,5 +115,28 @@ using Test
             @test B*q ∥ E*qnew
             
         end
+
+        @testset "array" begin
+            p = [1.0u"m", 3.0u"s"]
+            q̃ = [-1.0u"K", 2.0]
+
+            q = ustrip.(q̃).*unit.(1 ./q̃)
+            
+            # outer product to make a multipliable matrix
+            A = p*q̃'
+            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+
+            # turn array into Multipliable matrix
+            C = MultipliableMatrix(A)
+            @test A==array(C)
+            @test multipliable(A)
+
+            # change to make unmultipliable
+            A[1,1] *= 1u"m/s"
+            C = MultipliableMatrix(A)
+            @test ~multipliable(A)
+            
+        end
+        
     end
 end
