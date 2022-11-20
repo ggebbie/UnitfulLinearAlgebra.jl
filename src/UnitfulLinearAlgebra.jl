@@ -3,12 +3,54 @@ module UnitfulLinearAlgebra
 using Unitful, LinearAlgebra
 
 export similar, parallel, ∥, uniform
-export invdimension, dottable
+export invdimension, dottable, MultipliableMatrix
+export element, expand
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
 
 import LinearAlgebra.inv
-import Base:(~)
+import Base:(~), (*)
 import Base.similar
+
+"""
+    struct MultipliableMatrix
+
+    Matrices with units that a physically reasonable,
+    i.e., more than just an array of values with units.
+
+    Multipliable matrices have dimensions that are consistent with many linear algebraic manipulations, including multiplication.
+
+    Hart suggests that these matrices simply be called "matrices", and that matrices with dimensional values that cannot be multiplied should be called "arrays."
+"""
+struct MultipliableMatrix
+    numbers::Matrix
+    range::Vector
+    domain::Vector
+end
+
+element(A::MultipliableMatrix,i::Integer,j::Integer) = Quantity(A.numbers[i,j],A.range[i]./A.domain[j])
+
+function expand(A::MultipliableMatrix)
+
+    M = length(A.range)
+    N = length(A.domain)
+
+    B = Matrix{Quantity}(undef,M,N)
+    for m = 1:M
+        for n = 1:N
+            B[m,n] = element(A,m,n)
+        end
+    end
+    return B
+end
+
+"""
+    function *(A::MultipliableMatrix,b)
+
+    Matrix-vector multiplication with units/dimensions
+
+    Unitful also handles this case, but here there is added efficiency in the storage of units/dimensions by accounting for the necessary structure of the matrix.
+"""
+*(A::MultipliableMatrix,b) = dimension(A.domain) == dimension(b) ? c = (A.numbers*ustrip.(b)).*A.range : error("Dimensions of A and b not compatible")
 
 """
     function similar(a,b)::Bool
