@@ -2,7 +2,8 @@ module UnitfulLinearAlgebra
 
 using Unitful, LinearAlgebra
 
-export similar, parallel, ∥, uniform
+export similar, ∥, parallel
+export uniform, left_uniform, right_uniform
 export invdimension, dottable, MultipliableMatrix
 export element, array
 export convert_range, convert_domain
@@ -32,8 +33,8 @@ import Base.similar
 """
 struct MultipliableMatrix
     numbers::Matrix
-    range::Vector
-    domain::Vector
+    range::Vector{Unitful.FreeUnits}
+    domain::Vector{Unitful.FreeUnits}
     exact::Bool
 end
 
@@ -54,8 +55,8 @@ function MultipliableMatrix(A::Matrix)
 
     numbers = ustrip.(A)
     M,N = size(numbers)
-    domain = Vector(undef,N)
-    range = Vector(undef,M)
+    domain = Vector{Unitful.FreeUnits}(undef,N)
+    range = Vector{Unitful.FreeUnits}(undef,M)
 
     for i = 1:M
         range[i] = unit(A[i,1])
@@ -187,7 +188,7 @@ end
     There must be a way to inspect the Unitful type to answer this.
 """
 uniform(a::T) where T <: Number = true # all scalars by default
-function uniform(a::Vector)
+function uniform(a::Vector) 
     dima = dimension(a)
     for dd = 2:length(dima)
         if dima[dd] ≠ dima[1]
@@ -200,22 +201,29 @@ function uniform(A::Matrix)
     B = MultipliableMatrix(A)
     isnothing(B) ? false : uniform(B)
 end
-uniform(A::MultipliableMatrix) = (uniform(A.range) && uniform(A.domain)) ? true : false
+uniform(A::MultipliableMatrix) = left_uniform(A) && right_uniform(A)
 
-# function uniform(a)
-#     # handle scalars
-#     if length(a) == 1
-#         return true # by default
-#     else
-#         dima = dimension(a)
-#         for dd = 2:length(dima)
-#             if dima[dd] ≠ dima[1]
-#                 return false
-#             end
-#         end
-#     end
-#     return true
-# end
+"""
+    function left_uniform(A)
+
+    Does the range of A have uniform dimensions?
+"""
+left_uniform(A::MultipliableMatrix) = uniform(A.range) ? true : false
+function left_uniform(A::Matrix)
+    B = MultipliableMatrix(A)
+    isnothing(B) ? false : left_uniform(B)
+end
+
+"""
+    function right_uniform(A)
+
+    Does the domain of A have uniform dimensions?
+"""
+right_uniform(A::MultipliableMatrix) = uniform(A.domain) ? true : false
+function right_uniform(A::Matrix)
+    B = MultipliableMatrix(A)
+    isnothing(B) ? false : right_uniform(B)
+end
 
 """
     function invdimension

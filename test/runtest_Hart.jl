@@ -86,6 +86,10 @@ using Test
 
             # test multiplication
             @test isequal(A*q,B*q)
+
+            @test isequal(uniform(A),uniform(B))
+            @test isequal(left_uniform(A),left_uniform(B))
+            @test isequal(right_uniform(A),right_uniform(B))
         end
 
         @testset "exact" begin
@@ -100,6 +104,7 @@ using Test
             @test A==array(B)
             @test isequal(A*q,B*q)
 
+            
             # new domain
             qnew = (q)u"K"
             D = convert_domain(B,unit.(qnew))
@@ -130,7 +135,8 @@ using Test
             C = MultipliableMatrix(A)
             @test A==array(C)
             @test multipliable(A)
-
+            @test ~left_uniform(A)
+            
             # change to make unmultipliable
             A[1,1] *= 1u"m/s"
             C = MultipliableMatrix(A)
