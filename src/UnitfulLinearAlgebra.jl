@@ -2,7 +2,8 @@ module UnitfulLinearAlgebra
 
 using Unitful, LinearAlgebra
 
-export similar, parallel, ∥
+export similar, parallel, ∥, uniform
+export invdimension
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
 
 import LinearAlgebra.inv
@@ -10,27 +11,30 @@ import Base:(~)
 import Base.similar
 
 """
-    function similarity(a::Quantity{T},b::Quantity{T}) where T <: Number
-
-    Dimensional similarity of scalars, a binary relation
-
-    Make it a one-liner?
-
-    pp. 184, Hart
-"""
-similar(a::Quantity,b::Quantity) = isequal(dimension(a),dimension(b))
-~(a::Quantity,b::Quantity) = similar(a,b)
-
-"""
-    function similarity(a::Quantity{T},b::Quantity{T}) where T <: Number
+    function similar(a,b)::Bool
 
     Dimensional similarity of vectors, a binary relation
 
+    Read "a has the same dimensional form as b"
+
+    `a` and `b` may still have different units.
+
+    A stronger condition than being parallel.
+
     pp. 184, Hart
 """
-similar(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where T <: Number = isequal(dimension(a),dimension(b))
+ similar(a,b) = isequal(dimension(a),dimension(b))
+ ~(a,b) = similar(a,b)
 
-~(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where T <: Number = similar(a,b)
+# similar(a::T,b::T) where T <: Number = isequal(dimension(a),dimension(b))
+# ~(a::T,b::T) where T <: Number = similar(a,b)
+
+# similar(a::Quantity,b::Quantity) = isequal(dimension(a),dimension(b))
+# ~(a::Quantity,b::Quantity) = similar(a,b)
+
+# similar(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where T <: Number = isequal(dimension(a),dimension(b))
+
+# ~(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where T <: Number = similar(a,b)
 
 """
     function parallel
@@ -39,27 +43,83 @@ similar(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where T <: Number = isequ
     they have the same length and a consistent dimensional
     change relates corresponding components.
 
+    Guaranteed if two vectors are dimensionally similar.
+
+    True for scalars in all cases. 
+
     pp. 188, Hart
+
+    Note: Hart uses ≈, but this conflicts with an existing Julia function.
 """
-function parallel(a::Vector{Quantity{T}},b::Vector{Quantity{T}})::Bool where T <: Number 
+function parallel(a::Union{T,Quantity,Quantity{T},Vector{Quantity},Vector{Quantity{T}}},b::Union{T,Quantity,Quantity{T},Vector{Quantity},Vector{Quantity{T}}})::Bool where T <: Number 
 
     if isequal(length(a),length(b))
-        Δdim = dimension(a)./dimension(b)
-        for i = 2:length(a)
-            if Δdim[i] ≠ Δdim[1]
-                return false
+        if length(a) == 1
+            return true
+        else
+            Δdim = dimension(a)./dimension(b)
+            for i = 2:length(a)
+                if Δdim[i] ≠ Δdim[1]
+                    return false
+                end
             end
+            return true
         end
-        return true
     else
         return false
     end
     
 end
 
-∥(a::Vector{Quantity{T}},b::Vector{Quantity{T}}) where {T <: Number} = parallel(a,b)
-#end
+∥(a::Union{T,Quantity,Quantity{T},Vector{Quantity},Vector{Quantity{T}}},b::Union{T,Quantity,Quantity{T},Vector{Quantity},Vector{Quantity{T}}}) where {T <: Number} = parallel(a,b)
 
+"""
+    function uniform(a)
+
+    Is the dimension of this quantity uniform?
+
+    There must be a way to inspect the Unitful type to answer this.
+"""
+function uniform(a)
+
+    # handle scalars
+    if length(a) == 1
+        return true # by default
+    else
+        dima = dimension(a)
+        for dd = 2:length(dima)
+            if dima[dd] ≠ dima[1]
+                return false
+            end
+        end
+    end
+    return true
+end
+
+"""
+    function invdimension
+
+    Dimensional inverse
+      
+    pp. 64, Hart, `a~` in his notation
+"""
+invdimension(a::Union{Quantity,Vector{Quantity},Vector{Quantity{T}}}) where T <: Number = dimension(1 ./ a)
+
+# uniform vectors and scalars are not dispatched to previous definition
+invdimension(a) = uniform(a) ? dimension(1 ./ a) : error("inverse dimension not computable")
+
+"""
+    function dottable(a,b)
+
+    Are two quantities dimensionally compatible
+    to take a dot product?
+"""
+function dottable(a,b)
+
+    parallel(a, 1 ./ b)
+end
+
+    
 """
     function diagonal_matrix(γ)
 
