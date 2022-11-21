@@ -12,8 +12,9 @@ export convert_range, convert_domain
 export exact, multipliable, dimensionless, endomorphic
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
 export range, domain
+export square, squarable, singular
 
-import LinearAlgebra.inv
+import LinearAlgebra:inv, det
 import Base:(~), (*)
 import Base.similar
 import Base.range
@@ -56,6 +57,23 @@ end
 struct EndomorphicMatrix{T} <: MultipliableMatrices where {T <: Number}
     numbers::Matrix{T}
     range::Vector
+end
+
+"""
+    struct SquarableMatrix
+
+    An squarable matrix is one where 𝐀² is defined.
+    It is the case if the dimensional range and domain are parallel.
+
+# Attributes
+- `numbers`: numerical (dimensionless) matrix
+- `range`: dimensional range in terms of units, this is also the domain
+- `domainshift`: shift to range that gives the domain
+"""
+struct SquarableMatrix{T} <: MultipliableMatrices where {T <: Number}
+    numbers::Matrix{T}
+    range::Vector
+    domainshift
 end
 
 """
@@ -242,7 +260,7 @@ uniform(A::MultipliableMatrix) = left_uniform(A) && right_uniform(A)
 
     Does the range of A have uniform dimensions?
 """
-left_uniform(A::MultipliableMatrix) = uniform(A.range) ? true : false
+left_uniform(A::T) where T<: MultipliableMatrices = uniform(range(A)) ? true : false
 function left_uniform(A::Matrix)
     B = MultipliableMatrix(A)
     isnothing(B) ? false : left_uniform(B)
@@ -253,7 +271,7 @@ end
 
     Does the domain of A have uniform dimensions?
 """
-right_uniform(A::MultipliableMatrix) = uniform(A.domain) ? true : false
+right_uniform(A::T) where T<:MultipliableMatrices = uniform(domain(A)) ? true : false
 function right_uniform(A::Matrix)
     B = MultipliableMatrix(A)
     isnothing(B) ? false : right_uniform(B)
@@ -268,6 +286,10 @@ end
 dimensionless(A::MultipliableMatrix) = uniform(A) && A.range[1] == A.domain[1]
 dimensionless(A::Matrix) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
+
+square(A::T) where T <: MultipliableMatrices = (domainlength(A) == rangelength(A))
+
+squarable(A::T) where T <: MultipliableMatrices = (domain(A) ∥ range(A))
 
 """
     function invdimension
@@ -342,15 +364,14 @@ exact(A::MultipliableMatrix) = A.exact
 
     Numerical dimension (length or size) of range
 """
-rangelength(A::T) where T <: MultipliableMatrices = length(A.range)
+rangelength(A::T) where T <: MultipliableMatrices = length(range(A))
 
 """
     function domainlength(A::MultipliableMatrix)
 
     Numerical dimension (length or size) of domain of A
 """
-domainlength(A::MultipliableMatrix) = length(A.domain)
-domainlength(A::EndomorphicMatrix) = length(A.range) # domain not saved
+domainlength(A::T) where T <: MultipliableMatrices = length(domain(A))
 
 domain(A::T) where T <: MultipliableMatrices = A.domain
 domain(A::EndomorphicMatrix) = A.range # domain not saved
@@ -403,6 +424,30 @@ function EndomorphicMatrix(A::T) where T <: Number
         return nothing
     end
 end
+
+"""
+     function inv
+"""
+inv(A::T) where T <: MultipliableMatrices = ~singular(A) ? MultipliableMatrix(inv(A.numbers),domain(A),range(A)) : error("matrix is singular")
+
+"""
+    function det
+"""
+function det(A::T) where T<: MultipliableMatrices
+
+    if square(A)
+        # detunit = Vector{eltype(domain(A))}(undef,domainlength(A))
+        # for i = 1:domainlength(A)
+        # end
+        detunit = prod([range(A)[i]/domain(A)[i] for i = 1:domainlength(A)])
+
+        return Quantity(det(A.numbers),detunit)
+    else
+        error("Determinant requires square matrix")
+    end
+end
+
+singular(A::T) where T <: MultipliableMatrices = iszero(ustrip(det(A)))
 
 """
     function diagonal_matrix(γ)

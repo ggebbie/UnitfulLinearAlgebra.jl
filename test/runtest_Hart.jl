@@ -67,7 +67,7 @@ using Test
 
         for i = 1:3
             if i == 1
-                p = [1.0u"m", 3.0u"s"]
+                p = [1.0u"m", 9.0u"s"]
                 q̃ = [-1.0u"K", 2.0]
             elseif i == 2
                 p = [1.0u"m", 3.0u"s", 5.0u"m/s"]
@@ -193,6 +193,47 @@ using Test
             @test endomorphic(B)
             @test endomorphic(A)
         end
+
+        @testset "squarable" begin
+            p = [1.0u"m", 1.0u"s"]
+            q̃ = 1 ./ [1.0u"m", 1.0u"s"]
+
+            q = ustrip.(q̃).*unit.(1 ./q̃)
+            
+            # outer product to make a multipliable matrix
+            A = p*q̃'
+            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            @testset square(B)
+            @testset squarable(B)
+
+            #B*B
+            #inv(B)
+            
+        end
+
+        @testset "inverse 3x3" begin
+            # can't easily get a list of units to draw from
+            u1 = u"m"
+            u2 = u"m/s"
+            u3 = u"m/s^2"
+        
+            # i.e., trend analysis
+            K = 3
+            E = hcat(randn(K),randn(K)u1/u2,randn(K)u1/u3)
+            y = randn(K)u1
+            x = [randn()u1; randn()u2; randn()u3] 
+
+            F = MultipliableMatrix(E)
+            @test ~singular(F)
+            det(F)
+
+            E⁻¹ = inv(F)
+
+            # need to define matrix multiply here
+            #x̃ = E⁻¹ * (E * x)
+
+            #[@test isapprox(x̃[i],x[i]) for i in 1:length(x)]
+    end    
 
     end
 end
