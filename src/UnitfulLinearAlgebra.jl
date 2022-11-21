@@ -2,18 +2,21 @@ module UnitfulLinearAlgebra
 
 using Unitful, LinearAlgebra
 
+export MultipliableMatrix, EndomorphicMatrix
 export similar, ∥, parallel
 export uniform, left_uniform, right_uniform
-export invdimension, dottable, MultipliableMatrix
+export invdimension, dottable
 export element, array
 export convert_range, convert_domain
 #export convert_range!, convert_domain!
-export exact, multipliable
+export exact, multipliable, dimensionless, endomorphic
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
 
 import LinearAlgebra.inv
 import Base:(~), (*)
 import Base.similar
+
+abstract type MultipliableMatrices end
 
 """
     struct MultipliableMatrix
@@ -31,11 +34,26 @@ import Base.similar
 - `domain`: dimensional domain in terms of units
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
-struct MultipliableMatrix
-    numbers::Matrix
-    range::Vector{Unitful.FreeUnits}
-    domain::Vector{Unitful.FreeUnits}
+struct MultipliableMatrix{T} <: MultipliableMatrices where T <: Number
+    numbers::Matrix{T}
+    range::Vector
+    domain::Vector
     exact::Bool
+end
+
+"""
+    struct EndomorphicMatrix
+
+    An endomorphic matrix maps a dimensioned vector space
+    to itself. The dimensional range and domain are the same.
+
+# Attributes
+- `numbers`: numerical (dimensionless) matrix
+- `range`: dimensional range in terms of units, this is also the domain
+"""
+struct EndomorphicMatrix{T} <: MultipliableMatrices where {T <: Number}
+    numbers::Matrix{T}
+    range::Vector
 end
 
 """
@@ -55,8 +73,10 @@ function MultipliableMatrix(A::Matrix)
 
     numbers = ustrip.(A)
     M,N = size(numbers)
-    domain = Vector{Unitful.FreeUnits}(undef,N)
-    range = Vector{Unitful.FreeUnits}(undef,M)
+    #U = typeof(unit(A[1,1]))
+    U = eltype(unit.(A))
+    domain = Vector{U}(undef,N)
+    range = Vector{U}(undef,M)
 
     for i = 1:M
         range[i] = unit(A[i,1])
@@ -74,15 +94,25 @@ function MultipliableMatrix(A::Matrix)
     end
 end
 
-#multipliable(A::Matrix) = (array(MultipliableMatrix(A)) == A)
 """
-    function multipliable(A::Matrix)::Bool
+    function multipliable(A)::Bool
 
     Is an array multipliable?
     It requires a particular structure of the units/dimensions in the array. 
 """
 multipliable(A::Matrix) = ~isnothing(MultipliableMatrix(A))
-multipliable(A::MultipliableMatrix) = true
+multipliable(A::T) where T <: MultipliableMatrices = true
+
+"""
+    function endomorphic(A)::Bool
+
+    Is an array endomorphic?
+    It requires a particular structure of the units/dimensions in the array. 
+"""
+endomorphic(A::Matrix) = ~isnothing(EndomorphicMatrix(A))
+endomorphic(A::EndomorphicMatrix) = true
+endomorphic(A::MultipliableMatrix) = isequal(A.domain,A.range)
+endomorphic(A::T) where T <: Number = dimensionless(A) # scalars must be dimensionless to be endomorphic
 
 """
     function element(A::MultipliableMatrix,i::Integer,j::Integer)
@@ -100,17 +130,35 @@ multipliable(A::MultipliableMatrix) = true
 element(A::MultipliableMatrix,i::Integer,j::Integer) = Quantity(A.numbers[i,j],A.range[i]./A.domain[j])
 
 """
+    function element(A::EndomorphicMatrix,i::Integer,j::Integer)
+
+    Recover element (i,j) of a EndomorphicMatrix.
+
+#Input
+- `A::EndomorphicMatrix`
+- `i::Integer`: row index
+- `j::Integer`: column index
+
+#Output
+- `Quantity`: numerical value and units
+"""
+element(A::EndomorphicMatrix,i::Integer,j::Integer) = Quantity(A.numbers[i,j],A.range[i]./A.range[j])
+
+"""
     function array(A::MultipliableMatrix)
 
     Expand A into array form
     Useful for tests, display
     pp. 193, Hart
 """
-function array(A::MultipliableMatrix)
+function array(A::T) where T<: MultipliableMatrices
 
-    M = length(A.range)
-    N = length(A.domain)
-    B = Matrix{Quantity}(undef,M,N)
+    M = rangelength(A)
+    N = domainlength(A)
+    #M = length(A.range)
+    #N = length(A.domain)
+    #B = Matrix{Quantity}(undef,M,N)
+    B = Matrix(undef,M,N)
     for m = 1:M
         for n = 1:N
             B[m,n] = element(A,m,n)
@@ -118,7 +166,6 @@ function array(A::MultipliableMatrix)
     end
     return B
 end
-
 
 """
     function *(A::MultipliableMatrix,b)
@@ -226,6 +273,16 @@ function right_uniform(A::Matrix)
 end
 
 """
+     function dimensionless(A)
+
+     Not all dimensionless matrices have
+     dimensionless domain and range.
+"""
+dimensionless(A::MultipliableMatrix) = uniform(A) && A.range[1] == A.domain[1]
+dimensionless(A::Matrix) = uniform(A) && dimension(A[1,1]) == NoDims
+dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
+
+"""
     function invdimension
 
     Dimensional inverse
@@ -292,6 +349,68 @@ end
 -    `exact=false`: algebraic interpretation
 """
 exact(A::MultipliableMatrix) = A.exact
+
+"""
+    function rangelength(A::MultipliableMatrix)
+
+    Numerical dimension (length or size) of range
+"""
+rangelength(A::T) where T <: MultipliableMatrices = length(A.range)
+
+"""
+    function domainlength(A::MultipliableMatrix)
+
+    Numerical dimension (length or size) of domain of A
+"""
+domainlength(A::MultipliableMatrix) = length(A.domain)
+domainlength(A::EndomorphicMatrix) = length(A.range) # domain not saved
+
+"""
+     EndomorphicMatrix(array)
+
+    Transform array to EndomorphicMatrix
+"""
+function EndomorphicMatrix(A::Matrix)
+
+    numbers = ustrip.(A)
+    M,N = size(numbers)
+
+    # must be square
+    if M ≠ N
+        return nothing
+    end
+    
+    range = Vector{Unitful.FreeUnits}(undef,M)
+    for i = 1:M
+        range[i] = unit(A[i,1])
+    end
+    B = EndomorphicMatrix(numbers,range)
+    
+    # if the array is not multipliable, return nothing
+    if array(B) == A
+        return B
+    else
+        return nothing
+    end
+end
+
+"""
+    function EndomorphicMatrix(A::T) where T <: Number
+
+    Special case of a scalar. Must be dimensionless.
+"""
+function EndomorphicMatrix(A::T) where T <: Number
+    if dimensionless(A)
+        numbers = Matrix{T}(undef,1,1)
+        numbers[1,1] = A
+
+        range = Vector{Unitful.FreeUnits}(undef,1)
+        range[1] = unit(A)
+        return EndomorphicMatrix(numbers,range)
+    else
+        return nothing
+    end
+end
 
 """
     function diagonal_matrix(γ)

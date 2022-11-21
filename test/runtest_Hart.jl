@@ -80,18 +80,50 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
+            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
             @test A==array(B)
 
             # test multiplication
             @test isequal(A*q,B*q)
-
             @test isequal(uniform(A),uniform(B))
             @test isequal(left_uniform(A),left_uniform(B))
             @test isequal(right_uniform(A),right_uniform(B))
+            @test ~dimensionless(B)
+
         end
 
+        @testset "dimensionless" begin
+
+            # scalar test
+            @test dimensionless(1.0)
+            @test ~dimensionless(1.0u"K")
+            
+            # Not all dimensionless matrices have
+            # dimensionless domain and range
+            for i = 1:2
+                if i == 1
+                    p = [1.0u"m^2", 3.0u"m^2"]
+                elseif i ==2
+                    p = [1.0u"m^2", 3.0u"m^3"]
+                end
+                
+                q̃ = [-1.0u"m^-2", 2.0u"m^-2"]
+                q = ustrip.(q̃).*unit.(1 ./q̃)
+            
+                # outer product to make a multipliable matrix
+                A = p*q̃'
+                B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
+                if i == 1
+                    @test dimensionless(B)
+                    @test dimensionless(A)
+                elseif i ==2
+                    @test ~dimensionless(B)
+                    @test ~dimensionless(A)
+                end
+            end
+        end
+        
         @testset "exact" begin
             p = [1.0u"m", 3.0u"s"]
             q̃ = [-1.0u"K", 2.0]
@@ -136,13 +168,31 @@ using Test
             @test A==array(C)
             @test multipliable(A)
             @test ~left_uniform(A)
-            
-            # change to make unmultipliable
-            A[1,1] *= 1u"m/s"
-            C = MultipliableMatrix(A)
-            @test ~multipliable(A)
-            
+            @test isnothing(EndomorphicMatrix(A))
+            @test ~endomorphic(C)            
         end
-        
+
+        @testset "endomorphic" begin
+
+            @test endomorphic(1.0)
+            @test ~endomorphic(1.0u"K")
+            
+            p = [1.0u"m", 1.0u"s"]
+            q̃ = 1 ./ [1.0u"m", 1.0u"s"]
+
+            q = ustrip.(q̃).*unit.(1 ./q̃)
+            
+            # outer product to make a multipliable matrix
+            A = p*q̃'
+            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B2 = EndomorphicMatrix(ustrip.(A),unit.(p))
+
+            @test array(B)==array(B2)
+            @test multipliable(B2)
+            @test endomorphic(B2)
+            @test endomorphic(B)
+            @test endomorphic(A)
+        end
+
     end
 end
