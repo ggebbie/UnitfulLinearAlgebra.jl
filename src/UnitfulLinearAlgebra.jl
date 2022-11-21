@@ -11,10 +11,12 @@ export convert_range, convert_domain
 #export convert_range!, convert_domain!
 export exact, multipliable, dimensionless, endomorphic
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
+export range, domain
 
 import LinearAlgebra.inv
 import Base:(~), (*)
 import Base.similar
+import Base.range
 
 abstract type MultipliableMatrices end
 
@@ -111,7 +113,7 @@ multipliable(A::T) where T <: MultipliableMatrices = true
 """
 endomorphic(A::Matrix) = ~isnothing(EndomorphicMatrix(A))
 endomorphic(A::EndomorphicMatrix) = true
-endomorphic(A::MultipliableMatrix) = isequal(A.domain,A.range)
+endomorphic(A::T) where T <: MultipliableMatrices = isequal(domain(A),range(A))
 endomorphic(A::T) where T <: Number = dimensionless(A) # scalars must be dimensionless to be endomorphic
 
 """
@@ -127,22 +129,7 @@ endomorphic(A::T) where T <: Number = dimensionless(A) # scalars must be dimensi
 #Output
 - `Quantity`: numerical value and units
 """
-element(A::MultipliableMatrix,i::Integer,j::Integer) = Quantity(A.numbers[i,j],A.range[i]./A.domain[j])
-
-"""
-    function element(A::EndomorphicMatrix,i::Integer,j::Integer)
-
-    Recover element (i,j) of a EndomorphicMatrix.
-
-#Input
-- `A::EndomorphicMatrix`
-- `i::Integer`: row index
-- `j::Integer`: column index
-
-#Output
-- `Quantity`: numerical value and units
-"""
-element(A::EndomorphicMatrix,i::Integer,j::Integer) = Quantity(A.numbers[i,j],A.range[i]./A.range[j])
+element(A::T,i::Integer,j::Integer) where T <: MultipliableMatrices = Quantity(A.numbers[i,j],range(A)[i]./domain(A)[j]) 
 
 """
     function array(A::MultipliableMatrix)
@@ -364,6 +351,11 @@ rangelength(A::T) where T <: MultipliableMatrices = length(A.range)
 """
 domainlength(A::MultipliableMatrix) = length(A.domain)
 domainlength(A::EndomorphicMatrix) = length(A.range) # domain not saved
+
+domain(A::T) where T <: MultipliableMatrices = A.domain
+domain(A::EndomorphicMatrix) = A.range # domain not saved
+
+range(A::T) where T <: MultipliableMatrices = A.range
 
 """
      EndomorphicMatrix(array)
