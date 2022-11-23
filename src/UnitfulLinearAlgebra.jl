@@ -13,8 +13,9 @@ export exact, multipliable, dimensionless, endomorphic
 export svd_unitful, inv, inv_unitful, diagonal_matrix 
 export range, domain
 export square, squarable, singular
+export lu, det
 
-import LinearAlgebra:inv, det
+import LinearAlgebra:inv, det, lu
 import Base:(~), (*)
 import Base.similar
 import Base.range
@@ -57,6 +58,7 @@ end
 struct EndomorphicMatrix{T} <: MultipliableMatrices where {T <: Number}
     numbers::Matrix{T}
     range::Vector
+    exact::Bool
 end
 
 """
@@ -74,6 +76,7 @@ struct SquarableMatrix{T} <: MultipliableMatrices where {T <: Number}
     numbers::Matrix{T}
     range::Vector
     domainshift
+    exact::Bool
 end
 
 """
@@ -163,7 +166,8 @@ function array(A::T) where T<: MultipliableMatrices
     #M = length(A.range)
     #N = length(A.domain)
     #B = Matrix{Quantity}(undef,M,N)
-    B = Matrix(undef,M,N)
+    T2 = eltype(A.numbers)
+    B = Matrix{Quantity{T2}}(undef,M,N)
     for m = 1:M
         for n = 1:N
             B[m,n] = element(A,m,n)
@@ -207,18 +211,30 @@ end
 
     Note: special matrix forms revert to a product that is a MultipliableMatrix.
 """
-function *(A::T,B::T) where T<:MultipliableMatrices
-
-    if range(B) == domain(A) && exact(A) && exact(B)
-        return MultipliableMatrix(A.numbers*B.numbers,range(A),domain(B),exact=true)
-        
-    elseif range(B) ∥ domain(A)
-
+function *(A::T1,B::T2) where T1<:MultipliableMatrices where T2<:MultipliableMatrices
+    if range(B) == domain(A) && exact(A) && exact(B) 
+    return MultipliableMatrix(A.numbers*B.numbers,range(A),domain(B),exact=true) 
+        elseif range(B) ∥ domain(A)
         return MultipliableMatrix(A.numbers*B.numbers,range(A),domain(B)./range(A))
-
+    else
+        error("matrix domain/range not conformable")
     end
 end
 
+#function lu(A::T) where T <: MultipliableMatrices
+"""
+    function lu(A::MultipliableMatrix{Float64})
+"""
+function lu(A::T) where T <: MultipliableMatrices
+
+    F̂ = lu(A.numbers)
+
+    F = ( 
+    L = EndomorphicMatrix(F̂.L,range(A),exact(A)),
+        U = MultipliableMatrix(F̂.U,range(A),domain(A),exact(A)),
+    p = F̂.p)
+    return F
+end
 
 """
     function similar(a,b)::Bool
@@ -391,12 +407,12 @@ end
 # end
 
 """
-    function exact(A::MultipliableMatrix) = A.exact
+    function exact(A)
 
 -    `exact=true`: geometric interpretation of domain and range
 -    `exact=false`: algebraic interpretation
 """
-exact(A::MultipliableMatrix) = A.exact
+exact(A::T) where T <: MultipliableMatrices = A.exact
 
 """
     function rangelength(A::MultipliableMatrix)

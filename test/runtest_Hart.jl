@@ -235,7 +235,7 @@ using Test
             
             @test(A*A2==array(B*B2))
         end
-    
+
         @testset "inverse 3x3" begin
             # can't easily get a list of units to draw from
             u1 = u"m"
@@ -248,7 +248,14 @@ using Test
             y = randn(K)u1
             x = [randn()u1; randn()u2; randn()u3] 
 
+            Z = lu(ustrip.(E))
+            
             F = MultipliableMatrix(E)
+
+            Z2 = lu(F)
+
+            # failing with a small error (1e-17)
+            @test isapprox(E[Z2.p,:],array(Z2.L*Z2.U))
             @test ~singular(F)
             det(F)
 
@@ -258,7 +265,7 @@ using Test
             #x̃ = E⁻¹ * (E * x)
 
             #[@test isapprox(x̃[i],x[i]) for i in 1:length(x)]
-    end    
+        end    
 
     end
 end
