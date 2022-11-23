@@ -175,11 +175,50 @@ end
 """
     function *(A::MultipliableMatrix,b)
 
-    Matrix-vector multiplication with units/dimensions
-
-    Unitful also handles this case, but here there is added efficiency in the storage of units/dimensions by accounting for the necessary structure of the matrix.
+    Matrix-vector multiplication with units/dimensions.
+    Unitful also handles this case, but here there is added
+    efficiency in the storage of units/dimensions by accounting
+    for the necessary structure of the matrix.
 """
-*(A::MultipliableMatrix,b) = dimension(A.domain) == dimension(b) ? c = (A.numbers*ustrip.(b)).*A.range : error("Dimensions of MultipliableMatrix and pair not compatible")
+*(A::T,b::Vector) where T<: MultipliableMatrices = dimension(A.domain) == dimension(b) ?  (A.numbers*ustrip.(b)).*A.range : error("Dimensions of MultipliableMatrix and pair not compatible")
+
+"""
+    function *(A::MultipliableMatrix,b)
+
+    Matrix-scalar multiplication with units/dimensions.
+    Must account for change in the range when the
+     scalar has units.
+    Here, take product of dimension of the scalar and the range.
+    Alternatively, divide the domain by the dimension of the scalar. 
+    Matrix-scalar multiplication is commutative.
+    Result is `exact` if input matrix is exact and scalar is dimensionless. 
+    Note: special matrix forms revert to a product that is a MultipliableMatrix.
+"""
+*(A::T1,b::T2) where T1 <: MultipliableMatrices where T2 <: Number = (exact(A) && dimensionless(b)) ?  MultipliableMatrix(A.numbers*ustrip(b),range(A).*unit(b),domain(A),exact = true) : MultipliableMatrix(A.numbers*ustrip(b),range(A).*unit(b),domain(A))
+*(b::T2,A::T1) where T1 <: MultipliableMatrices where T2 <: Number = A*b
+
+"""
+    function *(A,B)
+
+    Matrix-matrix multiplication with units/dimensions.
+    A*B represents two successive transformations.
+    Range of B should equal domain of A in geometric interpretation.
+    Range of B should be parallel to domain of A in algebraic interpretation.
+
+    Note: special matrix forms revert to a product that is a MultipliableMatrix.
+"""
+function *(A::T,B::T) where T<:MultipliableMatrices
+
+    if range(B) == domain(A) && exact(A) && exact(B)
+        return MultipliableMatrix(A.numbers*B.numbers,range(A),domain(B),exact=true)
+        
+    elseif range(B) ∥ domain(A)
+
+        return MultipliableMatrix(A.numbers*B.numbers,range(A),domain(B)./range(A))
+
+    end
+end
+
 
 """
     function similar(a,b)::Bool

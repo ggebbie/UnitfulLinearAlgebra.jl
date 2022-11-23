@@ -150,7 +150,7 @@ using Test
             qnew = (q)u"s"
             E = convert_range(B,unit.(pnew))
             @test B*q ∥ E*qnew
-            
+
         end
 
         @testset "array" begin
@@ -211,6 +211,31 @@ using Test
             
         end
 
+        @testset "matrix * operations" begin
+            p = [1.0u"m", 3.0u"s"]
+            q̃ = [-1.0u"K", 2.0]
+            q = ustrip.(q̃).*unit.(1 ./q̃)
+            
+            # outer product to make a multipliable matrix
+            A = p*q̃'
+            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+
+            scalar = 2.0u"K" 
+            C = B * scalar
+            @test (array(C)./array(B))[1,1] == scalar
+            C2 = scalar *B
+            @test (array(C2)./array(B))[1,1] == scalar
+
+            scalar2 = 5.3
+            @test(exact(scalar2*B))
+
+            # outer product to make a multipliable matrix
+            B2 = MultipliableMatrix(ustrip.(A),unit.(q),unit.(p),exact=true)
+            A2 = array(B2)
+            
+            @test(A*A2==array(B*B2))
+        end
+    
         @testset "inverse 3x3" begin
             # can't easily get a list of units to draw from
             u1 = u"m"
