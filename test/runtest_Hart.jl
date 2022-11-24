@@ -9,21 +9,26 @@ using Test
 @testset "UnitfulLinearAlgebra.jl" begin
     # Write your tests here.
 
+    m = u"m"
+    s = u"s"
+    K = u"K"
+    m² = u"m^2"
+
     @testset "scalars" begin
-        c = 1u"m"
-        d = 2u"m"
+        c = 1m
+        d = 2m
         @test c~d
         @test similar(c,d)
         @test rand() ~ rand()
         @test parallel(rand(),rand())
         @test rand() ∥ rand()
         @test uniform(rand())
-        @test uniform((rand())u"K")
+        @test uniform((rand())K)
         @test isequal(invdimension(1.0),NoDims)
-        #@test isequal(invdimension(1.0u"K"),Symbol(𝚯^-1))
-        invdimension(1.0u"K")
+        #@test isequal(invdimension(1.0K),Symbol(𝚯^-1))
+        invdimension(1.0K)
 
-        f = 1u"m"
+        f = 1m
         g = 1 ./ f
         @test dottable(f,g)
         f ⋅ g
@@ -37,8 +42,8 @@ using Test
     @testset "vectors" begin
 
         # already implemented in Unitful?
-        a = [1u"m", 1u"s", 10u"K"]
-        b = [10u"m", -1u"s", 4u"K"]
+        a = [1m, 1s, 10K]
+        b = [10m, -1s, 4K]
         a + b
         @test similar(a,b)
         @test a~b
@@ -47,8 +52,8 @@ using Test
         #a ⋅ b
         @test ~uniform(b)
         
-        c = [1u"m", 1u"s", 10u"K"]
-        d = [10u"m^2", -1u"s", 4u"K"]
+        c = [1m, 1s, 10K]
+        d = [10m², -1s, 4K]
         @test ~similar(c,d)
         @test ~(c~d)
         @test ~(c∥d)
@@ -67,13 +72,13 @@ using Test
 
         for i = 1:3
             if i == 1
-                p = [1.0u"m", 9.0u"s"]
-                q̃ = [-1.0u"K", 2.0]
+                p = [1.0m, 9.0s]
+                q̃ = [-1.0K, 2.0]
             elseif i == 2
-                p = [1.0u"m", 3.0u"s", 5.0u"m/s"]
-                q̃ = [-1.0u"K"]
+                p = [1.0m, 3.0s, 5.0u"m/s"]
+                q̃ = [-1.0K]
             elseif i == 3
-                p = [1.0u"m", 3.0u"s"]
+                p = [1.0m, 3.0s]
                 q̃ = [-1.0, 2.0]
             end
             q = ustrip.(q̃).*unit.(1 ./q̃)
@@ -82,7 +87,7 @@ using Test
             A = p*q̃'
             B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
-            @test A==array(B)
+            @test A==Matrix(B)
 
             # test multiplication
             @test isequal(A*q,B*q)
@@ -97,15 +102,15 @@ using Test
 
             # scalar test
             @test dimensionless(1.0)
-            @test ~dimensionless(1.0u"K")
+            @test ~dimensionless(1.0K)
             
             # Not all dimensionless matrices have
             # dimensionless domain and range
             for i = 1:2
                 if i == 1
-                    p = [1.0u"m^2", 3.0u"m^2"]
+                    p = [1.0m²	, 3.0m²]
                 elseif i ==2
-                    p = [1.0u"m^2", 3.0u"m^3"]
+                    p = [1.0m², 3.0u"m^3"]
                 end
                 
                 q̃ = [-1.0u"m^-2", 2.0u"m^-2"]
@@ -125,20 +130,20 @@ using Test
         end
         
         @testset "exact" begin
-            p = [1.0u"m", 3.0u"s"]
-            q̃ = [-1.0u"K", 2.0]
+            p = [1.0m, 3.0s]
+            q̃ = [-1.0K, 2.0]
 
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
             # outer product to make a multipliable matrix
             A = p*q̃'
             B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
-            @test A==array(B)
+            @test A==Matrix(B)
             @test isequal(A*q,B*q)
 
             
             # new domain
-            qnew = (q)u"K"
+            qnew = (q)K
             D = convert_domain(B,unit.(qnew))
             @test B*q ∥ D*qnew
 
@@ -146,16 +151,16 @@ using Test
             #convert_domain!(B,unit.(qnew))
             #@test B*qnew ∥ D*qnew
             
-            pnew = (p)u"s"
-            qnew = (q)u"s"
+            pnew = (p)s
+            qnew = (q)s
             E = convert_range(B,unit.(pnew))
             @test B*q ∥ E*qnew
 
         end
 
         @testset "array" begin
-            p = [1.0u"m", 3.0u"s"]
-            q̃ = [-1.0u"K", 2.0]
+            p = [1.0m, 3.0s]
+            q̃ = [-1.0K, 2.0]
 
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
@@ -165,7 +170,7 @@ using Test
 
             # turn array into Multipliable matrix
             C = MultipliableMatrix(A)
-            @test A==array(C)
+            @test A==Matrix(C)
             @test multipliable(A)
             @test ~left_uniform(A)
             @test isnothing(EndomorphicMatrix(A))
@@ -175,10 +180,10 @@ using Test
         @testset "endomorphic" begin
 
             @test endomorphic(1.0)
-            @test ~endomorphic(1.0u"K")
+            @test ~endomorphic(1.0K)
             
-            p = [1.0u"m", 1.0u"s"]
-            q̃ = 1 ./ [1.0u"m", 1.0u"s"]
+            p = [1.0m, 1.0s]
+            q̃ = 1 ./ [1.0m, 1.0s]
 
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
@@ -187,7 +192,7 @@ using Test
             B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
             B2 = EndomorphicMatrix(ustrip.(A),unit.(p))
 
-            @test array(B)==array(B2)
+            @test Matrix(B)==Matrix(B2)
             @test multipliable(B2)
             @test endomorphic(B2)
             @test endomorphic(B)
@@ -195,8 +200,8 @@ using Test
         end
 
         @testset "squarable" begin
-            p = [1.0u"m", 1.0u"s"]
-            q̃ = 1 ./ [1.0u"m", 1.0u"s"]
+            p = [1.0m, 1.0s]
+            q̃ = 1 ./ [1.0m, 1.0s]
 
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
@@ -212,33 +217,33 @@ using Test
         end
 
         @testset "matrix * operations" begin
-            p = [1.0u"m", 3.0u"s"]
-            q̃ = [-1.0u"K", 2.0]
+            p = [1.0m, 3.0s]
+            q̃ = [-1.0K, 2.0]
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
             # outer product to make a multipliable matrix
             A = p*q̃'
             B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
-            scalar = 2.0u"K" 
+            scalar = 2.0K 
             C = B * scalar
-            @test (array(C)./array(B))[1,1] == scalar
+            @test (Matrix(C)./Matrix(B))[1,1] == scalar
             C2 = scalar *B
-            @test (array(C2)./array(B))[1,1] == scalar
+            @test (Matrix(C2)./Matrix(B))[1,1] == scalar
 
             scalar2 = 5.3
             @test(exact(scalar2*B))
 
             # outer product to make a multipliable matrix
             B2 = MultipliableMatrix(ustrip.(A),unit.(q),unit.(p),exact=true)
-            A2 = array(B2)
+            A2 = Matrix(B2)
             
-            @test(A*A2==array(B*B2))
+            @test(A*A2==Matrix(B*B2))
         end
 
         @testset "inverse 3x3" begin
             # can't easily get a list of units to draw from
-            u1 = u"m"
+            u1 = m
             u2 = u"m/s"
             u3 = u"m/s^2"
         
@@ -255,16 +260,15 @@ using Test
             Z2 = lu(F)
 
             # failing with a small error (1e-17)
-            @test isapprox(E[Z2.p,:],array(Z2.L*Z2.U))
+            @test maximum(abs.(ustrip.(E[Z2.p,:]-Matrix(Z2.L*Z2.U)))) < 1e-5
             @test ~singular(F)
             det(F)
 
             E⁻¹ = inv(F)
-
-            # need to define matrix multiply here
-            #x̃ = E⁻¹ * (E * x)
-
-            #[@test isapprox(x̃[i],x[i]) for i in 1:length(x)]
+            #x̃ = E⁻¹ * (E * x) # doesn't work because Vector{Any} in parentheses, dimension() not valid, dimension deprecated?
+            x̃ = E⁻¹ * (F * x)
+            #@test isapprox(x̃[i],x[i]) for i in 1:length(x)]
+             #   @test isapprox(x̃,x)
         end    
 
     end

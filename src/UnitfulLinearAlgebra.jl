@@ -110,7 +110,7 @@ function MultipliableMatrix(A::Matrix)
     end
     B = MultipliableMatrix(numbers,range,domain,exact=false)
     # if the array is not multipliable, return nothing
-    if array(B) == A
+    if Matrix(B) == A
         return B
     else
         return nothing
@@ -153,13 +153,13 @@ endomorphic(A::T) where T <: Number = dimensionless(A) # scalars must be dimensi
 element(A::T,i::Integer,j::Integer) where T <: MultipliableMatrices = Quantity(A.numbers[i,j],range(A)[i]./domain(A)[j]) 
 
 """
-    function array(A::MultipliableMatrix)
+    function Matrix(A::MultipliableMatrix)
 
     Expand A into array form
     Useful for tests, display
     pp. 193, Hart
 """
-function array(A::T) where T<: MultipliableMatrices
+function Matrix(A::T) where T<: MultipliableMatrices
 
     M = rangelength(A)
     N = domainlength(A)
@@ -184,7 +184,18 @@ end
     efficiency in the storage of units/dimensions by accounting
     for the necessary structure of the matrix.
 """
-*(A::T,b::Vector) where T<: MultipliableMatrices = dimension(A.domain) == dimension(b) ?  (A.numbers*ustrip.(b)).*A.range : error("Dimensions of MultipliableMatrix and pair not compatible")
+function *(A::T,b::Vector) where T<: MultipliableMatrices
+
+    if dimension(domain(A)) == dimension(b)
+    #if domain(A) ~ b
+        return (A.numbers*ustrip.(b)).*A.range
+    elseif ~exact(A) && (domain(A) ∥ b)
+        Anew = convert_domain(A,b) # inefficient?
+        return (Anew.numbers*ustrip.(b)).*Anew.range
+    else
+        error("Dimensions of MultipliableMatrix and vector not compatible")
+    end
+end
 
 """
     function *(A::MultipliableMatrix,b)
@@ -212,9 +223,12 @@ end
     Note: special matrix forms revert to a product that is a MultipliableMatrix.
 """
 function *(A::T1,B::T2) where T1<:MultipliableMatrices where T2<:MultipliableMatrices
-    if range(B) == domain(A) && exact(A) && exact(B) 
-    return MultipliableMatrix(A.numbers*B.numbers,range(A),domain(B),exact=true) 
-        elseif range(B) ∥ domain(A)
+    #if range(B) ~ domain(A) # should this be similar()?
+
+    if range(B) == domain(A) # should this be similar()?
+        exactproduct = exact(A) && exact(B)
+        return MultipliableMatrix(A.numbers*B.numbers,range(A),domain(B),exact=exactproduct) 
+    elseif range(B) ∥ domain(A)
         return MultipliableMatrix(A.numbers*B.numbers,range(A),domain(B)./range(A))
     else
         error("matrix domain/range not conformable")
@@ -240,16 +254,12 @@ end
     function similar(a,b)::Bool
 
     Dimensional similarity of vectors, a binary relation
-
     Read "a has the same dimensional form as b"
-
     `a` and `b` may still have different units.
-
     A stronger condition than being parallel.
-
     pp. 184, Hart
 """
- similar(a,b) = isequal(dimension(a),dimension(b))
+ similar(a,b)::Bool = isequal(dimension(a),dimension(b))
  ~(a,b) = similar(a,b)
 
 """
@@ -258,13 +268,10 @@ end
     Vector a is dimensionally parallel to vector b if
     they have the same length and a consistent dimensional
     change relates corresponding components.
-
     Guaranteed if two vectors are dimensionally similar.
-
     True for scalars in all cases. 
 
     pp. 188, Hart
-
     Note: Hart uses ≈, but this conflicts with an existing Julia function.
 """
 function parallel(a,b)::Bool
@@ -434,9 +441,18 @@ domain(A::EndomorphicMatrix) = A.range # domain not saved
 range(A::T) where T <: MultipliableMatrices = A.range
 
 """
-     EndomorphicMatrix(array)
+    function EndomorphicMatrix
 
-    Transform array to EndomorphicMatrix
+    Constructor where `exact` is a keyword argument. One may construct an EndomorphicMatrix without specifying exact, in which case it defaults to `false`. 
+
+"""
+EndomorphicMatrix(numbers,range;exact=false) =
+    EndomorphicMatrix(numbers,range,exact)
+
+"""
+     EndomorphicMatrix(A)
+
+    Transform array to EndomorphicMatrix type
 """
 function EndomorphicMatrix(A::Matrix)
 
@@ -455,7 +471,7 @@ function EndomorphicMatrix(A::Matrix)
     B = EndomorphicMatrix(numbers,range)
     
     # if the array is not multipliable, return nothing
-    if array(B) == A
+    if Matrix(B) == A
         return B
     else
         return nothing
