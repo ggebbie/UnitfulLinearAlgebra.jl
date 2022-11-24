@@ -370,11 +370,19 @@ invdimension(a) = dimension(1 ./ a)
 """
 dottable(a,b) = parallel(a, 1 ./ b)
 
+"""
+    function convert_domain(A, newdomain)
+
+    When using the geometric interpretation of matrices,
+    it is useful to convert the dimensional domain of the
+    matrix to match the expected vectors during multiplication.
+    Here we set the matrix to `exact=true` after this step.
+"""
 function convert_domain(A::MultipliableMatrix, newdomain::Vector)::MultipliableMatrix
-    if A.domain ∥ newdomain
-        shift = newdomain./A.domain
-        newrange = A.range.*shift
-        B = MultipliableMatrix(A.numbers,newrange,newdomain,A.exact)
+    if domain(A) ∥ newdomain
+        shift = newdomain./domain(A)
+        newrange = range(A).*shift
+        B = MultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New domain not parallel to domain of Multipliable Matrix")
     end
@@ -392,11 +400,19 @@ end
 #     end
 # end
 
+"""
+    function convert_range(A, newrange)
+
+    When using the geometric interpretation of matrices,
+    it is useful to convert the dimensional range of the
+    matrix to match the desired output of multiplication.
+    Here we set the matrix to `exact=true` after this step.
+"""
 function convert_range(A::MultipliableMatrix, newrange::Vector)::MultipliableMatrix
     if A.range ∥ newrange
-        shift = newrange./A.range
-        newdomain = A.domain.*shift
-        B = MultipliableMatrix(A.numbers,newrange,newdomain,A.exact)
+        shift = newrange./range(A)
+        newdomain = domain(A).*shift
+        B = MultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New range not parallel to range of Multipliable Matrix")
     end

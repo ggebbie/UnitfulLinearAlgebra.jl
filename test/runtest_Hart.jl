@@ -244,8 +244,8 @@ using Test
         @testset "inverse 3x3" begin
             # can't easily get a list of units to draw from
             u1 = m
-            u2 = u"m/s"
-            u3 = u"m/s^2"
+            u2 = m/s
+            u3 = m/s/s
         
             # i.e., trend analysis
             K = 3
@@ -256,7 +256,8 @@ using Test
             Z = lu(ustrip.(E))
             
             F = MultipliableMatrix(E)
-
+            G = convert_domain(F,unit.(x))
+                               
             Z2 = lu(F)
 
             # failing with a small error (1e-17)
@@ -264,11 +265,10 @@ using Test
             @test ~singular(F)
             det(F)
 
-            E⁻¹ = inv(F)
+            E⁻¹ = inv(G)
             #x̃ = E⁻¹ * (E * x) # doesn't work because Vector{Any} in parentheses, dimension() not valid, dimension deprecated?
-            x̃ = E⁻¹ * (F * x)
-            #@test isapprox(x̃[i],x[i]) for i in 1:length(x)]
-             #   @test isapprox(x̃,x)
+            x̃ = E⁻¹ * (G * x)
+            @test abs.(maximum(ustrip.(x̃-x))) < 1e-10
         end    
 
     end
