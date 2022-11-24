@@ -272,16 +272,18 @@ using Test
         end    
 
         @testset "svd" begin
-	    E = [1/2 1/2; 1/4 3/4; 3/4 1/4]u"dbar*s"
-	    U,λ,V = svd(E)
-	    Λ = Diagonal(λ)
-            K = length(λ) # rank
-	    y = 5randn(3)u"s"
-	    σₙ = randn(3)u"s"
-	    Cₙₙ = diagonal_matrix(σₙ)
-	    W⁻¹ = diagonal_matrix([1,1,1]u"1/s^2")
-	    x̃ = inv(E'*W⁻¹*E)*(E'*W⁻¹*y)
-            [@test isequal(x̃[i]/ustrip(x̃[i]),1.0u"dbar^-1") for i in 1:length(x̃)]
+            
+	    # E = [1/2 1/2; 1/4 3/4; 3/4 1/4]m
+            # F = MultipliableMatrix(E)
+	    # U,λ,V = svd(E)
+	    # Λ = Diagonal(λ)
+            # K = length(λ) # rank
+	    # y = 5randn(3)u"s"
+	    # σₙ = randn(3)u"s"
+	    # Cₙₙ = diagonal_matrix(σₙ)
+	    # W⁻¹ = diagonal_matrix([1,1,1]u"1/s^2")
+	    # x̃ = inv(E'*W⁻¹*E)*(E'*W⁻¹*y)
+            # [@test isequal(x̃[i]/ustrip(x̃[i]),1.0u"dbar^-1") for i in 1:length(x̃)]
 
         end
     end

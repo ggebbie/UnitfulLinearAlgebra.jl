@@ -100,8 +100,11 @@ function MultipliableMatrix(A::Matrix)
     U = eltype(unit.(A))
     domain = Vector{U}(undef,N)
     range = Vector{U}(undef,M)
+    #domain = Vector(undef,N)
+    #range = Vector(undef,M)
 
     for i = 1:M
+        
         range[i] = unit(A[i,1])
     end
     
