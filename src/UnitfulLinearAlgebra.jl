@@ -3,6 +3,7 @@ module UnitfulLinearAlgebra
 using Unitful, LinearAlgebra
 
 export MultipliableMatrix, EndomorphicMatrix
+export SquarableMatrix, UniformMatrix
 export similar, ∥, parallel
 export uniform, left_uniform, right_uniform
 export invdimension, dottable
@@ -45,6 +46,7 @@ struct MultipliableMatrix{T} <: MultipliableMatrices where T <: Number
     exact::Bool
 end
 
+
 """
     struct EndomorphicMatrix
 
@@ -53,7 +55,8 @@ end
 
 # Attributes
 - `numbers`: numerical (dimensionless) matrix
-- `range`: dimensional range in terms of units, this is also the domain
+- `range`: dimensional range in terms of units, and also equal the dimensional domain
+- `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
 struct EndomorphicMatrix{T} <: MultipliableMatrices where {T <: Number}
     numbers::Matrix{T}
@@ -71,11 +74,30 @@ end
 - `numbers`: numerical (dimensionless) matrix
 - `range`: dimensional range in terms of units, this is also the domain
 - `domainshift`: shift to range that gives the domain
+- `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
 struct SquarableMatrix{T} <: MultipliableMatrices where {T <: Number}
     numbers::Matrix{T}
     range::Vector
     domainshift
+    exact::Bool
+end
+
+"""
+    struct UniformMatrix
+
+    Uniform matrix
+
+# Attributes
+- `numbers`: numerical (dimensionless) matrix
+- `range`:  uniform dimensional range expressed as a single unit
+- `domain`: uniform dimensional domain expressed as a single unit
+- `exact`: geometric (`true`) or algebraic (`false`) interpretation
+"""
+struct UniformMatrix{T,R,D} <: MultipliableMatrices where {T <: Number} where {R,D <: Unitful.Unitlike}
+    numbers::Matrix{T}
+    range::R
+    domain::D
     exact::Bool
 end
 
@@ -88,30 +110,43 @@ MultipliableMatrix(numbers,range,domain;exact=false) =
     MultipliableMatrix(numbers,range,domain,exact)
 
 """
-     MultipliableMatrix(array)
+     MultipliableMatrix(A::Matrix)
 
-    Transform array to MultipliableMatrix
+    Transform array to MultipliableMatrix.
+    Finds best representation amongst
+    UniformMatrix, EndomorphicMatrix, or MultipliableMatrix.
 """
 function MultipliableMatrix(A::Matrix)
 
     numbers = ustrip.(A)
     M,N = size(numbers)
     #U = typeof(unit(A[1,1]))
-    U = eltype(unit.(A))
-    domain = Vector{U}(undef,N)
-    range = Vector{U}(undef,M)
-    #domain = Vector(undef,N)
-    #range = Vector(undef,M)
+    #U = eltype(unit.(A))
+    # domain = Vector{U}(undef,N)
+    # range = Vector{U}(undef,M)
+    domain = Vector{Unitful.FreeUnits}(undef,N)
+    range = Vector{Unitful.FreeUnits}(undef,M)
 
     for i = 1:M
-        
         range[i] = unit(A[i,1])
     end
     
     for j = 1:N
         domain[j] = unit(A[1,1])/unit(A[1,j])
     end
-    B = MultipliableMatrix(numbers,range,domain,exact=false)
+
+    #println(range)
+    #println(domain)
+    
+    # what kind of matrix is the best representation?
+    if uniform(range) && uniform(domain)
+        B = UniformMatrix(numbers,range[1],domain[1])
+    elseif range == domain
+        B = EndomorphicMatrix(numbers,range)
+    else
+        B = MultipliableMatrix(numbers,range,domain)
+    end
+    
     # if the array is not multipliable, return nothing
     if Matrix(B) == A
         return B
@@ -130,15 +165,81 @@ multipliable(A::Matrix) = ~isnothing(MultipliableMatrix(A))
 multipliable(A::T) where T <: MultipliableMatrices = true
 
 """
+    function EndomorphicMatrix
+
+    Constructor with keyword argument `exact=false`.
+    If `exact` not specified, defaults to `false`.
+"""
+EndomorphicMatrix(numbers,range;exact=false) =
+    EndomorphicMatrix(numbers,range,exact)
+
+"""
+     EndomorphicMatrix(A)
+
+    Transform array to EndomorphicMatrix type
+"""
+function EndomorphicMatrix(A::Matrix)
+
+    numbers = ustrip.(A)
+    M,N = size(numbers)
+
+    # must be square
+    if M ≠ N
+        return nothing
+    end
+    
+    range = Vector{Unitful.FreeUnits}(undef,M)
+    for i = 1:M
+        range[i] = unit(A[i,1])
+    end
+    B = EndomorphicMatrix(numbers,range)
+    
+    # if the array is not multipliable, return nothing
+    if Matrix(B) == A
+        return B
+    else
+        return nothing
+    end
+end
+
+"""
+    function EndomorphicMatrix(A::T) where T <: Number
+
+    Special case of a scalar. Must be dimensionless.
+"""
+function EndomorphicMatrix(A::T) where T <: Number
+    if dimensionless(A)
+        numbers = Matrix{T}(undef,1,1)
+        numbers[1,1] = A
+
+        range = Vector{Unitful.FreeUnits}(undef,1)
+        range[1] = unit(A)
+        return EndomorphicMatrix(numbers,range)
+    else
+        return nothing
+    end
+end
+
+
+"""
     function endomorphic(A)::Bool
 
-    Is an array endomorphic?
-    It requires a particular structure of the units/dimensions in the array. 
+    Endomorphic matrices have a particular structure
+     of the units/dimensions in the array. 
 """
 endomorphic(A::Matrix) = ~isnothing(EndomorphicMatrix(A))
 endomorphic(A::EndomorphicMatrix) = true
 endomorphic(A::T) where T <: MultipliableMatrices = isequal(domain(A),range(A))
 endomorphic(A::T) where T <: Number = dimensionless(A) # scalars must be dimensionless to be endomorphic
+
+"""
+    function UniformMatrix
+
+    Constructor with keyword argument `exact=false`.
+    If `exact` not specified, defaults to `false`.
+"""
+UniformMatrix(numbers,range,domain;exact=false) =
+    UniformMatrix(numbers,range,domain,exact)
 
 """
     function element(A::MultipliableMatrix,i::Integer,j::Integer)
@@ -166,9 +267,6 @@ function Matrix(A::T) where T<: MultipliableMatrices
 
     M = rangelength(A)
     N = domainlength(A)
-    #M = length(A.range)
-    #N = length(A.domain)
-    #B = Matrix{Quantity}(undef,M,N)
     T2 = eltype(A.numbers)
     B = Matrix{Quantity{T2}}(undef,M,N)
     for m = 1:M
@@ -456,64 +554,12 @@ domainlength(A::T) where T <: MultipliableMatrices = length(domain(A))
 
 domain(A::T) where T <: MultipliableMatrices = A.domain
 domain(A::EndomorphicMatrix) = A.range # domain not saved
+domain(A::UniformMatrix) = fill(A.domain,size(A.numbers)[2])
 
 range(A::T) where T <: MultipliableMatrices = A.range
+range(A::UniformMatrix) = fill(A.range,size(A.numbers)[1])
 
-"""
-    function EndomorphicMatrix
 
-    Constructor where `exact` is a keyword argument. One may construct an EndomorphicMatrix without specifying exact, in which case it defaults to `false`. 
-
-"""
-EndomorphicMatrix(numbers,range;exact=false) =
-    EndomorphicMatrix(numbers,range,exact)
-
-"""
-     EndomorphicMatrix(A)
-
-    Transform array to EndomorphicMatrix type
-"""
-function EndomorphicMatrix(A::Matrix)
-
-    numbers = ustrip.(A)
-    M,N = size(numbers)
-
-    # must be square
-    if M ≠ N
-        return nothing
-    end
-    
-    range = Vector{Unitful.FreeUnits}(undef,M)
-    for i = 1:M
-        range[i] = unit(A[i,1])
-    end
-    B = EndomorphicMatrix(numbers,range)
-    
-    # if the array is not multipliable, return nothing
-    if Matrix(B) == A
-        return B
-    else
-        return nothing
-    end
-end
-
-"""
-    function EndomorphicMatrix(A::T) where T <: Number
-
-    Special case of a scalar. Must be dimensionless.
-"""
-function EndomorphicMatrix(A::T) where T <: Number
-    if dimensionless(A)
-        numbers = Matrix{T}(undef,1,1)
-        numbers[1,1] = A
-
-        range = Vector{Unitful.FreeUnits}(undef,1)
-        range[1] = unit(A)
-        return EndomorphicMatrix(numbers,range)
-    else
-        return nothing
-    end
-end
 
 """
      function inv
