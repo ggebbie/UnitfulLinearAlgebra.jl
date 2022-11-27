@@ -276,9 +276,18 @@ using Test
         @testset "svd" begin
             
 	    E = [1/2 1/2; 1/4 3/4; 3/4 1/4]m
-            F = MultipliableMatrix(E)
-            U,λ,V = svd(ustrip.(E))
- 	    U,λ,V = svd(F)
+            E2 = MultipliableMatrix(E)
+            @test size(E2)==size(E)
+
+            F = svd(ustrip.(E))
+ 	    F2 = svd(E2,full=true)
+
+            #K = length(F2.S)
+            #G = 0 .*E
+            #for k = 1:K
+            #    G .+= F2.U[:,k] * F2.Vt[k,:]
+            #end
+                
 # 	    Λ = Diagonal(λ)
 #             K = length(λ) # rank
 # 	    y = 5randn(3)u"s"

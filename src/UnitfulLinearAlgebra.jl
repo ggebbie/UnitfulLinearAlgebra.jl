@@ -283,6 +283,27 @@ function Matrix(A::T) where T<: MultipliableMatrices
     return B
 end
 
+# """
+#     function convert(AbstractMatrix,A::MultipliableMatrix)
+
+#     Expand A into array form
+#     Useful for tests, display
+#     pp. 193, Hart
+# """
+# function convert(AbstractMatrix{T},A::MultipliableMatrices)  where T<: Number
+
+#     M = rangelength(A)
+#     N = domainlength(A)
+#     T2 = eltype(A.numbers)
+#     B = Matrix{Quantity{T2}}(undef,M,N)
+#     for m = 1:M
+#         for n = 1:N
+#             B[m,n] = getindex(A,m,n)
+#         end
+#     end
+#     return B
+# end
+
 """
     function *(A::MultipliableMatrix,b)
 
@@ -559,6 +580,12 @@ rangelength(A::T) where T <: MultipliableMatrices = length(range(A))
 """
 domainlength(A::T) where T <: MultipliableMatrices = length(domain(A))
 
+size(A::MultipliableMatrices) = (rangelength(A), domainlength(A))
+
+convert(::Type{AbstractMatrix{T}}, A::MultipliableMatrices) where {T<:Number} = convert(MultipliableMatrices{T}, A)
+convert(::Type{AbstractArray{T}}, A::MultipliableMatrices) where {T<:Number} = convert(MultipliableMatrices{T}, A)
+#convert(::Type{AbstractArray{T}}, S::AbstractToeplitz) where {T<:Number} = convert(AbstractToeplitz{T}, S)
+
 domain(A::T) where T <: MultipliableMatrices = A.domain
 domain(A::EndomorphicMatrix) = A.range # domain not saved
 domain(A::UniformMatrix) = fill(A.domain,size(A.numbers)[2])
@@ -597,13 +624,22 @@ singular(A::T) where T <: MultipliableMatrices = iszero(ustrip(det(A)))
 
 Compute the singular value decomposition (SVD) of `A` and return an `SVD` object. Extended for MultipliableMatrix input.
 """
-function svd(A::T;full=false) where T <: MultipliableMatrices
-    if uniform(A)
-        Fnumbers = svd(A.numbers, full=full)
+#function svd(A::MultipliableMatrices;full=false) where T <: MultipliableMatrices
+function svd(A::MultipliableMatrices;full=false) 
+    if uniform(A) && full
+        F = svd(A.numbers, full=full)
 
-        # issue: how to fit return quantity into SVD type
+        # U,V just regular matrices: return that way?
+        #U = EndomorphicMatrix(Fnumbers.U,range(A),exact(A))
+        # S dimensionally similar to A
+        #S = Fnumbers.S * range(A)[1]./domain(A)[1]
+        # domain(A) nondimensional, should be inverted
+        # ok to not invert here for uniform matrices
+        #Vt = EndomorphicMatrix(Fnumbers.Vt,domain(A),exact(A))
+       
+        return SVD(F.U,F.S * range(A)[1]./domain(A)[1],F.Vt)
     else
-        error("SVD not implemented for non-uniform matrices")
+        error("SVD not implemented for non-uniform matrices or non-full flag")
     end
     
     
