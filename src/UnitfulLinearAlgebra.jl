@@ -21,7 +21,9 @@ import Base:(~), (*), getindex
 import Base.similar
 import Base.range
 
-abstract type MultipliableMatrices end
+abstract type MultipliableMatrices{T<:Number} <: AbstractMatrix{T} end
+
+#abstract type AbstractToeplitz{T<:Number} <: AbstractMatrix{T} end
 
 """
     struct MultipliableMatrix
@@ -39,13 +41,12 @@ abstract type MultipliableMatrices end
 - `domain`: dimensional domain in terms of units
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
-struct MultipliableMatrix{T} <: MultipliableMatrices where T <: Number
+struct MultipliableMatrix{T <:Number} <: MultipliableMatrices{T}
     numbers::Matrix{T}
     range::Vector
     domain::Vector
     exact::Bool
 end
-
 
 """
     struct EndomorphicMatrix
@@ -58,7 +59,7 @@ end
 - `range`: dimensional range in terms of units, and also equal the dimensional domain
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
-struct EndomorphicMatrix{T} <: MultipliableMatrices where {T <: Number}
+struct EndomorphicMatrix{T<:Number} <: MultipliableMatrices{T} 
     numbers::Matrix{T}
     range::Vector
     exact::Bool
@@ -76,7 +77,7 @@ end
 - `domainshift`: shift to range that gives the domain
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
-struct SquarableMatrix{T} <: MultipliableMatrices where {T <: Number}
+struct SquarableMatrix{T<:Number} <: MultipliableMatrices{T} 
     numbers::Matrix{T}
     range::Vector
     domainshift
@@ -94,12 +95,18 @@ end
 - `domain`: uniform dimensional domain expressed as a single unit
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
-struct UniformMatrix{T,R,D} <: MultipliableMatrices where {T <: Number} where {R,D <: Unitful.Unitlike}
+struct UniformMatrix{T<:Number} <: MultipliableMatrices{T}
     numbers::Matrix{T}
-    range::R
-    domain::D
+    range
+    domain
     exact::Bool
 end
+# struct UniformMatrix{T,R,D} <: MultipliableMatrices where {T <: Number} where {R,D <: Unitful.Unitlike}
+#     numbers::Matrix{T}
+#     range::R
+#     domain::D
+#     exact::Bool
+# end
 
 """
     MultipliableMatrix(numbers,range,domain;exact=false)
