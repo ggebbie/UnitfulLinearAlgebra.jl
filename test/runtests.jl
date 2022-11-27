@@ -281,13 +281,17 @@ using Test
 
             F = svd(ustrip.(E))
  	    F2 = svd(E2,full=true)
+ 	    F3 = svd(E2)
 
-            #K = length(F2.S)
-            #G = 0 .*E
-            #for k = 1:K
-            #    G .+= F2.U[:,k] * F2.Vt[k,:]
-            #end
-                
+            K = length(F3.S)
+            G = 0 .*E
+            for k = 1:K
+                # outer product
+                G += F2.S[k] * F2.U[:,k] * transpose(F2.Vt[k,:])
+            end
+            @test ustrip(abs.(maximum(G- E) )) < 1e-10
+
+            # recover using Diagonal dimensional matrix
 # 	    Λ = Diagonal(λ)
 #             K = length(λ) # rank
 # 	    y = 5randn(3)u"s"

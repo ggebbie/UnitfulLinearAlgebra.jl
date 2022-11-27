@@ -626,17 +626,10 @@ Compute the singular value decomposition (SVD) of `A` and return an `SVD` object
 """
 #function svd(A::MultipliableMatrices;full=false) where T <: MultipliableMatrices
 function svd(A::MultipliableMatrices;full=false) 
-    if uniform(A) && full
+    if uniform(A) 
         F = svd(A.numbers, full=full)
-
         # U,V just regular matrices: return that way?
-        #U = EndomorphicMatrix(Fnumbers.U,range(A),exact(A))
-        # S dimensionally similar to A
-        #S = Fnumbers.S * range(A)[1]./domain(A)[1]
-        # domain(A) nondimensional, should be inverted
-        # ok to not invert here for uniform matrices
-        #Vt = EndomorphicMatrix(Fnumbers.Vt,domain(A),exact(A))
-       
+        # They are also Uniform and Endomorphic
         return SVD(F.U,F.S * range(A)[1]./domain(A)[1],F.Vt)
     else
         error("SVD not implemented for non-uniform matrices or non-full flag")
