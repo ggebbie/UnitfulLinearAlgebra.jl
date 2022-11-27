@@ -7,17 +7,17 @@ export SquarableMatrix, UniformMatrix
 export similar, ∥, parallel
 export uniform, left_uniform, right_uniform
 export invdimension, dottable
-export element, array
+export getindex, array
 export convert_range, convert_domain
 #export convert_range!, convert_domain!
 export exact, multipliable, dimensionless, endomorphic
-export svd_unitful, inv, inv_unitful, diagonal_matrix 
+export svd, inv 
 export range, domain
 export square, squarable, singular
 export lu, det
 
-import LinearAlgebra:inv, det, lu
-import Base:(~), (*)
+import LinearAlgebra:inv, det, lu, svd
+import Base:(~), (*), getindex
 import Base.similar
 import Base.range
 
@@ -242,19 +242,18 @@ UniformMatrix(numbers,range,domain;exact=false) =
     UniformMatrix(numbers,range,domain,exact)
 
 """
-    function element(A::MultipliableMatrix,i::Integer,j::Integer)
+    function getindex(A::MultipliableMatrix,i::Integer,j::Integer)
 
     Recover element (i,j) of a MultipliableMatrix.
-
+    Part of the AbstractArray interface.
 #Input
 - `A::MultipliableMatrix`
 - `i::Integer`: row index
 - `j::Integer`: column index
-
 #Output
 - `Quantity`: numerical value and units
 """
-element(A::T,i::Integer,j::Integer) where T <: MultipliableMatrices = Quantity(A.numbers[i,j],range(A)[i]./domain(A)[j]) 
+getindex(A::T,i::Integer,j::Integer) where T <: MultipliableMatrices = Quantity(A.numbers[i,j],range(A)[i]./domain(A)[j]) 
 
 """
     function Matrix(A::MultipliableMatrix)
@@ -271,7 +270,7 @@ function Matrix(A::T) where T<: MultipliableMatrices
     B = Matrix{Quantity{T2}}(undef,M,N)
     for m = 1:M
         for n = 1:N
-            B[m,n] = element(A,m,n)
+            B[m,n] = getindex(A,m,n)
         end
     end
     return B
@@ -416,7 +415,8 @@ function uniform(A::Matrix)
     B = MultipliableMatrix(A)
     isnothing(B) ? false : uniform(B)
 end
-uniform(A::MultipliableMatrix) = left_uniform(A) && right_uniform(A)
+uniform(A::T) where T <: MultipliableMatrices = left_uniform(A) && right_uniform(A)
+uniform(A::UniformMatrix) = true
 
 """
     function left_uniform(A)
@@ -446,7 +446,7 @@ end
      Not all dimensionless matrices have
      dimensionless domain and range.
 """
-dimensionless(A::MultipliableMatrix) = uniform(A) && A.range[1] == A.domain[1]
+dimensionless(A::T) where T <: MultipliableMatrices = uniform(A) && range(A)[1] == domain(A)[1]
 dimensionless(A::Matrix) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
 
@@ -584,5 +584,22 @@ function det(A::T) where T<: MultipliableMatrices
 end
 
 singular(A::T) where T <: MultipliableMatrices = iszero(ustrip(det(A)))
+
+"""
+    svd(A; full::Bool = false, alg::Algorithm = default_svd_alg(A)) -> SVD
+
+Compute the singular value decomposition (SVD) of `A` and return an `SVD` object. Extended for MultipliableMatrix input.
+"""
+function svd(A::T;full=false) where T <: MultipliableMatrices
+    if uniform(A)
+        Fnumbers = svd(A.numbers, full=full)
+
+        # issue: how to fit return quantity into SVD type
+    else
+        error("SVD not implemented for non-uniform matrices")
+    end
+    
+    
+end
 
 end

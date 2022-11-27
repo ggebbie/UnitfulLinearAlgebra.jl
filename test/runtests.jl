@@ -277,7 +277,8 @@ using Test
             
 	    E = [1/2 1/2; 1/4 3/4; 3/4 1/4]m
             F = MultipliableMatrix(E)
-# 	    U,λ,V = svd(E)
+            U,λ,V = svd(ustrip.(E))
+ 	    U,λ,V = svd(F)
 # 	    Λ = Diagonal(λ)
 #             K = length(λ) # rank
 # 	    y = 5randn(3)u"s"
