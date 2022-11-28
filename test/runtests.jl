@@ -18,7 +18,7 @@ using Test
         c = 1m
         d = 2m
         @test c~d
-        @test similar(c,d)
+        @test similarity(c,d)
         @test rand() ~ rand()
         @test parallel(rand(),rand())
         @test rand() ∥ rand()
@@ -45,7 +45,7 @@ using Test
         a = [1m, 1s, 10K]
         b = [10m, -1s, 4K]
         a + b
-        @test similar(a,b)
+        @test similarity(a,b)
         @test a~b
         @test parallel(a,b)
         @test a ∥ b
@@ -54,7 +54,7 @@ using Test
         
         c = [1m, 1s, 10K]
         d = [10m², -1s, 4K]
-        @test ~similar(c,d)
+        @test ~similarity(c,d)
         @test ~(c~d)
         @test ~(c∥d)
         #c ⋅ d
@@ -193,6 +193,11 @@ using Test
             B2 = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
             B3 = EndomorphicMatrix(ustrip.(A),unit.(p))
 
+            Ip = EndomorphicMatrix(I(2),unit.([0m,0s]))
+
+            B3 + Ip
+            Ip = identity(unit.(p))
+            
             @test Matrix(B)==Matrix(B2)
             @test Matrix(B3)==Matrix(B2)
             @test multipliable(B)
@@ -268,6 +273,9 @@ using Test
             det(F)
 
             E⁻¹ = inv(G)
+
+            Eᵀ = transpose(G)
+            @test G[2,1] == Eᵀ[1,2]
             #x̃ = E⁻¹ * (E * x) # doesn't work because Vector{Any} in parentheses, dimension() not valid, dimension deprecated?
             x̃ = E⁻¹ * (G * x)
             @test abs.(maximum(ustrip.(x̃-x))) < 1e-10

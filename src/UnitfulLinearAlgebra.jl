@@ -4,22 +4,21 @@ using Unitful, LinearAlgebra
 
 export MultipliableMatrix, EndomorphicMatrix
 export SquarableMatrix, UniformMatrix
-export similar, ∥, parallel
+export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
 export invdimension, dottable
-export getindex, array
+export getindex, size
 export convert_range, convert_domain
 #export convert_range!, convert_domain!
 export exact, multipliable, dimensionless, endomorphic
-export svd, inv 
+export svd, inv, transpose
 export range, domain
 export square, squarable, singular
 export lu, det
 
-import LinearAlgebra:inv, det, lu, svd, getproperty
-import Base:(~), (*), getindex
-import Base.similar
-import Base.range
+import LinearAlgebra: inv, det, lu, svd, getproperty
+import Base:(~), (*), (+), getindex, size, range, transpose
+#import Base.similar
 
 abstract type MultipliableMatrices{T<:Number} <: AbstractMatrix{T} end
 
@@ -58,7 +57,7 @@ end
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
 struct EndomorphicMatrix{T<:Number} <: MultipliableMatrices{T} 
-    numbers::Matrix{T}
+    numbers::AbstractMatrix{T}
     range::Vector
     exact::Bool
 end
@@ -349,9 +348,9 @@ end
     Note: special matrix forms revert to a product that is a MultipliableMatrix.
 """
 function *(A::T1,B::T2) where T1<:MultipliableMatrices where T2<:MultipliableMatrices
-    #if range(B) ~ domain(A) # should this be similar()?
+    #if range(B) ~ domain(A) # should this be similarity()?
 
-    if range(B) == domain(A) # should this be similar()?
+    if range(B) == domain(A) # should this be similarity()?
         exactproduct = exact(A) && exact(B)
         return MultipliableMatrix(A.numbers*B.numbers,range(A),domain(B),exact=exactproduct) 
     elseif range(B) ∥ domain(A)
@@ -361,7 +360,23 @@ function *(A::T1,B::T2) where T1<:MultipliableMatrices where T2<:MultipliableMat
     end
 end
 
-#function lu(A::T) where T <: MultipliableMatrices
+"""
+    function +(A,B)
+
+    Matrix-matrix addition with units/dimensions.
+    A+B requires the two matrices to have dimensional similarity.
+"""
+function +(A::MultipliableMatrices{T1},B::MultipliableMatrices{T2}) where T1 where T2
+
+    #if range(A) ~ range(B) && domain(A) ~ domain(B)
+    if range(A) == range(B) && domain(A) == domain(B)
+        exactproduct = exact(A) && exact(B)
+        return MultipliableMatrix(A.numbers+B.numbers,range(A),domain(A),exact=exactproduct) 
+    else
+        error("matrices not dimensionally conformable for addition")
+    end
+end
+
 """
     function lu(A::MultipliableMatrix{Float64})
 """
@@ -417,7 +432,7 @@ function getproperty(F::LU{T,<:MultipliableMatrices,Vector{Int64}}, d::Symbol) w
 end
 
 """
-    function similar(a,b)::Bool
+    function similarity(a,b)::Bool
 
     Dimensional similarity of vectors, a binary relation
     Read "a has the same dimensional form as b"
@@ -425,8 +440,8 @@ end
     A stronger condition than being parallel.
     pp. 184, Hart
 """
- similar(a,b)::Bool = isequal(dimension(a),dimension(b))
- ~(a,b) = similar(a,b)
+ similarity(a::Vector,b::Vector)::Bool = isequal(dimension(a),dimension(b))
+ ~(a,b) = similarity(a,b)
 
 """
     function parallel
@@ -631,12 +646,30 @@ domain(A::UniformMatrix) = fill(A.domain,size(A.numbers)[2])
 range(A::T) where T <: MultipliableMatrices = A.range
 range(A::UniformMatrix) = fill(A.range,size(A.numbers)[1])
 
+"""
+    function transpose
+
+    Defined by condition `A[i,j] = transpose(A[j,i])`.
+    Not analogous to function for dimensionless matrices.
+
+    Hart, pp. 205.
+"""
+transpose(A::MultipliableMatrices) = MultipliableMatrix(copy(transpose(A.numbers)),unit.(1 ./domain(A)), unit.(1 ./range(A))) 
+
+identity(dimrange) = EndomorphicMatrix(I(length(dimrange)),range;exact=false)
 
 
 """
      function inv
+
+     Inverse of Multipliable Matrix.
+     Only defined for nonsingular matrices.
+     Inverse reverses mapping from domain to range.
+     Is `exact` if input is exact.
+
+    Hart, pp. 205. 
 """
-inv(A::T) where T <: MultipliableMatrices = ~singular(A) ? MultipliableMatrix(inv(A.numbers),domain(A),range(A)) : error("matrix is singular")
+inv(A::T) where T <: MultipliableMatrices = ~singular(A) ? MultipliableMatrix(inv(A.numbers),domain(A),range(A),exact(A)) : error("matrix is singular")
 
 """
     function det
