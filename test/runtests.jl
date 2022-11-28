@@ -85,7 +85,7 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
             @test A==Matrix(B)
 
@@ -118,7 +118,7 @@ using Test
             
                 # outer product to make a multipliable matrix
                 A = p*q̃'
-                B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
+                B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
                 if i == 1
                     @test dimensionless(B)
                     @test dimensionless(A)
@@ -137,7 +137,7 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
             @test A==Matrix(B)
             @test isequal(A*q,B*q)
 
@@ -166,10 +166,10 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
             # turn array into Multipliable matrix
-            C = MultipliableMatrix(A)
+            C = BestMultipliableMatrix(A)
             @test A==Matrix(C)
             @test multipliable(A)
             @test ~left_uniform(A)
@@ -189,14 +189,16 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = MultipliableMatrix(A)
-            B2 = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
+            B = BestMultipliableMatrix(A)
+            B2 = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
             B3 = EndomorphicMatrix(ustrip.(A),unit.(p))
 
-            Ip = EndomorphicMatrix(I(2),unit.([0m,0s]))
+            Bᵀ = transpose(B)
+            @test Bᵀ[2,1] == B[1,2]
 
+            Ip = EndomorphicMatrix(I(2),unit.([0m,0s]))
             B3 + Ip
-            Ip = identity(unit.(p))
+            Ip = identitymatrix(unit.(p))
             
             @test Matrix(B)==Matrix(B2)
             @test Matrix(B3)==Matrix(B2)
@@ -214,9 +216,9 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
-            @testset square(B)
-            @testset squarable(B)
+            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            @test square(B)
+            @test squarable(B)
 
             #B*B
             #inv(B)
@@ -230,7 +232,7 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = MultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
             scalar = 2.0K 
             C = B * scalar
@@ -239,22 +241,22 @@ using Test
             @test (Matrix(C2)./Matrix(B))[1,1] == scalar
 
             scalar2 = 5.3
-            @test(exact(scalar2*B))
+            @test exact(scalar2*B)
 
             # outer product to make a multipliable matrix
             B2 = MultipliableMatrix(ustrip.(A),unit.(q),unit.(p),exact=true)
             A2 = Matrix(B2)
             
-            @test(A*A2==Matrix(B*B2))
+            @test A*A2==Matrix(B*B2)
         end
 
-        @testset "inverse 3x3" begin
-            # can't easily get a list of units to draw from
+        @testset "polynomial fitting" begin
+           
             u1 = m
             u2 = m/s
             u3 = m/s/s
         
-            # i.e., trend analysis
+            # example: polynomial fitting
             K = 3
             E = hcat(randn(K),randn(K)u1/u2,randn(K)u1/u3)
             y = randn(K)u1
@@ -262,7 +264,7 @@ using Test
 
             Z = lu(ustrip.(E))
             
-            F = MultipliableMatrix(E)
+            F = BestMultipliableMatrix(E)
             G = convert_domain(F,unit.(x))
                                
             Z2 = lu(F)
@@ -284,8 +286,10 @@ using Test
         @testset "svd" begin
             
 	    E = [1/2 1/2; 1/4 3/4; 3/4 1/4]m
-            E2 = MultipliableMatrix(E)
+            E2 = BestMultipliableMatrix(E)
             @test size(E2)==size(E)
+            Eᵀ = transpose(E2)
+            @test E2[2,1] == Eᵀ[1,2]
 
             F = svd(ustrip.(E))
  	    F2 = svd(E2,full=true)
@@ -300,7 +304,11 @@ using Test
             @test ustrip(abs.(maximum(G- E) )) < 1e-10
 
             # recover using Diagonal dimensional matrix
-# 	    Λ = Diagonal(λ)
+            # use Full SVD (thin may not work)
+ 	    Λ = diagm(F2.S,range(E2),domain(E2),exact=true)
+            Ẽ = F2.U*(Λ*F2.Vt)
+
+            @test ustrip(abs.(maximum(Matrix(Ẽ) - E))) < 1e-10
 #             K = length(λ) # rank
 # 	    y = 5randn(3)u"s"
 # 	    σₙ = randn(3)u"s"
