@@ -16,14 +16,12 @@ export range, domain
 export square, squarable, singular
 export lu, det
 
-import LinearAlgebra:inv, det, lu, svd
+import LinearAlgebra:inv, det, lu, svd, getproperty
 import Base:(~), (*), getindex
 import Base.similar
 import Base.range
 
 abstract type MultipliableMatrices{T<:Number} <: AbstractMatrix{T} end
-
-#abstract type AbstractToeplitz{T<:Number} <: AbstractMatrix{T} end
 
 """
     struct MultipliableMatrix
@@ -371,11 +369,51 @@ function lu(A::T) where T <: MultipliableMatrices
 
     F̂ = lu(A.numbers)
 
-    F = ( 
-    L = EndomorphicMatrix(F̂.L,range(A),exact(A)),
-        U = MultipliableMatrix(F̂.U,range(A),domain(A),exact(A)),
-    p = F̂.p)
+    # store dimensional domain and range in "factors" attribute
+    # even though this is not truly a MultipliableMatrix
+    factors = MultipliableMatrix(F̂.factors,range(A),domain(A),exact(A))
+
+    F = LU(factors,F̂.ipiv,F̂.info)
+    
+    #F = ( 
+    #L = EndomorphicMatrix(F̂.L,range(A),exact(A)),
+    #    U = MultipliableMatrix(F̂.U,range(A),domain(A),exact(A)),
+    #p = F̂.p)
     return F
+end
+
+"""
+    function getproperty(F::LU{T,<:MultipliableMatrices,Vector{Int64}}, d::Symbol) where T
+
+    Extend LinearAlgebra.getproperty for MultipliableMatrices.
+
+    LU factorization stores L and U together.
+    Extract L and U while keeping consistent
+    with dimensional domain and range.
+"""
+function getproperty(F::LU{T,<:MultipliableMatrices,Vector{Int64}}, d::Symbol) where T
+    m, n = size(F)
+    if d === :L
+        mmatrix = getfield(F, :factors)
+        numbers = getfield(mmatrix,:numbers)
+        # add ustrip to get numerical values
+        Lnum = tril!(numbers[1:m, 1:min(m,n)])
+        for i = 1:min(m,n); Lnum[i,i] = one(T); end
+        L = EndomorphicMatrix(Lnum,range(mmatrix),exact(mmatrix))
+        return L
+    elseif d === :U
+        mmatrix = getfield(F, :factors)
+        numbers = getfield(mmatrix,:numbers)
+        Unum = triu!(numbers[1:min(m,n), 1:n])
+        U = MultipliableMatrix(Unum, range(mmatrix), domain(mmatrix), exact(mmatrix))
+        return U
+    elseif d === :p
+        return LinearAlgebra.ipiv2perm(getfield(F, :ipiv), m)
+    elseif d === :P
+        return Matrix{T}(I, m, m)[:,LinearAlgebra.invperm(F.p)]
+    else
+        getfield(F, d)
+    end
 end
 
 """
@@ -625,9 +663,9 @@ singular(A::T) where T <: MultipliableMatrices = iszero(ustrip(det(A)))
 Compute the singular value decomposition (SVD) of `A` and return an `SVD` object. Extended for MultipliableMatrix input.
 """
 #function svd(A::MultipliableMatrices;full=false) where T <: MultipliableMatrices
-function svd(A::MultipliableMatrices;full=false) 
+function svd(A::MultipliableMatrices;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
     if uniform(A) 
-        F = svd(A.numbers, full=full)
+        F = svd(A.numbers, full=full, alg=alg)
         # U,V just regular matrices: return that way?
         # They are also Uniform and Endomorphic
         return SVD(F.U,F.S * range(A)[1]./domain(A)[1],F.Vt)
