@@ -146,7 +146,7 @@ using Test
             
             # new domain
             qnew = (q)K
-            D = convert_domain(B,unit.(qnew))
+            D = convert_unitdomain(B,unit.(qnew))
             @test B*q ∥ D*qnew
 
             # update B?
@@ -155,7 +155,7 @@ using Test
             
             pnew = (p)s
             qnew = (q)s
-            E = convert_range(B,unit.(pnew))
+            E = convert_unitrange(B,unit.(pnew))
             @test B*q ∥ E*qnew
 
         end
@@ -267,7 +267,7 @@ using Test
             Z = lu(ustrip.(E))
             
             F = BestMultipliableMatrix(E)
-            G = convert_domain(F,unit.(x))
+            G = convert_unitdomain(F,unit.(x))
                                
             Z2 = lu(F)
 
@@ -327,7 +327,7 @@ using Test
 
             # recover using Diagonal dimensional matrix
             # use Full SVD (thin may not work)
- 	    Λ = diagm(F2.S,range(E2),domain(E2),exact=true)
+ 	    Λ = diagm(F2.S,unitrange(E2),unitdomain(E2),exact=true)
             Ẽ = F2.U*(Λ*F2.Vt)
 
             @test ustrip(abs.(maximum(Matrix(Ẽ) - E))) < 1e-10
