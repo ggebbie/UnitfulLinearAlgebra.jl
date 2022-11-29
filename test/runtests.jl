@@ -1,3 +1,5 @@
+ENV["UNITFUL_FANCY_EXPONENTS"] = true
+
 using Revise
 using UnitfulLinearAlgebra
 using Unitful
@@ -279,13 +281,33 @@ using Test
             Eᵀ = transpose(G)
             @test G[2,1] == Eᵀ[1,2]
             #x̃ = E⁻¹ * (E * x) # doesn't work because Vector{Any} in parentheses, dimension() not valid, dimension deprecated?
-            x̃ = E⁻¹ * (G * x)
+            y = G*x
+
+            # matrix left divide.
+            # just numbers.
+            x̃num = ustrip.(E) \ ustrip.(y)
+
+            # an exact matrix
+            x̂ = G \ y
+            @test abs.(maximum(ustrip.(x̂-x))) < 1e-10
+
+            # an inexact matrix
+            x′ = F \ y
+            @test abs.(maximum(ustrip.(x′-x))) < 1e-10
+
+            
+            x̃ = E⁻¹ * y
             @test abs.(maximum(ustrip.(x̃-x))) < 1e-10
+
+            # Does LU solve the same problem?
+            # x̆ = Z2 \ y, fails
         end    
 
         @testset "svd" begin
             
 	    E = [1/2 1/2; 1/4 3/4; 3/4 1/4]m
+
+            
             E2 = BestMultipliableMatrix(E)
             @test size(E2)==size(E)
             Eᵀ = transpose(E2)

@@ -8,20 +8,20 @@ export BestMultipliableMatrix
 export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
 export invdimension, dottable
-export getindex, size
+export getindex, setindex!, size
 export convert_range, convert_domain
 #export convert_range!, convert_domain!
 export exact, multipliable, dimensionless, endomorphic
 export svd, inv, transpose
 export range, domain
 export square, squarable, singular
-export lu, det, diagm
+export lu, det, diagm, (\)
 export identitymatrix
 
 import LinearAlgebra: inv, det, lu, svd, getproperty,
     diagm
-import Base:(~), (*), (+), getindex, size, range,
-    transpose
+import Base:(~), (*), (+), (\), getindex, setindex!,
+    size, range, transpose
 #import Base.similar
 
 abstract type MultipliableMatrices{T<:Number} <: AbstractMatrix{T} end
@@ -266,7 +266,22 @@ UniformMatrix(numbers,range,domain;exact=false) =
 #Output
 - `Quantity`: numerical value and units
 """
-getindex(A::T,i::Integer,j::Integer) where T <: MultipliableMatrices = Quantity(A.numbers[i,j],range(A)[i]./domain(A)[j]) 
+getindex(A::T,i::Int,j::Int) where T <: MultipliableMatrices = Quantity(A.numbers[i,j],range(A)[i]./domain(A)[j]) 
+
+"""
+    function setindex!(A::MultipliableMatrix,v,i,j)
+
+    Set element (i,j) of a MultipliableMatrix.
+    Part of the AbstractArray interface.
+#Input
+- `A::MultipliableMatrix`
+- `v`: new value
+- `i::Integer`: row index
+- `j::Integer`: column index
+#Output
+- `Quantity`: numerical value and units
+"""
+setindex!(A::T,v,i::Int,j::Int) where T <: MultipliableMatrices = (unit(v) == range(A)[i]./domain(A)[j]) ? (A.numbers[i,j] = ustrip(v)) : error("new value has incompatible units")
 
 """
     function Matrix(A::MultipliableMatrix)
@@ -695,7 +710,28 @@ identitymatrix(dimrange) = EndomorphicMatrix(I(length(dimrange)),dimrange;exact=
 
     Hart, pp. 205. 
 """
-inv(A::T) where T <: MultipliableMatrices = ~singular(A) ? MultipliableMatrix(inv(A.numbers),domain(A),range(A),exact(A)) : error("matrix is singular")
+inv(A::T) where T <: MultipliableMatrices = ~singular(A) ? BestMultipliableMatrix(inv(A.numbers),domain(A),range(A),exact=exact(A)) : error("matrix is singular")
+
+"""
+     function ldiv!
+
+     Left divide of Multipliable Matrix.
+     Reverse mapping from domain to range.
+     Is `exact` if input is exact.
+"""
+function (\)(A::MultipliableMatrices,b::AbstractVector)
+
+    # unit.(range(b)) == range(A) ?  BestMultipliableMatrix(A.numbers\ustrip.(b),domain(A),range(A),exact(A)) : error("matrix and vector units don't match")
+    if dimension(range(A)) == dimension(b)
+    #if range(A) ~ b
+        return (A.numbers\ustrip.(b)).*domain(A)
+    elseif ~exact(A) && (range(A) ∥ b)
+        Anew = convert_range(A,unit.(b)) # inefficient?
+        return (Anew.numbers\ustrip.(b)).*domain(Anew)
+    else
+        error("UnitfulLinearAlgebra.mldivide: Dimensions of MultipliableMatrix and vector not compatible")
+    end
+end
 
 """
     function det
