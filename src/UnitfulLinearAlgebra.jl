@@ -565,8 +565,12 @@ dimensionless(A::Matrix) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
 
 square(A::T) where T <: MultipliableMatrices = (domainlength(A) == rangelength(A))
+square(A::SquarableMatrix) = true
+square(A::EndomorphicMatrix) = true
 
 squarable(A::T) where T <: MultipliableMatrices = (unitdomain(A) ∥ unitrange(A))
+squarable(A::SquarableMatrix) = true
+squarable(A::EndomorphicMatrix) = true
 
 """
     function invdimension
