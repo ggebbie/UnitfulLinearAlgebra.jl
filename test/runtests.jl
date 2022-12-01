@@ -211,8 +211,24 @@ using Test
         end
 
         @testset "squarable" begin
-            p = [1.0m, 1.0s]
-            q̃ = 1 ./ [1.0m², 1.0m*s]
+            p = [1.0m, 2.0s]
+            q̃ = 1 ./ [2.0m², 3.0m*s]
+
+            q = ustrip.(q̃).*unit.(1 ./q̃)
+            
+            # outer product to make a multipliable matrix
+            A = p*q̃'
+            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=false)
+            @test square(B)
+            @test squarable(B)
+            B*B
+            #inv(B); rank 1, not invertible
+            
+        end
+
+        @testset "unit symmetric" begin
+            p = [1.0m, 2.0s]
+            q̃ = [3.0m, 4.0s]
 
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
@@ -220,10 +236,7 @@ using Test
             A = p*q̃'
             B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
             @test square(B)
-            @test squarable(B)
-
-            #B*B
-            #inv(B)
+            @test ~squarable(B)
             
         end
 

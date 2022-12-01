@@ -4,6 +4,7 @@ using Unitful, LinearAlgebra, SparseArrays
 
 export MultipliableMatrix, EndomorphicMatrix
 export SquarableMatrix, UniformMatrix
+export UnitSymmetricMatrix
 export BestMultipliableMatrix
 export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
@@ -70,7 +71,7 @@ end
     struct SquarableMatrix
 
     An squarable matrix is one where 𝐀² is defined.
-    It is the case if the dimensional range and domain are parallel.
+    Definition: dimensional range and domain are parallel.
 
 # Attributes
 - `numbers`: numerical (dimensionless) matrix
@@ -79,6 +80,26 @@ end
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
 struct SquarableMatrix{T<:Number} <: MultipliableMatrices{T} 
+    numbers::AbstractMatrix{T}
+    unitrange::Vector
+    Δunitdomain
+    exact::Bool
+end
+
+"""
+    struct UnitSymmetricMatrix
+
+    An squarable matrix is one where 𝐀² is defined.
+    Definition: inverse dimensional range and dimensional domain are parallel.
+    Called "dimensionally symmetric" by Hart.
+
+# Attributes
+- `numbers`: numerical (dimensionless) matrix
+- `unitrange`: dimensional range in terms of units, this is also the domain
+- `Δunitdomain`: shift to range that gives the domain
+- `exact`: geometric (`true`) or algebraic (`false`) interpretation
+"""
+struct UnitSymmetricMatrix{T<:Number} <: MultipliableMatrices{T} 
     numbers::AbstractMatrix{T}
     unitrange::Vector
     Δunitdomain
@@ -166,6 +187,10 @@ function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVecto
     elseif unitrange ∥ unitdomain
         Δunitdomain = unitdomain[1]./unitrange[1]
         B = SquarableMatrix(numbers,unitrange,Δunitdomain,exact)
+    elseif unitrange ∥ 1 ./unitdomain
+        Δunitdomain = unitdomain[1] * unitrange[1]
+        B = UnitSymmetricMatrix(numbers,unitrange,Δunitdomain,exact)
+        
     else
         B = MultipliableMatrix(numbers,unitrange,unitdomain,exact)
     end
@@ -678,6 +703,7 @@ convert(::Type{AbstractArray{T}}, A::MultipliableMatrices) where {T<:Number} = c
 
 unitdomain(A::T) where T <: MultipliableMatrices = A.unitdomain
 unitdomain(A::SquarableMatrix) = A.unitrange.*A.Δunitdomain
+unitdomain(A::UnitSymmetricMatrix) = unit.(1 ./ A.unitrange).*A.Δunitdomain
 unitdomain(A::EndomorphicMatrix) = A.unitrange # unitdomain not saved and must be reconstructed
 unitdomain(A::UniformMatrix) = fill(A.unitdomain,size(A.numbers)[2])
 
