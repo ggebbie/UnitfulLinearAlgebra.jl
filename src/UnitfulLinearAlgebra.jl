@@ -75,13 +75,13 @@ end
 # Attributes
 - `numbers`: numerical (dimensionless) matrix
 - `unitrange`: dimensional range in terms of units, this is also the domain
-- `domainshift`: shift to range that gives the domain
+- `Δunitdomain`: shift to range that gives the domain
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
 struct SquarableMatrix{T<:Number} <: MultipliableMatrices{T} 
     numbers::AbstractMatrix{T}
     unitrange::Vector
-    unitdomainshift
+    Δunitdomain
     exact::Bool
 end
 
@@ -163,6 +163,9 @@ function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVecto
         B = UniformMatrix(numbers,unitrange[1],unitdomain[1],exact)
     elseif unitrange == unitdomain
         B = EndomorphicMatrix(numbers,unitrange,exact)
+    elseif unitrange ∥ unitdomain
+        Δunitdomain = unitdomain[1]./unitrange[1]
+        B = SquarableMatrix(numbers,unitrange,Δunitdomain,exact)
     else
         B = MultipliableMatrix(numbers,unitrange,unitdomain,exact)
     end
@@ -670,7 +673,8 @@ convert(::Type{AbstractArray{T}}, A::MultipliableMatrices) where {T<:Number} = c
 #convert(::Type{AbstractArray{T}}, S::AbstractToeplitz) where {T<:Number} = convert(AbstractToeplitz{T}, S)
 
 unitdomain(A::T) where T <: MultipliableMatrices = A.unitdomain
-unitdomain(A::EndomorphicMatrix) = A.unitrange # unitdomain not saved
+unitdomain(A::SquarableMatrix) = A.unitrange.*A.Δunitdomain
+unitdomain(A::EndomorphicMatrix) = A.unitrange # unitdomain not saved and must be reconstructed
 unitdomain(A::UniformMatrix) = fill(A.unitdomain,size(A.numbers)[2])
 
 unitrange(A::T) where T <: MultipliableMatrices = A.unitrange

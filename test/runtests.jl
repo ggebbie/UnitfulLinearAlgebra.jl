@@ -212,7 +212,7 @@ using Test
 
         @testset "squarable" begin
             p = [1.0m, 1.0s]
-            q̃ = 1 ./ [1.0m, 1.0s]
+            q̃ = 1 ./ [1.0m², 1.0m*s]
 
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
