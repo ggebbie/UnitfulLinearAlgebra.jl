@@ -227,19 +227,20 @@ using Test
         end
 
         @testset "unit symmetric" begin
-            p = [1.0m, 2.0s]
-            q̃ = [3.0m, 4.0s]
+            p = [2.0m, 1.0s]
+            q̃ = [2.0m, 1.0s]
 
-            q = ustrip.(q̃).*unit.(1 ./q̃)
+            p = [m,s]
+            q= p.^-1
             
             # outer product to make a multipliable matrix
-            A = p*q̃'
-            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            A = [1.0 0.1; 0.1 1.0]
+            B = BestMultipliableMatrix(A,p,q ,exact=true)
             @test square(B)
             @test ~squarable(B)
-            
+ch = cholesky(ustrip.(B))            
         end
-
+Cholesky
         @testset "matrix * operations" begin
             p = [1.0m, 3.0s]
             q̃ = [-1.0K, 2.0]
