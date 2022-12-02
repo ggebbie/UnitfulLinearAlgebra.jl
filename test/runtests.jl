@@ -223,7 +223,7 @@ using Test
             @test squarable(B)
             B*B
             #inv(B); rank 1, not invertible
-            
+
         end
 
         @testset "unit symmetric" begin
@@ -238,6 +238,15 @@ using Test
             B = BestMultipliableMatrix(A,p,q ,exact=true)
             @test square(B)
             @test ~squarable(B)
+
+            # make equivalent Diagonal matrix.
+            C = UnitfulLinearAlgebra.Diagonal([1.0m, 4.0s],unit.(p),unit.(q))
+            
+            # try cholesky decomposition
+
+            out = chol(ustrip.(A))
+            
+        end
 
             Q = UnitfulLinearAlgebra.cholesky(B)
             transpose(Q.U)*Q.U
