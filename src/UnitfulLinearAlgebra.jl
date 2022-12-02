@@ -15,12 +15,12 @@ export convert_unitrange, convert_unitdomain
 export exact, multipliable, dimensionless, endomorphic
 export svd, inv, transpose
 export unitrange, unitdomain
-export square, squarable, singular
-export lu, det, diagm, (\)
+export square, squarable, singular, unit_symmetric
+export lu, det, diagm, Diagonal, (\)
 export identitymatrix
 
 import LinearAlgebra: inv, det, lu, svd, getproperty,
-    diagm
+    diagm, Diagonal
 import Base:(~), (*), (+), (\), getindex, setindex!,
     size, range, transpose
 #import Base.similar
@@ -597,6 +597,9 @@ squarable(A::T) where T <: MultipliableMatrices = (unitdomain(A) ∥ unitrange(A
 squarable(A::SquarableMatrix) = true
 squarable(A::EndomorphicMatrix) = true
 
+unit_symmetric(A::T) where T<: MultipliableMatrices = false
+unit_symmetric(A::UnitSymmetricMatrix)  = true
+
 """
     function invdimension
 
@@ -804,16 +807,32 @@ function svd(A::MultipliableMatrices;full=false,alg::LinearAlgebra.Algorithm = L
 end
 
 """
-    function Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
+    function diagm(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
 
-    Construct Diagonal matrix with units where the diagonal has elements `v`.
-
-    If `v` has units, check that they conform with dimensional range `r` and dimensional domain `d`.
-
-    `LinearAlgebra.Diagonal` produces a square diagonal matrix. Instead, this is based upon `spdiagm`. 
+    Construct diagonal matrix with units where the diagonal has elements `v`.
+    If `v` has units, check that they conform with dimensional unit range `r`
+     and dimensional unit domain `d`. Works for square or non-square matrices.
 """
 diagm(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = BestMultipliableMatrix(spdiagm(length(r),length(d),ustrip.(v)),r,d; exact=exact)    
 #Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false) = MultipliableMatrix(Diagonal(ustrip.(v)),r,d ; exact=exact)    
 #end
 
+"""
+    function Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
+
+    Construct diagonal matrix with units where the diagonal has elements `v`.
+    If `v` has units, check that they conform with dimensional unit range `r`
+     and dimensional unit domain `d`.
+    Like `LinearAlgebra.Diagonal`, this extension is restricted to square matrices.
+"""
+Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = (length(r) == length(d)) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
+
+
+"""
+    Cholesky decomposition
+
+    Requires unit (or dimensionally) symmetric matrix.
+"""
+cholesky(A::MultipliableMatrices) = ((unit_symmetric(A) && ishermitian(A.numbers) )?
+    B = MultipliableMatrix(cholesky(
 end
