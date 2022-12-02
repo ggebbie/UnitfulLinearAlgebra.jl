@@ -15,12 +15,12 @@ export convert_unitrange, convert_unitdomain
 export exact, multipliable, dimensionless, endomorphic
 export svd, inv, transpose
 export unitrange, unitdomain
-export square, squarable, singular
-export lu, det, diagm, (\)
+export square, squarable, singular, unit_symmetric
+export lu, det, diagm, (\), cholesky
 export identitymatrix
 
 import LinearAlgebra: inv, det, lu, svd, getproperty,
-    diagm
+    diagm, cholesky
 import Base:(~), (*), (+), (\), getindex, setindex!,
     size, range, transpose
 #import Base.similar
@@ -597,6 +597,9 @@ squarable(A::T) where T <: MultipliableMatrices = (unitdomain(A) ∥ unitrange(A
 squarable(A::SquarableMatrix) = true
 squarable(A::EndomorphicMatrix) = true
 
+unit_symmetric(A::MultipliableMatrices) = false
+unit_symmetric(A::UnitSymmetricMatrix) = true
+
 """
     function invdimension
 
@@ -815,5 +818,21 @@ end
 diagm(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = BestMultipliableMatrix(spdiagm(length(r),length(d),ustrip.(v)),r,d; exact=exact)    
 #Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false) = MultipliableMatrix(Diagonal(ustrip.(v)),r,d ; exact=exact)    
 #end
+
+function cholesky(A::MultipliableMatrices)
+    if unit_symmetric(A)
+        C = LinearAlgebra.cholesky(A.numbers)
+        factors = BestMultipliableMatrix(C.factors,unitdomain(A)./unitdomain(A),unitdomain(A))
+
+        return Cholesky(factors,C.uplo,C.info)
+    else
+        error("requires unit symmetric matrix")
+    end
+    
+         # factors = cholesky(A.numbers)        BestMultipliableMatrix(cholesky(A.numbers),unitdomain(A)./unitdomain(A),unitdomain(A),exact(A))  : #end
+    #         F̂ = lu(A.numbers)
+    # factors = MultipliableMatrix(F̂.factors,unitrange(A),unitdomain(A),exact(A))
+    # F = LU(factors,F̂.ipiv,F̂.info)
+end
 
 end

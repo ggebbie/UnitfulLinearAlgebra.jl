@@ -238,6 +238,11 @@ using Test
             B = BestMultipliableMatrix(A,p,q ,exact=true)
             @test square(B)
             @test ~squarable(B)
+
+            Q = UnitfulLinearAlgebra.cholesky(B)
+            transpose(Q.U)*Q.U
+
+            Q.
 ch = cholesky(ustrip.(B))            
         end
 Cholesky
