@@ -240,13 +240,12 @@ using Test
             @test ~squarable(B)
 
             # make equivalent Diagonal matrix.
-            C = UnitfulLinearAlgebra.Diagonal([1.0m, 4.0s],unit.(p),unit.(q))
+            C = UnitfulLinearAlgebra.Diagonal([1.0m, 4.0s],p,q)
             
             # try cholesky decomposition
-
-            out = chol(ustrip.(A))
+            out = cholesky(ustrip.(A))
             
-        end
+        #end
 
             Q = UnitfulLinearAlgebra.cholesky(B)
             transpose(Q.U)*Q.U

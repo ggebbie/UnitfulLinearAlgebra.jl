@@ -817,6 +817,12 @@ diagm(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = Be
 #Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false) = MultipliableMatrix(Diagonal(ustrip.(v)),r,d ; exact=exact)    
 #end
 
+"""
+    function cholesky(A::MultipliableMatrices)
+
+    Cholesky decomposition extended for matrices with units.
+    Requires unit (or dimensionally) symmetric matrix.
+"""
 function cholesky(A::MultipliableMatrices)
     if unit_symmetric(A)
         C = LinearAlgebra.cholesky(A.numbers)
@@ -833,6 +839,23 @@ function cholesky(A::MultipliableMatrices)
     # F = LU(factors,F̂.ipiv,F̂.info)
 end
 
+function getproperty(C::Cholesky{T,<:MultipliableMatrices}, d::Symbol) where T 
+    Cfactors = getfield(C, :factors)
+    Cuplo    = getfield(C, :uplo)
+    if d === :U
+        numbers = UpperTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? Cfactors.numbers : copy(Cfactors.numbers'))
+        println(typeof(numbers))
+        println(numbers)
+        return BestMultipliableMatrix(numbers,Cfactors.unitrange,Cfactors.unitdomain,Cfactors.exact)
+    # elseif d === :L
+    #     return LowerTriangular(Cuplo === char_uplo(d) ? Cfactors : copy(Cfactors'))
+    # elseif d === :UL
+    #     return (Cuplo === 'U' ? UpperTriangular(Cfactors) : LowerTriangular(Cfactors))
+    # else
+    #     return getfield(C, d)
+    end
+end
+
 """
     function Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
 
@@ -844,11 +867,6 @@ end
 Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = (length(r) == length(d)) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
 
 
-"""
-    Cholesky decomposition
+# cholesky(A::MultipliableMatrices) = ((unit_symmetric(A) && ishermitian(A.numbers) ) ?    B = MultipliableMatrix(cholesky(
 
-    Requires unit (or dimensionally) symmetric matrix.
-"""
-cholesky(A::MultipliableMatrices) = ((unit_symmetric(A) && ishermitian(A.numbers) )?
-    B = MultipliableMatrix(cholesky(
 end
