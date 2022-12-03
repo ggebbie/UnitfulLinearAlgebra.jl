@@ -4,6 +4,7 @@ using Unitful, LinearAlgebra, SparseArrays
 
 export MultipliableMatrix, EndomorphicMatrix
 export SquarableMatrix, UniformMatrix
+export LeftUniformMatrix, RightUniformMatrix
 export UnitSymmetricMatrix
 export BestMultipliableMatrix
 export similarity, ∥, parallel
@@ -131,6 +132,42 @@ end
 # end
 
 """
+    struct LeftUniformMatrix
+
+    Left uniform matrix
+
+# Attributes
+- `numbers`: numerical (dimensionless) matrix
+- `unitrange`:  uniform dimensional range expressed as a single unit
+- `unitdomain`: dimensional domain (Vector)
+- `exact`: geometric (`true`) or algebraic (`false`) interpretation
+"""
+struct LeftUniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
+    numbers::AbstractMatrix{T}
+    unitrange
+    unitdomain::AbstractVector
+    exact::Bool
+end
+
+"""
+    struct RightUniformMatrix
+
+    Right uniform matrix
+
+# Attributes
+- `numbers`: numerical (dimensionless) matrix
+- `unitrange::Vector`:  unit (dimensional) range
+- `unitdomain`: uniform dimensional domain expressed as a single unit
+- `exact`: geometric (`true`) or algebraic (`false`) interpretation
+"""
+struct RightUniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
+    numbers::AbstractMatrix{T}
+    unitrange::AbstractVector
+    unitdomain
+    exact::Bool
+end
+
+"""
     MultipliableMatrix(numbers,unitrange,unitdomain;exact=false)
 
     Constructor where `exact` is a keyword argument. One may construct a MultipliableMatrix without specifying exact, in which case it defaults to `false`. 
@@ -182,6 +219,10 @@ end
 function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVector,unitdomain::AbstractVector;exact=false)
     if uniform(unitrange) && uniform(unitdomain)
         B = UniformMatrix(numbers,unitrange[1],unitdomain[1],exact)
+    elseif uniform(unitrange)
+        B = LeftUniformMatrix(numbers,unitrange[1],unitdomain,exact)
+    elseif uniform(unitdomain)
+        B = RightUniformMatrix(numbers,unitrange,unitdomain[1],exact)
     elseif unitrange == unitdomain
         B = EndomorphicMatrix(numbers,unitrange,exact)
     elseif unitrange ∥ unitdomain
@@ -190,7 +231,6 @@ function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVecto
     elseif unitrange ∥ 1 ./unitdomain
         Δunitdomain = unitdomain[1] * unitrange[1]
         B = UnitSymmetricMatrix(numbers,unitrange,Δunitdomain,exact)
-        
     else
         B = MultipliableMatrix(numbers,unitrange,unitdomain,exact)
     end
@@ -462,11 +502,8 @@ end
     Based on LDU factorization, Hart, pp. 204.
 """
 function lu(A::AbstractMultipliableMatrix{T}) where T <: Number
-    #where T <: AbstractMultipliableMatrix
-
     F̂ = lu(A.numbers)
-
-    factors = MultipliableMatrix(F̂.factors,unitrange(A),unitdomain(A),exact(A))
+    factors = BestMultipliableMatrix(F̂.factors,unitrange(A),unitdomain(A),exact=exact(A))
     F = LU(factors,F̂.ipiv,F̂.info)
     return F
 end
@@ -577,8 +614,9 @@ uniform(A::UniformMatrix) = true
 """
     function left_uniform(A)
 
-    Does the unitrange of A have uniform dimensions?
+    Definition: uniform unitrange of A
 """
+left_uniform(A::LeftUniformMatrix) = true
 left_uniform(A::T) where T<: AbstractMultipliableMatrix = uniform(unitrange(A)) ? true : false
 function left_uniform(A::Matrix)
     B = BestMultipliableMatrix(A)
@@ -643,7 +681,7 @@ dottable(a,b) = parallel(a, 1 ./ b)
     matrix to match the expected vectors during multiplication.
     Here we set the matrix to `exact=true` after this step.
 """
-function convert_unitdomain(A::T, newdomain::Vector) where T<:AbstractMultipliableMatrix
+function convert_unitdomain(A::AbstractMultipliableMatrix, newdomain::Vector) 
     if unitdomain(A) ∥ newdomain
         shift = newdomain./unitdomain(A)
         newrange = unitrange(A).*shift
@@ -673,11 +711,11 @@ end
     matrix to match the desired output of multiplication.
     Here we set the matrix to `exact=true` after this step.
 """
-function convert_unitrange(A::MultipliableMatrix, newrange::Vector)::MultipliableMatrix
+function convert_unitrange(A::AbstractMultipliableMatrix, newrange::Vector)
     if unitrange(A) ∥ newrange
         shift = newrange./unitrange(A)
         newdomain = unitdomain(A).*shift
-        B = MultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
+        B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New unitrange not parallel to unitrange of Multipliable Matrix")
     end
@@ -707,16 +745,19 @@ exact(A::T) where T <: AbstractMultipliableMatrix = A.exact
 
     Numerical dimension (length or size) of unitrange
 """
-rangelength(A::T) where T <: AbstractMultipliableMatrix = length(unitrange(A))
+#rangelength(A::T) where T <: AbstractMultipliableMatrix = length(unitrange(A))
+rangelength(A::T) where T <: AbstractMultipliableMatrix = size(A)[1]
 
 """
     function domainlength(A::MultipliableMatrix)
 
     Numerical dimension (length or size) of unitdomain of A
 """
-domainlength(A::T) where T <: AbstractMultipliableMatrix = length(unitdomain(A))
+#domainlength(A::T) where T <: AbstractMultipliableMatrix = length(unitdomain(A))
+domainlength(A::T) where T <: AbstractMultipliableMatrix = size(A)[2]
 
-size(A::AbstractMultipliableMatrix) = (rangelength(A), domainlength(A))
+#size(A::AbstractMultipliableMatrix) = (rangelength(A), domainlength(A))
+size(A::AbstractMultipliableMatrix) = size(A.numbers)
 
 convert(::Type{AbstractMatrix{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
 convert(::Type{AbstractArray{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
@@ -724,12 +765,13 @@ convert(::Type{AbstractArray{T}}, A::AbstractMultipliableMatrix) where {T<:Numbe
 
 unitdomain(A::T) where T <: AbstractMultipliableMatrix = A.unitdomain
 unitdomain(A::SquarableMatrix) = A.unitrange.*A.Δunitdomain
-unitdomain(A::UnitSymmetricMatrix) = unit.(1 ./ A.unitrange).*A.Δunitdomain
+#unitdomain(A::UnitSymmetricMatrix) = unit.(1 ./ A.unitrange).*A.Δunitdomain
+unitdomain(A::UnitSymmetricMatrix) =  A.Δunitdomain./A.unitrange
 unitdomain(A::EndomorphicMatrix) = A.unitrange # unitdomain not saved and must be reconstructed
-unitdomain(A::UniformMatrix) = fill(A.unitdomain,size(A.numbers)[2])
+unitdomain(A::Union{UniformMatrix,RightUniformMatrix}) = fill(A.unitdomain,size(A.numbers)[2])
 
 unitrange(A::T) where T <: AbstractMultipliableMatrix = A.unitrange
-unitrange(A::UniformMatrix) = fill(A.unitrange,size(A.numbers)[1])
+unitrange(A::Union{UniformMatrix,LeftUniformMatrix}) = fill(A.unitrange,size(A.numbers)[1])
 
 """
     function transpose
@@ -865,13 +907,13 @@ function getproperty(C::Cholesky{T,<:AbstractMultipliableMatrix}, d::Symbol) whe
     Cuplo    = getfield(C, :uplo)
     if d === :U
         numbers = UpperTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? Cfactors.numbers : copy(Cfactors.numbers'))
-        return BestMultipliableMatrix(numbers,Cfactors.unitrange,Cfactors.unitdomain,exact = Cfactors.exact)
+        return BestMultipliableMatrix(numbers,unitrange(Cfactors),unitdomain(Cfactors),exact = Cfactors.exact)
     elseif d === :L
         numbers = LowerTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? Cfactors.numbers : copy(Cfactors.numbers'))
         # use transpose to get units right
-        return BestMultipliableMatrix(numbers,Cfactors.unitdomain.^-1,Cfactors.unitrange.^-1,exact = Cfactors.exact)
+        return BestMultipliableMatrix(numbers,unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1,exact = Cfactors.exact)
     elseif d === :UL
-        return (Cuplo === 'U' ?        BestMultipliableMatrix(UpperTriangular(Cfactors.numbers),Cfactors.unitrange,Cfactors.unitdomain,exact = Cfactors.exact) : BestMultipliableMatrix(LowerTriangular(Cfactors.numbers),Cfactors.unitdomain.^-1,Cfactors.unitrange.^-1,exact = Cfactors.exact))
+        return (Cuplo === 'U' ?        BestMultipliableMatrix(UpperTriangular(Cfactors.numbers),unitrange(Cfactors),unitdomain(Cfactors),exact = Cfactors.exact) : BestMultipliableMatrix(LowerTriangular(Cfactors.numbers),unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1,exact = Cfactors.exact))
     else
         #println("caution: fallback not tested")
         return getfield(C, d)
