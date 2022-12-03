@@ -886,6 +886,8 @@ diagm(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = Be
 
     Cholesky decomposition extended for matrices with units.
     Requires unit (or dimensionally) symmetric matrix.
+    Functions available for LinearAlgebra.Cholesky objects: `size`, `\`, `inv`, `det`, `logdet` and `isposdef`.
+    Functions available for UnitfulLinearAlgebra.Cholesky objects: `size`, `det`, and `isposdef`.
 """
 function cholesky(A::AbstractMultipliableMatrix)
     if unit_symmetric(A)

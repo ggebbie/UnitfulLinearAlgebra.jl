@@ -228,7 +228,7 @@ using Test
 
         @testset "unit symmetric" begin
             p = [2.0m, 1.0s]
-            q̃ = [2.0m, 1.0s]
+            q̃ = p
 
             p = [m,s]
             q= p.^-1
@@ -241,9 +241,10 @@ using Test
 
             # make equivalent Diagonal matrix.
             C = UnitfulLinearAlgebra.Diagonal([1.0m, 4.0s],p,q)
-            
+
+            Anodims = ustrip.(A)
             # try cholesky decomposition
-            out = cholesky(ustrip.(A))
+            Qnodims = cholesky(Anodims)
             
         #end
 
@@ -255,7 +256,10 @@ using Test
             @test maximum(abs.(ustrip.(B-test2))) < 1e-5
             @test maximum(abs.(ustrip.(B-Q.L*transpose(Q.L)))) < 1e-5
 
-            ch = cholesky(ustrip.(B))            
+            # do operations directly with Q?
+            Qnodims.U\[0.5, 0.5]
+            Q.U\[0.5, 0.8]
+            #Q\[0.5, 0.8] # doesn't work
         end
 
         @testset "matrix * operations" begin
