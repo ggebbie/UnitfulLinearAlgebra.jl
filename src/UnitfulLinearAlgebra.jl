@@ -363,7 +363,7 @@ end
 """
 function *(A::T,b::Vector) where T<: AbstractMultipliableMatrix
 
-    if dimension(unitdomain(A)) == dimension(b)
+    if dimension.(unitdomain(A)) == dimension.(b)
     #if unitdomain(A) ~ b
         return (A.numbers*ustrip.(b)).*A.unitrange
     elseif ~exact(A) && (unitdomain(A) ∥ b)
@@ -514,7 +514,7 @@ end
     A stronger condition than being parallel.
     pp. 184, Hart
 """
- similarity(a,b)::Bool = isequal(dimension(a),dimension(b))
+ similarity(a,b)::Bool = isequal(dimension.(a),dimension.(b))
  ~(a,b) = similarity(a,b)
 #similarity(a,b) = isequal(dimension
 
@@ -559,7 +559,7 @@ end
 """
 uniform(a::T) where T <: Number = true # all scalars by default
 function uniform(a::Vector) 
-    dima = dimension(a)
+    dima = dimension.(a)
     for dd = 2:length(dima)
         if dima[dd] ≠ dima[1]
             return false
@@ -624,7 +624,8 @@ unit_symmetric(A::UnitSymmetricMatrix) = true
       
     pp. 64, Hart, `a~` in his notation
 """
-invdimension(a) = dimension(1 ./ a)
+#invdimension(a) = dimension.(1 ./ a)
+invdimension(a) = dimension.(a).^-1
 
 """
     function dottable(a,b)

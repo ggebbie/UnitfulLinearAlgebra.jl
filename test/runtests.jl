@@ -62,7 +62,7 @@ using Test
         #c ⋅ d
 
         # inverse dimension
-        invdimension(a)
+        invdimension.(a)
 
         k = 1 ./ a
         a ⋅ k
