@@ -616,7 +616,7 @@ uniform(A::UniformMatrix) = true
 
     Definition: uniform unitrange of A
 """
-left_uniform(A::LeftUniformMatrix) = true
+left_uniform(A::Union{LeftUniformMatrix,UniformMatrix}) = true
 left_uniform(A::T) where T<: AbstractMultipliableMatrix = uniform(unitrange(A)) ? true : false
 function left_uniform(A::Matrix)
     B = BestMultipliableMatrix(A)
@@ -628,6 +628,7 @@ end
 
     Does the unitdomain of A have uniform dimensions?
 """
+right_uniform(A::Union{UniformMatrix,RightUniformMatrix}) = true
 right_uniform(A::T) where T<:AbstractMultipliableMatrix = uniform(unitdomain(A)) ? true : false
 function right_uniform(A::Matrix)
     B = BestMultipliableMatrix(A)
