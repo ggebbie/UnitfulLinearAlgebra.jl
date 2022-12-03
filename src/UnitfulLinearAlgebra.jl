@@ -721,9 +721,12 @@ unitrange(A::UniformMatrix) = fill(A.unitrange,size(A.numbers)[1])
 
     Hart, pp. 205.
 """
-transpose(A::MultipliableMatrices) = MultipliableMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)), unit.(1 ./unitrange(A)),exact(A)) 
-transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unit.(1 ./unitrange(A)), exact(A)) 
-transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)[1]), unit.(1 ./unitrange(A)[1]), exact(A)) 
+transpose(A::MultipliableMatrices) = MultipliableMatrix(transpose(A.numbers),unitdomain(A).^-1, unitrange(A).^-1,exact(A)) 
+transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unitrange(A).^-1, exact(A)) 
+transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),unitdomain(A)[1]^-1, unitrange(A)[1]^-1, exact(A)) 
+# transpose(A::MultipliableMatrices) = MultipliableMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)), unit.(1 ./unitrange(A)),exact(A)) 
+# transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unit.(1 ./unitrange(A)), exact(A)) 
+# transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)[1]), unit.(1 ./unitrange(A)[1]), exact(A)) 
 
 """
     function identitymatrix(dimrange)
@@ -844,15 +847,16 @@ function getproperty(C::Cholesky{T,<:MultipliableMatrices}, d::Symbol) where T
     Cuplo    = getfield(C, :uplo)
     if d === :U
         numbers = UpperTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? Cfactors.numbers : copy(Cfactors.numbers'))
-        println(typeof(numbers))
-        println(numbers)
-        return BestMultipliableMatrix(numbers,Cfactors.unitrange,Cfactors.unitdomain,Cfactors.exact)
-    # elseif d === :L
-    #     return LowerTriangular(Cuplo === char_uplo(d) ? Cfactors : copy(Cfactors'))
-    # elseif d === :UL
-    #     return (Cuplo === 'U' ? UpperTriangular(Cfactors) : LowerTriangular(Cfactors))
-    # else
-    #     return getfield(C, d)
+        return BestMultipliableMatrix(numbers,Cfactors.unitrange,Cfactors.unitdomain,exact = Cfactors.exact)
+    elseif d === :L
+        numbers = LowerTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? Cfactors.numbers : copy(Cfactors.numbers'))
+        # use transpose to get units right
+        return BestMultipliableMatrix(numbers,Cfactors.unitdomain.^-1,Cfactors.unitrange.^-1,exact = Cfactors.exact)
+    elseif d === :UL
+        return (Cuplo === 'U' ?        BestMultipliableMatrix(UpperTriangular(Cfactors.numbers),Cfactors.unitrange,Cfactors.unitdomain,exact = Cfactors.exact) : BestMultipliableMatrix(LowerTriangular(Cfactors.numbers),Cfactors.unitdomain.^-1,Cfactors.unitrange.^-1,exact = Cfactors.exact))
+    else
+        #println("caution: fallback not tested")
+        return getfield(C, d)
     end
 end
 

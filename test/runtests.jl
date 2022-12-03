@@ -248,12 +248,16 @@ using Test
         #end
 
             Q = UnitfulLinearAlgebra.cholesky(B)
-            transpose(Q.U)*Q.U
+            test1 = Matrix(transpose(Q.U)*Q.U)
+            @test maximum(abs.(ustrip.(B-test1))) < 1e-5
 
-            Q.
-ch = cholesky(ustrip.(B))            
+            test2 = Matrix(Q.L*transpose(Q.L))
+            @test maximum(abs.(ustrip.(B-test2))) < 1e-5
+            @test maximum(abs.(ustrip.(B-Q.L*transpose(Q.L)))) < 1e-5
+
+            ch = cholesky(ustrip.(B))            
         end
-Cholesky
+
         @testset "matrix * operations" begin
             p = [1.0m, 3.0s]
             q̃ = [-1.0K, 2.0]
