@@ -324,18 +324,27 @@ using Test
 
             # an exact matrix
             x̂ = G \ y
+
+            y2 = convert(Vector{Quantity},y)
+            UnitfulLinearAlgebra.ldiv!(G,y2)
+            
             @test abs.(maximum(ustrip.(x̂-x))) < 1e-10
 
             # an inexact matrix
             x′ = F \ y
             @test abs.(maximum(ustrip.(x′-x))) < 1e-10
 
+            easy = [1. 0.2; 0.2 1.0]
+            tester = cholesky(easy)
+            @which ldiv!(tester,[2.1,3.1])
             
             x̃ = E⁻¹ * y
             @test abs.(maximum(ustrip.(x̃-x))) < 1e-10
 
             # Does LU solve the same problem?
-            # x̆ = Z2 \ y, fails
+            y2 = convert(Vector{Quantity},y)
+            x̆ = Z2 \ y2 #, fails, does work by hand with U, L, etc.
+            @which Z \ y
         end    
 
         @testset "svd" begin

@@ -349,7 +349,15 @@ getindex(A::T,i::Int,j::Int) where T <: AbstractMultipliableMatrix = Quantity(A.
 #Output
 - `Quantity`: numerical value and units
 """
-setindex!(A::T,v,i::Int,j::Int) where T <: AbstractMultipliableMatrix = (unit(v) == unitrange(A)[i]./unitdomain(A)[j]) ? (A.numbers[i,j] = ustrip(v)) : error("new value has incompatible units")
+function setindex!(A::T,v,i::Int,j::Int) where T <: AbstractMultipliableMatrix
+
+    if unit(v) == unitrange(A)[i]./unitdomain(A)[j]
+        A.numbers[i,j] = ustrip(v)
+    else error("new value has incompatible units")
+    end
+end
+
+#function setindex!(A::T,v,i::Int,j::Int) where T <: AbstractMultipliableMatrix = A.numbers[i,j] = ustrip(v)) 
 
 """
     function Matrix(A::MultipliableMatrix)
@@ -531,7 +539,7 @@ function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Sym
         mmatrix = getfield(F, :factors)
         numbers = getfield(mmatrix,:numbers)
         Unum = triu!(numbers[1:min(m,n), 1:n])
-        U = MultipliableMatrix(Unum, unitrange(mmatrix), unitdomain(mmatrix), exact(mmatrix))
+        U = BestMultipliableMatrix(Unum, unitrange(mmatrix), unitdomain(mmatrix), exact=exact(mmatrix))
         return U
     elseif d === :p
         return LinearAlgebra.ipiv2perm(getfield(F, :ipiv), m)
@@ -541,6 +549,16 @@ function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Sym
         getfield(F, d)
     end
 end
+
+# function ldiv!(A::LU{<:Any,<:StridedMatrix}, B::StridedVecOrMat)
+#     if unitrange(A.L) == unit.(B)
+#         LinearAlgebra._apply_ipiv_rows!(A, B)
+#         nums = ldiv!(UpperTriangular(A.factors.numbers), ldiv!(UnitLowerTriangular(A.factors.numbers), ustrip.(B)))
+#         return nums.*unitdomain(A.U)
+#     else
+#         error("units not compatible for ldiv!")
+#     end
+# end
 
 """
     function similarity(a,b)::Bool
@@ -782,7 +800,7 @@ unitrange(A::Union{UniformMatrix,LeftUniformMatrix}) = fill(A.unitrange,size(A.n
 
     Hart, pp. 205.
 """
-transpose(A::AbstractMultipliableMatrix) = MultipliableMatrix(transpose(A.numbers),unitdomain(A).^-1, unitrange(A).^-1,exact(A)) 
+transpose(A::AbstractMultipliableMatrix) = BestMultipliableMatrix(transpose(A.numbers),unitdomain(A).^-1, unitrange(A).^-1,exact=exact(A)) 
 transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unitrange(A).^-1, exact(A)) 
 transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),unitdomain(A)[1]^-1, unitrange(A)[1]^-1, exact(A)) 
 # transpose(A::AbstractMultipliableMatrix) = MultipliableMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)), unit.(1 ./unitrange(A)),exact(A)) 
@@ -814,14 +832,13 @@ identitymatrix(dimrange) = EndomorphicMatrix(I(length(dimrange)),dimrange;exact=
 inv(A::T) where T <: AbstractMultipliableMatrix = ~singular(A) ? BestMultipliableMatrix(inv(A.numbers),unitdomain(A),unitrange(A),exact=exact(A)) : error("matrix is singular")
 
 """
-     function ldiv!
+     function left divide
 
      Left divide of Multipliable Matrix.
      Reverse mapping from unitdomain to range.
      Is `exact` if input is exact.
 """
 function (\)(A::AbstractMultipliableMatrix,b::AbstractVector)
-
     # unit.(range(b)) == range(A) ?  BestMultipliableMatrix(A.numbers\ustrip.(b),unitdomain(A),range(A),exact(A)) : error("matrix and vector units don't match")
     if dimension(unitrange(A)) == dimension(b)
     #if unitrange(A) ~ b
@@ -832,6 +849,39 @@ function (\)(A::AbstractMultipliableMatrix,b::AbstractVector)
     else
         error("UnitfulLinearAlgebra.mldivide: Dimensions of MultipliableMatrix and vector not compatible")
     end
+end
+
+"""
+     function ldiv!
+
+     In-place left division by a Multipliable Matrix.
+     Reverse mapping from unitdomain to range.
+     Is `exact` if input is exact.
+
+    Problem: b changes type.
+"""
+function ldiv!(A::AbstractMultipliableMatrix,b::AbstractVector)
+    if dimension(unitrange(A)) == dimension(b)
+        #if unitrange(A) ~ b
+
+        # seems to go against the point
+        #b = copy((A.numbers\ustrip.(b)).*unitdomain(A))
+        btmp = (A.numbers\ustrip.(b)).*unitdomain(A)
+        for bb = 1:length(btmp)
+            b[bb] = btmp[bb]
+        end
+        
+    elseif ~exact(A) && (unitrange(A) ∥ b)
+        Anew = convert_unitrange(A,unit.(b)) # inefficient?
+        btmp = (Anew.numbers\ustrip.(b)).*unitdomain(Anew)
+        for bb = 1:length(btmp)
+            b[bb] = btmp[bb]
+        end
+
+    else
+        error("UnitfulLinearAlgebra.ldiv!: Dimensions of MultipliableMatrix and vector not compatible")
+    end
+    
 end
 
 """
@@ -899,10 +949,6 @@ function cholesky(A::AbstractMultipliableMatrix)
         error("requires unit symmetric matrix")
     end
     
-         # factors = cholesky(A.numbers)        BestMultipliableMatrix(cholesky(A.numbers),unitdomain(A)./unitdomain(A),unitdomain(A),exact(A))  : #end
-    #         F̂ = lu(A.numbers)
-    # factors = MultipliableMatrix(F̂.factors,unitrange(A),unitdomain(A),exact(A))
-    # F = LU(factors,F̂.ipiv,F̂.info)
 end
 
 function getproperty(C::Cholesky{T,<:AbstractMultipliableMatrix}, d::Symbol) where T 
