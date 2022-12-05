@@ -120,8 +120,10 @@ end
 """
 struct UniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
     numbers::AbstractMatrix{T}
-    unitrange::AbstractVector # just one entry
-    unitdomain::AbstractVector # just one entry
+#    unitrange::AbstractVector # just one entry
+#    unitdomain::AbstractVector # just one entry
+    unitrange::Vector{Unitful.FreeUnits} # just one entry
+    unitdomain::Vector{Unitful.FreeUnits} # just one entry
     exact::Bool
 end
 # struct UniformMatrix{T,R,D} <: AbstractMultipliableMatrix where {T <: Number} where {R,D <: Unitful.Unitlike}
@@ -144,7 +146,7 @@ end
 """
 struct LeftUniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
     numbers::AbstractMatrix{T}
-    unitrange::AbstractVector # usually just one entry
+    unitrange::Vector{Unitful.FreeUnits} # usually just one entry, so that the type is not too exact and changeable with convert_unitdomain!
     unitdomain::AbstractVector
     exact::Bool
 end
@@ -163,7 +165,7 @@ end
 struct RightUniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
     numbers::AbstractMatrix{T}
     unitrange::AbstractVector
-    unitdomain::AbstractVector # usually just one entry
+    unitdomain::Vector{Unitful.FreeUnits} # usually just one entry
     exact::Bool
 end
 
@@ -218,11 +220,15 @@ end
 """
 function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVector,unitdomain::AbstractVector;exact=false)
     if uniform(unitrange) && uniform(unitdomain)
-        B = UniformMatrix(numbers,[unitrange[1]],[unitdomain[1]],exact)
+        ur = Base.convert(Vector{Unitful.FreeUnits},[unitrange[1]])
+        ud = Base.convert(Vector{Unitful.FreeUnits},[unitdomain[1]])
+        B = UniformMatrix(numbers,ur,ud,exact)
     elseif uniform(unitrange)
-        B = LeftUniformMatrix(numbers,[unitrange[1]],unitdomain,exact)
+        ur = Base.convert(Vector{Unitful.FreeUnits},[unitrange[1]])
+        B = LeftUniformMatrix(numbers,ur,unitdomain,exact)
     elseif uniform(unitdomain)
-        B = RightUniformMatrix(numbers,unitrange,[unitdomain[1]],exact)
+        ud = Base.convert(Vector{Unitful.FreeUnits},[unitdomain[1]])
+        B = RightUniformMatrix(numbers,unitrange,ud,exact)
     elseif unitrange == unitdomain
         B = EndomorphicMatrix(numbers,unitrange,exact)
     elseif unitrange ∥ unitdomain
@@ -831,7 +837,10 @@ unitrange(A::Union{UniformMatrix,LeftUniformMatrix}) = fill(A.unitrange[1],size(
 """
 transpose(A::AbstractMultipliableMatrix) = BestMultipliableMatrix(transpose(A.numbers),unitdomain(A).^-1, unitrange(A).^-1,exact=exact(A)) 
 transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unitrange(A).^-1, exact(A)) 
-transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),[unitdomain(A)[1]^-1], [unitrange(A)[1]^-1], exact(A)) 
+transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),
+                                            Base.convert(Vector{Unitful.FreeUnits},[unitdomain(A)[1]^-1]),
+                                            Base.convert(Vector{Unitful.FreeUnits},[unitrange(A)[1]^-1]),
+                                            exact(A)) 
 # transpose(A::AbstractMultipliableMatrix) = MultipliableMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)), unit.(1 ./unitrange(A)),exact(A)) 
 # transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unit.(1 ./unitrange(A)), exact(A)) 
 # transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)[1]), unit.(1 ./unitrange(A)[1]), exact(A)) 
