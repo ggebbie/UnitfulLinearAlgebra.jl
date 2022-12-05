@@ -12,7 +12,7 @@ export uniform, left_uniform, right_uniform
 export invdimension, dottable
 export getindex, setindex!, size
 export convert_unitrange, convert_unitdomain
-#export convert_range!, convert_domain!
+export convert_unitrange!, convert_unitdomain!
 export exact, multipliable, dimensionless, endomorphic
 export svd, inv, transpose
 export unitrange, unitdomain
@@ -533,7 +533,8 @@ function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Sym
         # add ustrip to get numerical values
         Lnum = tril!(numbers[1:m, 1:min(m,n)])
         for i = 1:min(m,n); Lnum[i,i] = one(T); end
-        L = EndomorphicMatrix(Lnum,unitrange(mmatrix),exact(mmatrix))
+        #L = EndomorphicMatrix(Lnum,unitrange(mmatrix),exact(mmatrix))
+        L = BestMultipliableMatrix(Lnum,unitrange(mmatrix),unitrange(mmatrix),exact=exact(mmatrix))
         return L
     elseif d === :U
         mmatrix = getfield(F, :factors)
@@ -710,17 +711,30 @@ function convert_unitdomain(A::AbstractMultipliableMatrix, newdomain::Vector)
     end
 end
 
-#ERROR: setfield!: immutable struct of type MultipliableMatrix cannot be changed
-# function convert_domain!(A::MultipliableMatrix, newdomain::Vector)::MultipliableMatrix
-#     if A.domain ∥ newdomain
-#         shift = newdomain./A.domain
-#         newrange = A.range.*shift
-#         A.domain = newdomain
-#         A.range = newrange
-#     else
-#         error("New domain not parallel to domain of Multipliable Matrix")
-#     end
-# end
+"""
+    function convert_unitdomain!(A, newdomain)
+
+    In-place conversion of unit (dimensional) domain.
+    Matrix Type not permitted to change.
+"""
+function convert_unitdomain!(A::AbstractMultipliableMatrix, newdomain::Vector)
+    if unitdomain(A) ∥ newdomain
+        shift = newdomain[1]./unitdomain(A)[1]
+        # caution: not all matrices have this attribute
+        if hasproperty(A,:unitdomain)
+            for (ii,vv) in enumerate(A.unitdomain)
+                A.unitdomain[ii] *= shift
+            end
+        end
+        if hasproperty(A,:unitrange)
+            for (ii,vv) in enumerate(A.unitrange)
+                A.unitrange[ii] *= shift
+            end
+        end
+    else
+        error("New domain not parallel to domain of Multipliable Matrix")
+    end
+end
 
 """
     function convert_unitrange(A, newrange)
@@ -729,10 +743,11 @@ end
     it is useful to convert the dimensional range of the
     matrix to match the desired output of multiplication.
     Here we set the matrix to `exact=true` after this step.
+    Permits MatrixType to change.
 """
 function convert_unitrange(A::AbstractMultipliableMatrix, newrange::Vector)
     if unitrange(A) ∥ newrange
-        shift = newrange./unitrange(A)
+        shift = newrange[1]./unitrange(A)[1]
         newdomain = unitdomain(A).*shift
         B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
@@ -740,16 +755,30 @@ function convert_unitrange(A::AbstractMultipliableMatrix, newrange::Vector)
     end
 end
 
-#ERROR: setfield!: immutable struct of type MultipliableMatrix cannot be changed
-# function convert_range!(A::MultipliableMatrix, newrange::Vector)::MultipliableMatrix
-#     if A.range ∥ newrange
-#         shift = newrange./A.range
-#         newdomain = A.domain.*shift
-#         A = MultipliableMatrix(A.numbers,newrange,newdomain,A.exact)
-#     else
-#         error("New range not parallel to range of Multipliable Matrix")
-#     end
-# end
+"""
+    function convert_unitrange!(A, newrange)
+
+    In-place conversion of unit (dimensional) range.
+    Matrix Type not permitted to change.
+"""
+function convert_unitrange!(A::AbstractMultipliableMatrix, newrange::Vector)
+    if unitrange(A) ∥ newrange
+        shift = newrange[1]./unitrange(A)[1]
+        # caution: not all matrices have this attribute
+        if hasproperty(A,:unitdomain)
+            for (ii,vv) in enumerate(A.unitdomain)
+                A.unitdomain[ii] *= shift
+            end
+        end
+        if hasproperty(A,:unitrange)
+            for (ii,vv) in enumerate(A.unitrange)
+                A.unitrange[ii] *= shift
+            end
+        end
+     else
+         error("New range not parallel to range of Multipliable Matrix")
+     end
+end
 
 """
     function exact(A)
@@ -851,6 +880,51 @@ function (\)(A::AbstractMultipliableMatrix,b::AbstractVector)
     end
 end
 
+# function (\)(F:::LU{T,<:AbstractMultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
+
+#     # UnitfulLinearAlgebra: F - > F.factors
+#     require_one_based_indexing(B)
+#     m, n = size(F)
+
+#     # UnitfulLinearAlgebra: check units
+#     if dimension(unitrange(A)) == dimension(b)
+#          # pass without any issues
+#     elseif dimension(unitrange(F.factors)) ∥ dimension(b)
+#         # convert_range of F.factors
+#         # is allocating, will affect performance
+#         convert_unitrange(F.factors,unit.(b))
+#     else
+#         error("units of F, B, are not conformable")
+#     end
+    
+#     if m != size(B, 1)
+#         throw(DimensionMismatch("arguments must have the same number of rows"))
+#     end
+
+#     TFB = typeof(oneunit(eltype(B)) / oneunit(eltype(F.factors)))
+#     FF = Factorization{TFB}(F.factors)
+
+#     # For wide problem we (often) compute a minimum norm solution. The solution
+#     # is larger than the right hand side so we use size(F, 2).
+#     BB = _zeros(TFB, B, n)
+
+#     if n > size(B, 1)
+#         # Underdetermined
+#         copyto!(view(BB, 1:m, :), B)
+#     else
+#         copyto!(BB, B)
+#     end
+
+#     ldiv!(FF, BB)
+
+#     # For tall problems, we compute a least squares solution so only part
+#     # of the rhs should be returned from \ while ldiv! uses (and returns)
+#     # the complete rhs
+#     # UnitfulLinearAlgebra: add units
+#     return _cut_B(BB, 1:n).*unitdomain(F.factors)
+# end
+
+
 """
      function ldiv!
 
@@ -858,9 +932,11 @@ end
      Reverse mapping from unitdomain to range.
      Is `exact` if input is exact.
 
-    Problem: b changes type.
+    Problem: b changes type unless endomorphic
 """
 function ldiv!(A::AbstractMultipliableMatrix,b::AbstractVector)
+    ~endomorphic(A) && error("A not endomorphic, b changes type, ldiv! not available")
+    
     if dimension(unitrange(A)) == dimension(b)
         #if unitrange(A) ~ b
 

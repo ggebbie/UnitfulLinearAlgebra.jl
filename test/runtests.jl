@@ -140,30 +140,27 @@ using Test
             # outer product to make a multipliable matrix
             A = p*q̃'
             B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            Bq = B*q
             @test A==Matrix(B)
-            @test isequal(A*q,B*q)
-
+            @test isequal(A*q,Bq)
             
             # new domain
             qnew = (q)K
             D = convert_unitdomain(B,unit.(qnew))
-            @test B*q ∥ D*qnew
+            convert_unitdomain!(B,unit.(qnew))
+            @test unitrange(D) == unitrange(B)
+            @test unitdomain(D) == unitdomain(B)
+            @test Bq ∥ D*qnew
 
-            # update B?
-            #convert_domain!(B,unit.(qnew))
-            #@test B*qnew ∥ D*qnew
-            
             pnew = (p)s
             qnew = (q)s
             E = convert_unitrange(B,unit.(pnew))
-            @test B*q ∥ E*qnew
-
+            @test Bq ∥ E*qnew
         end
 
         @testset "array" begin
             p = [1.0m, 3.0s]
             q̃ = [-1.0K, 2.0]
-
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
             # outer product to make a multipliable matrix
@@ -186,7 +183,6 @@ using Test
             
             p = [1.0m, 1.0s]
             q̃ = 1 ./ [1.0m, 1.0s]
-
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
             # outer product to make a multipliable matrix
@@ -198,9 +194,9 @@ using Test
             Bᵀ = transpose(B)
             @test Bᵀ[2,1] == B[1,2]
 
-            Ip = EndomorphicMatrix(I(2),unit.([0m,0s]))
+            Ip = EndomorphicMatrix(I(2),[m,s])
             B3 + Ip
-            Ip = identitymatrix(unit.(p))
+            Ip = identitymatrix([m,s])
             
             @test Matrix(B)==Matrix(B2)
             @test Matrix(B3)==Matrix(B2)
@@ -208,6 +204,13 @@ using Test
             @test endomorphic(B2)
             @test endomorphic(B)
             @test endomorphic(A)
+
+            #change domain of B3
+            convert_unitrange!(B3,[m²,s*m])
+            @test unitrange(B3) == [m²,s*m]
+
+            convert_unitdomain!(B3,[m,s])
+            @test unitdomain(B3) == [m,s]
         end
 
         @testset "squarable" begin
@@ -222,7 +225,12 @@ using Test
             @test square(B)
             @test squarable(B)
             B*B
-            #inv(B); rank 1, not invertible
+            
+            convert_unitrange!(B,K*[m,s])
+            @test unitrange(B) == K*[m,s]
+
+            convert_unitdomain!(B,K*[m,s])
+            @test unitdomain(B) == K*[m,s]
 
         end
 
@@ -294,16 +302,18 @@ using Test
             u3 = m/s/s
         
             # example: polynomial fitting
-            K = 3
-            E = hcat(randn(K),randn(K)u1/u2,randn(K)u1/u3)
-            y = randn(K)u1
+            k = 3
+            E = hcat(randn(k),randn(k)u1/u2,randn(k)u1/u3)
+            y = randn(k)u1
             x = [randn()u1; randn()u2; randn()u3] 
 
             Z = lu(ustrip.(E))
             
             F = BestMultipliableMatrix(E)
+            
             G = convert_unitdomain(F,unit.(x))
-                               
+            convert_unitdomain!(G,s.*unit.(x))
+            
             Z2 = lu(F)
 
             # failing with a small error (1e-17)
@@ -325,8 +335,8 @@ using Test
             # an exact matrix
             x̂ = G \ y
 
-            y2 = convert(Vector{Quantity},y)
-            UnitfulLinearAlgebra.ldiv!(G,y2)
+            #y2 = convert(Vector{Quantity},y)
+            #UnitfulLinearAlgebra.ldiv!(G,y2)
             
             @test abs.(maximum(ustrip.(x̂-x))) < 1e-10
 
@@ -343,7 +353,10 @@ using Test
 
             # Does LU solve the same problem?
             y2 = convert(Vector{Quantity},y)
-            x̆ = Z2 \ y2 #, fails, does work by hand with U, L, etc.
+            x̆ = Z2 \ y #, fails, does work by hand with U, L, etc.
+            # works by hand
+            𝐱 = Z2.U\(Z2.L\(Z2.P'*y))
+
             @which Z \ y
         end    
 
