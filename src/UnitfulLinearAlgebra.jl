@@ -678,7 +678,7 @@ squarable(A::T) where T <: AbstractMultipliableMatrix = (unitdomain(A) ∥ unitr
 squarable(A::SquarableMatrix) = true
 squarable(A::EndomorphicMatrix) = true
 
-unit_symmetric(A::AbstractMultipliableMatrix) = false
+unit_symmetric(A::AbstractMultipliableMatrix) = (unitrange(A) ∥ 1 ./unitdomain(A))
 unit_symmetric(A::UnitSymmetricMatrix) = true
 
 """
@@ -889,6 +889,17 @@ function (\)(A::AbstractMultipliableMatrix,b::AbstractVector)
     end
 end
 
+function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
+    if unitrange(A) == unitrange(B)
+        return (A.numbers\B.numbers).*unitdomain(A)
+    elseif ~exact(A) && (unitrange(A) ∥ b)
+        convert_unitrange!(A,unitrange(B)) # inefficient?
+        return (A.numbers\B.numbers).*unitdomain(A)
+    else
+        error("UnitfulLinearAlgebra.mldivide: Dimensions of Multipliable Matrices A and B not compatible")
+    end
+end
+
 #function (\)(F::LU{T,AbstractMultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 """
     function ldiv(F::LU{T,LeftUniformMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
@@ -1012,8 +1023,40 @@ function svd(A::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorit
         # They are also Uniform and Endomorphic
         return SVD(F.U,F.S * unitrange(A)[1]./unitdomain(A)[1],F.Vt)
     else
-        error("SVD not implemented for non-uniform matrices or non-full flag")
+        error("SVD not implemented for non-uniform matrices")
     end
+end
+
+"""
+    function svd(A::AbstractMultipliableMatrix,Pdomain::UnitSymmetricMatrix,Prange::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
+
+    Singular value decomposition for matrices with non-uniform units.
+# Input
+- `A::AbstractMultipliableMatrix`
+- `Prange::UnitSymmetricMatrix`: square matrix defining norm of range
+- `Pdomain::UnitSymmetricMatrix`: square matrix defining norm of domain
+- `full=false`: optional argument
+- `alg`: optional argument for algorithm
+# Output:
+- `F::SVD`: SVD object with units that can be deconstructed
+"""
+function svd(A::AbstractMultipliableMatrix,Pr::UnitSymmetricMatrix,Pd::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
+
+    Qr = getproperty(cholesky(Pr),:U)
+    Qd = getproperty(cholesky(Pd),:U)
+
+    # must be more efficient way
+    A′ = Qr*(A*inv(Qd))
+
+    ~dimensionless(A′) && error("A′ should be dimensionless to implement `LinearAlgebra.svd`")
+
+    F′ = svd(A′.numbers, full=full, alg=alg)
+    U′ = BestMultipliableMatrix(F′.U)
+    U = Qr \ U′
+        # U,V just regular matrices: return that way?
+        # They are also Uniform and Endomorphic
+     #   return SVD(F.U,F.S * unitrange(A)[1]./unitdomain(A)[1],F.Vt)
+    #end
 end
 
 """
