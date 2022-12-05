@@ -831,7 +831,7 @@ unitrange(A::Union{UniformMatrix,LeftUniformMatrix}) = fill(A.unitrange[1],size(
 """
 transpose(A::AbstractMultipliableMatrix) = BestMultipliableMatrix(transpose(A.numbers),unitdomain(A).^-1, unitrange(A).^-1,exact=exact(A)) 
 transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unitrange(A).^-1, exact(A)) 
-transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),unitdomain(A)[1]^-1, unitrange(A)[1]^-1, exact(A)) 
+transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),[unitdomain(A)[1]^-1], [unitrange(A)[1]^-1], exact(A)) 
 # transpose(A::AbstractMultipliableMatrix) = MultipliableMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)), unit.(1 ./unitrange(A)),exact(A)) 
 # transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unit.(1 ./unitrange(A)), exact(A)) 
 # transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)[1]), unit.(1 ./unitrange(A)[1]), exact(A)) 
