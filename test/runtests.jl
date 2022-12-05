@@ -375,9 +375,9 @@ using Test
  	    F2 = svd(E2,full=true)
  	    F3 = svd(E2)
 
-            K = length(F3.S)
+            Krank = length(F3.S)
             G = 0 .*E
-            for k = 1:K
+            for k = 1:Krank
                 # outer product
                 G += F2.S[k] * F2.U[:,k] * transpose(F2.Vt[k,:])
             end
@@ -430,54 +430,24 @@ using Test
             Pr = inv(Cr)
 
             ##
-            svd
-            
-            # not so easy with Uniform matrices
-            @test unitdomain(F) == unitdomain(G)
-            Z2 = lu(G)
+            G = svd(F,Pr,Pd) 
 
-            # failing with a small error (1e-17)
-            @test maximum(abs.(ustrip.(E[Z2.p,:]-Matrix(Z2.L*Z2.U)))) < 1e-5
-            @test ~singular(F)
-            det(F)
+            ## doesn't work because I can't call (i.e., getindex!) of a column
+            # Krank = length(G.S)
+            # H = 0 .*E
+            # for k = 1:Krank
+            #     # outer product
+            #     H += G.S[k] * G.U[:,k] * transpose(G.Vt[k,:])
+            # end
+            # @test ustrip(abs.(maximum(G- E) )) < 1e-10
 
-            E⁻¹ = inv(G)
 
-            Eᵀ = transpose(G)
-            @test G[2,1] == Eᵀ[1,2]
-            #x̃ = E⁻¹ * (E * x) # doesn't work because Vector{Any} in parentheses, dimension() not valid, dimension deprecated?
-            y = G*x
+            # recover using Diagonal dimensional matrix
+ 	    # Λ = diagm(G.S,unitrange(F),unitdomain(G),exact=true)
+ 	    Λ = diagm(size(F)[1],size(F)[2],G.S)
+            Ẽ = G.U*(Λ*G.Vt)
 
-            # matrix left divide.
-            # just numbers.
-            x̃num = ustrip.(E) \ ustrip.(y)
-
-            # an exact matrix
-            x̂ = G \ y
-
-            #y2 = convert(Vector{Quantity},y)
-            #UnitfulLinearAlgebra.ldiv!(G,y2)
-            
-            @test abs.(maximum(ustrip.(x̂-x))) < 1e-10
-
-            # an inexact matrix
-            x′ = F \ y
-            @test abs.(maximum(ustrip.(x′-x))) < 1e-10
-
-            #easy = [1. 0.2; 0.2 1.0]
-            #tester = cholesky(easy)
-            #@which ldiv!(tester,[2.1,3.1])
-            
-            x̃ = E⁻¹ * y
-            @test abs.(maximum(ustrip.(x̃-x))) < 1e-10
-
-            # Does LU solve the same problem?
-            x̆ = Z2 \ y 
-            @test abs.(maximum(ustrip.(x̆-x))) < 1e-10
-
-            # works by hand
-            𝐱 = Z2.U\(Z2.L\(Z2.P'*y))
-            @test abs.(maximum(ustrip.(𝐱-x))) < 1e-10
+            @test abs.(maximum(ustrip.(Matrix(Ẽ) - E))) < 1e-10
 
         end    
 

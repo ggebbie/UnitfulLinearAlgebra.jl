@@ -891,10 +891,11 @@ end
 
 function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
     if unitrange(A) == unitrange(B)
-        return (A.numbers\B.numbers).*unitdomain(A)
+        #return (A.numbers\B.numbers).*unitdomain(A)
+        return BestMultipliableMatrix(A.numbers\B.numbers,unitdomain(A),unitdomain(B),exact = (exact(A) && exact(B)))
     elseif ~exact(A) && (unitrange(A) ∥ b)
         convert_unitrange!(A,unitrange(B)) # inefficient?
-        return (A.numbers\B.numbers).*unitdomain(A)
+        return BestMultipliableMatrix(A.numbers\B.numbers,unitdomain(A),unitdomain(B),exact = (exact(A)&&exact(B)))
     else
         error("UnitfulLinearAlgebra.mldivide: Dimensions of Multipliable Matrices A and B not compatible")
     end
@@ -1040,10 +1041,10 @@ end
 # Output:
 - `F::SVD`: SVD object with units that can be deconstructed
 """
-function svd(A::AbstractMultipliableMatrix,Pr::UnitSymmetricMatrix,Pd::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
+function svd(A::AbstractMultipliableMatrix,Pr::AbstractMultipliableMatrix,Pd::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
 
-    Qr = getproperty(cholesky(Pr),:U)
-    Qd = getproperty(cholesky(Pd),:U)
+    unit_symmetric(Pr) ? Qr = getproperty(cholesky(Pr),:U) : error("norm matrix for range not unit symmetric")
+    unit_symmetric(Pd) ? Qd = getproperty(cholesky(Pd),:U) : error("norm matrix for domain not unit symmetric")
 
     # must be more efficient way
     A′ = Qr*(A*inv(Qd))
@@ -1051,12 +1052,19 @@ function svd(A::AbstractMultipliableMatrix,Pr::UnitSymmetricMatrix,Pd::UnitSymme
     ~dimensionless(A′) && error("A′ should be dimensionless to implement `LinearAlgebra.svd`")
 
     F′ = svd(A′.numbers, full=full, alg=alg)
-    U′ = BestMultipliableMatrix(F′.U)
-    U = Qr \ U′
-        # U,V just regular matrices: return that way?
-        # They are also Uniform and Endomorphic
-     #   return SVD(F.U,F.S * unitrange(A)[1]./unitdomain(A)[1],F.Vt)
-    #end
+
+    # Issue: SVD structure calls for Vt, but it is really V⁻¹
+
+    # Issue: SVD wants first and last matrices to have the same type.
+    #return SVD( Qr\BestMultipliableMatrix(F′.U),F′.S,F′.Vt*Qd)
+
+    U = Qr\BestMultipliableMatrix(F′.U)
+    Û = MultipliableMatrix(U.numbers,unitrange(U),unitdomain(U),exact(U))
+
+    Vt = F′.Vt*Qd
+    V̂t = MultipliableMatrix(Vt.numbers,unitrange(Vt),unitdomain(Vt),exact(Vt))
+    return SVD(Û,F′.S,V̂t)
+    
 end
 
 """
