@@ -248,13 +248,11 @@ using Test
             @test ~squarable(B)
 
             # make equivalent Diagonal matrix.
-            C = UnitfulLinearAlgebra.Diagonal([1.0m, 4.0s],p,q)
+            C = Diagonal([1.0m, 4.0s],p,q)
 
             Anodims = ustrip.(A)
             # try cholesky decomposition
             Qnodims = cholesky(Anodims)
-            
-        #end
 
             Q = UnitfulLinearAlgebra.cholesky(B)
             test1 = Matrix(transpose(Q.U)*Q.U)
@@ -265,7 +263,7 @@ using Test
             @test maximum(abs.(ustrip.(B-Q.L*transpose(Q.L)))) < 1e-5
 
             # do operations directly with Q?
-            Qnodims.U\[0.5, 0.5]
+            Qnodims.U\[0.5, 0.8]
             Q.U\[0.5, 0.8]
             #Q\[0.5, 0.8] # doesn't work
         end
@@ -312,9 +310,12 @@ using Test
             F = BestMultipliableMatrix(E)
             
             G = convert_unitdomain(F,unit.(x))
-            convert_unitdomain!(G,s.*unit.(x))
+
+            # doesn't work due to Units type conflict.
+            #convert_unitdomain!(G,s.*unit.(x))
+            #convert_unitdomain!(G,unit.(x))
             
-            Z2 = lu(F)
+            Z2 = lu(G)
 
             # failing with a small error (1e-17)
             @test maximum(abs.(ustrip.(E[Z2.p,:]-Matrix(Z2.L*Z2.U)))) < 1e-5
@@ -344,26 +345,26 @@ using Test
             x′ = F \ y
             @test abs.(maximum(ustrip.(x′-x))) < 1e-10
 
-            easy = [1. 0.2; 0.2 1.0]
-            tester = cholesky(easy)
-            @which ldiv!(tester,[2.1,3.1])
+            #easy = [1. 0.2; 0.2 1.0]
+            #tester = cholesky(easy)
+            #@which ldiv!(tester,[2.1,3.1])
             
             x̃ = E⁻¹ * y
             @test abs.(maximum(ustrip.(x̃-x))) < 1e-10
 
             # Does LU solve the same problem?
-            y2 = convert(Vector{Quantity},y)
-            x̆ = Z2 \ y #, fails, does work by hand with U, L, etc.
+            x̆ = Z2 \ y 
+            @test abs.(maximum(ustrip.(x̆-x))) < 1e-10
+
             # works by hand
             𝐱 = Z2.U\(Z2.L\(Z2.P'*y))
+            @test abs.(maximum(ustrip.(𝐱-x))) < 1e-10
 
-            @which Z \ y
         end    
 
         @testset "svd" begin
             
 	    E = [1/2 1/2; 1/4 3/4; 3/4 1/4]m
-
             
             E2 = BestMultipliableMatrix(E)
             @test size(E2)==size(E)

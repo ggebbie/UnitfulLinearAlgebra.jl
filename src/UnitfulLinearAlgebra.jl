@@ -120,8 +120,8 @@ end
 """
 struct UniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
     numbers::AbstractMatrix{T}
-    unitrange
-    unitdomain
+    unitrange::AbstractVector # just one entry
+    unitdomain::AbstractVector # just one entry
     exact::Bool
 end
 # struct UniformMatrix{T,R,D} <: AbstractMultipliableMatrix where {T <: Number} where {R,D <: Unitful.Unitlike}
@@ -144,7 +144,7 @@ end
 """
 struct LeftUniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
     numbers::AbstractMatrix{T}
-    unitrange
+    unitrange::AbstractVector # usually just one entry
     unitdomain::AbstractVector
     exact::Bool
 end
@@ -163,7 +163,7 @@ end
 struct RightUniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
     numbers::AbstractMatrix{T}
     unitrange::AbstractVector
-    unitdomain
+    unitdomain::AbstractVector # usually just one entry
     exact::Bool
 end
 
@@ -218,11 +218,11 @@ end
 """
 function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVector,unitdomain::AbstractVector;exact=false)
     if uniform(unitrange) && uniform(unitdomain)
-        B = UniformMatrix(numbers,unitrange[1],unitdomain[1],exact)
+        B = UniformMatrix(numbers,[unitrange[1]],[unitdomain[1]],exact)
     elseif uniform(unitrange)
-        B = LeftUniformMatrix(numbers,unitrange[1],unitdomain,exact)
+        B = LeftUniformMatrix(numbers,[unitrange[1]],unitdomain,exact)
     elseif uniform(unitdomain)
-        B = RightUniformMatrix(numbers,unitrange,unitdomain[1],exact)
+        B = RightUniformMatrix(numbers,unitrange,[unitdomain[1]],exact)
     elseif unitrange == unitdomain
         B = EndomorphicMatrix(numbers,unitrange,exact)
     elseif unitrange ∥ unitdomain
@@ -816,10 +816,10 @@ unitdomain(A::SquarableMatrix) = A.unitrange.*A.Δunitdomain
 #unitdomain(A::UnitSymmetricMatrix) = unit.(1 ./ A.unitrange).*A.Δunitdomain
 unitdomain(A::UnitSymmetricMatrix) =  A.Δunitdomain./A.unitrange
 unitdomain(A::EndomorphicMatrix) = A.unitrange # unitdomain not saved and must be reconstructed
-unitdomain(A::Union{UniformMatrix,RightUniformMatrix}) = fill(A.unitdomain,size(A.numbers)[2])
+unitdomain(A::Union{UniformMatrix,RightUniformMatrix}) = fill(A.unitdomain[1],size(A.numbers)[2])
 
 unitrange(A::T) where T <: AbstractMultipliableMatrix = A.unitrange
-unitrange(A::Union{UniformMatrix,LeftUniformMatrix}) = fill(A.unitrange,size(A.numbers)[1])
+unitrange(A::Union{UniformMatrix,LeftUniformMatrix}) = fill(A.unitrange[1],size(A.numbers)[1])
 
 """
     function transpose
@@ -880,50 +880,61 @@ function (\)(A::AbstractMultipliableMatrix,b::AbstractVector)
     end
 end
 
-# function (\)(F:::LU{T,<:AbstractMultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
+#function (\)(F::LU{T,AbstractMultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
+"""
+    function ldiv(F::LU{T,LeftUniformMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 
-#     # UnitfulLinearAlgebra: F - > F.factors
-#     require_one_based_indexing(B)
-#     m, n = size(F)
+    Perform matrix left divide on LU factorization object,
+    where LU object contains unit information.
+     Requires LeftUniformMatrix in type signature (?). 
+"""
+function (\)(F::LU{T,LeftUniformMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 
-#     # UnitfulLinearAlgebra: check units
-#     if dimension(unitrange(A)) == dimension(b)
-#          # pass without any issues
-#     elseif dimension(unitrange(F.factors)) ∥ dimension(b)
-#         # convert_range of F.factors
-#         # is allocating, will affect performance
-#         convert_unitrange(F.factors,unit.(b))
-#     else
-#         error("units of F, B, are not conformable")
-#     end
+    # UnitfulLinearAlgebra: F - > F.factors
+    LinearAlgebra.require_one_based_indexing(B)
+    m, n = size(F)
+
+    # UnitfulLinearAlgebra: check units
+    if dimension(unitrange(F.factors)) == dimension(B)
+         # pass without any issues
+    elseif dimension(unitrange(F.factors)) ∥ dimension(b)
+        # convert_range of F.factors
+        # is allocating, will affect performance
+        convert_unitrange!(F.factors,unit.(b))
+    else
+        error("units of F, B, are not conformable")
+    end
     
-#     if m != size(B, 1)
-#         throw(DimensionMismatch("arguments must have the same number of rows"))
-#     end
+    if m != size(B, 1)
+        throw(DimensionMismatch("arguments must have the same number of rows"))
+    end
 
-#     TFB = typeof(oneunit(eltype(B)) / oneunit(eltype(F.factors)))
-#     FF = Factorization{TFB}(F.factors)
+    TFB = typeof(oneunit(eltype(ustrip.(B))) / oneunit(eltype(F.factors.numbers)))
 
-#     # For wide problem we (often) compute a minimum norm solution. The solution
-#     # is larger than the right hand side so we use size(F, 2).
-#     BB = _zeros(TFB, B, n)
+    # does this line incur a lot of allocations?
+    # it demotes Unitful LU struct to Numeric LU struct
+    FF = LinearAlgebra.Factorization{TFB}(LU(F.factors.numbers,F.ipiv,F.info))
 
-#     if n > size(B, 1)
-#         # Underdetermined
-#         copyto!(view(BB, 1:m, :), B)
-#     else
-#         copyto!(BB, B)
-#     end
+    # For wide problem we (often) compute a minimum norm solution. The solution
+    # is larger than the right hand side so we use size(F, 2).
+    BB = LinearAlgebra._zeros(TFB, B, n)
 
-#     ldiv!(FF, BB)
+    if n > size(B, 1)
+        # Underdetermined
+        # Does "ustrip" cause performance issues?
+        LinearAlgebra.copyto!(view(BB, 1:m, :), ustrip.(B))
+    else
+        LinearAlgebra.copyto!(BB, ustrip.(B))
+    end
 
-#     # For tall problems, we compute a least squares solution so only part
-#     # of the rhs should be returned from \ while ldiv! uses (and returns)
-#     # the complete rhs
-#     # UnitfulLinearAlgebra: add units
-#     return _cut_B(BB, 1:n).*unitdomain(F.factors)
-# end
+    LinearAlgebra.ldiv!(FF, BB)
 
+    # For tall problems, we compute a least squares solution so only part
+    # of the rhs should be returned from \ while ldiv! uses (and returns)
+    # the complete rhs
+    # UnitfulLinearAlgebra: add units
+    return LinearAlgebra._cut_B(BB, 1:n).*unitdomain(F.factors)
+end
 
 """
      function ldiv!
