@@ -62,7 +62,7 @@ using Test
         #c ⋅ d
 
         # inverse dimension
-        invdimension(a)
+        invdimension.(a)
 
         k = 1 ./ a
         a ⋅ k
@@ -140,30 +140,27 @@ using Test
             # outer product to make a multipliable matrix
             A = p*q̃'
             B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            Bq = B*q
             @test A==Matrix(B)
-            @test isequal(A*q,B*q)
-
+            @test isequal(A*q,Bq)
             
             # new domain
             qnew = (q)K
-            D = convert_domain(B,unit.(qnew))
-            @test B*q ∥ D*qnew
+            D = convert_unitdomain(B,unit.(qnew))
+            convert_unitdomain!(B,unit.(qnew))
+            @test unitrange(D) == unitrange(B)
+            @test unitdomain(D) == unitdomain(B)
+            @test Bq ∥ D*qnew
 
-            # update B?
-            #convert_domain!(B,unit.(qnew))
-            #@test B*qnew ∥ D*qnew
-            
             pnew = (p)s
             qnew = (q)s
-            E = convert_range(B,unit.(pnew))
-            @test B*q ∥ E*qnew
-
+            E = convert_unitrange(B,unit.(pnew))
+            @test Bq ∥ E*qnew
         end
 
         @testset "array" begin
             p = [1.0m, 3.0s]
             q̃ = [-1.0K, 2.0]
-
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
             # outer product to make a multipliable matrix
@@ -186,7 +183,6 @@ using Test
             
             p = [1.0m, 1.0s]
             q̃ = 1 ./ [1.0m, 1.0s]
-
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
             # outer product to make a multipliable matrix
@@ -198,9 +194,9 @@ using Test
             Bᵀ = transpose(B)
             @test Bᵀ[2,1] == B[1,2]
 
-            Ip = EndomorphicMatrix(I(2),unit.([0m,0s]))
+            Ip = EndomorphicMatrix(I(2),[m,s])
             B3 + Ip
-            Ip = identitymatrix(unit.(p))
+            Ip = identitymatrix([m,s])
             
             @test Matrix(B)==Matrix(B2)
             @test Matrix(B3)==Matrix(B2)
@@ -208,23 +204,68 @@ using Test
             @test endomorphic(B2)
             @test endomorphic(B)
             @test endomorphic(A)
+
+            #change domain of B3
+            convert_unitrange!(B3,[m²,s*m])
+            @test unitrange(B3) == [m²,s*m]
+
+            convert_unitdomain!(B3,[m,s])
+            @test unitdomain(B3) == [m,s]
         end
 
         @testset "squarable" begin
-            p = [1.0m, 1.0s]
-            q̃ = 1 ./ [1.0m, 1.0s]
+            p = [1.0m, 2.0s]
+            q̃ = 1 ./ [2.0m², 3.0m*s]
 
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=false)
             @test square(B)
             @test squarable(B)
-
-            #B*B
-            #inv(B)
+            B*B
             
+            convert_unitrange!(B,K*[m,s])
+            @test unitrange(B) == K*[m,s]
+
+            convert_unitdomain!(B,K*[m,s])
+            @test unitdomain(B) == K*[m,s]
+
+        end
+
+        @testset "unit symmetric" begin
+            p = [2.0m, 1.0s]
+            q̃ = p
+
+            p = [m,s]
+            q= p.^-1
+            
+            # outer product to make a multipliable matrix
+            A = [1.0 0.1; 0.1 1.0]
+            B = BestMultipliableMatrix(A,p,q ,exact=true)
+            @test square(B)
+            @test ~squarable(B)
+
+            # make equivalent Diagonal matrix.
+            C = Diagonal([1.0m, 4.0s],p,q)
+
+            Anodims = ustrip.(A)
+            # try cholesky decomposition
+            Qnodims = cholesky(Anodims)
+
+            Q = UnitfulLinearAlgebra.cholesky(B)
+            test1 = Matrix(transpose(Q.U)*Q.U)
+            @test maximum(abs.(ustrip.(B-test1))) < 1e-5
+
+            test2 = Matrix(Q.L*transpose(Q.L))
+            @test maximum(abs.(ustrip.(B-test2))) < 1e-5
+            @test maximum(abs.(ustrip.(B-Q.L*transpose(Q.L)))) < 1e-5
+
+            # do operations directly with Q?
+            Qnodims.U\[0.5, 0.8]
+            Q.U\[0.5, 0.8]
+            #Q\[0.5, 0.8] # doesn't work
         end
 
         @testset "matrix * operations" begin
@@ -259,17 +300,22 @@ using Test
             u3 = m/s/s
         
             # example: polynomial fitting
-            K = 3
-            E = hcat(randn(K),randn(K)u1/u2,randn(K)u1/u3)
-            y = randn(K)u1
+            k = 3
+            E = hcat(randn(k),randn(k)u1/u2,randn(k)u1/u3)
+            y = randn(k)u1
             x = [randn()u1; randn()u2; randn()u3] 
 
             Z = lu(ustrip.(E))
             
             F = BestMultipliableMatrix(E)
-            G = convert_domain(F,unit.(x))
-                               
-            Z2 = lu(F)
+            
+            G = convert_unitdomain(F,unit.(x))
+
+            # doesn't work due to Units type conflict.
+            #convert_unitdomain!(G,s.*unit.(x))
+            #convert_unitdomain!(G,unit.(x))
+            
+            Z2 = lu(G)
 
             # failing with a small error (1e-17)
             @test maximum(abs.(ustrip.(E[Z2.p,:]-Matrix(Z2.L*Z2.U)))) < 1e-5
@@ -289,24 +335,36 @@ using Test
 
             # an exact matrix
             x̂ = G \ y
+
+            #y2 = convert(Vector{Quantity},y)
+            #UnitfulLinearAlgebra.ldiv!(G,y2)
+            
             @test abs.(maximum(ustrip.(x̂-x))) < 1e-10
 
             # an inexact matrix
             x′ = F \ y
             @test abs.(maximum(ustrip.(x′-x))) < 1e-10
 
+            #easy = [1. 0.2; 0.2 1.0]
+            #tester = cholesky(easy)
+            #@which ldiv!(tester,[2.1,3.1])
             
             x̃ = E⁻¹ * y
             @test abs.(maximum(ustrip.(x̃-x))) < 1e-10
 
             # Does LU solve the same problem?
-            # x̆ = Z2 \ y, fails
+            x̆ = Z2 \ y 
+            @test abs.(maximum(ustrip.(x̆-x))) < 1e-10
+
+            # works by hand, but failed on 1.8 GitHub Action
+            #𝐱 = Z2.U\(Z2.L\(Z2.P'*y))
+            #@test abs.(maximum(ustrip.(𝐱-x))) < 1e-10
+
         end    
 
-        @testset "svd" begin
+        @testset "uniform svd" begin
             
 	    E = [1/2 1/2; 1/4 3/4; 3/4 1/4]m
-
             
             E2 = BestMultipliableMatrix(E)
             @test size(E2)==size(E)
@@ -327,7 +385,7 @@ using Test
 
             # recover using Diagonal dimensional matrix
             # use Full SVD (thin may not work)
- 	    Λ = diagm(F2.S,range(E2),domain(E2),exact=true)
+ 	    Λ = diagm(F2.S,unitrange(E2),unitdomain(E2),exact=true)
             Ẽ = F2.U*(Λ*F2.Vt)
 
             @test ustrip(abs.(maximum(Matrix(Ẽ) - E))) < 1e-10
@@ -340,5 +398,72 @@ using Test
 # #            [@test isequal(x̃[i]/ustrip(x̃[i]),1.0u"dbar^-1") for i in 1:length(x̃)]
 
         end
+
+        # @testset "non-uniform svd" begin
+           
+        #     u1 = m
+        #     u2 = m/s
+        #     u3 = m/s/s
+        
+        #     # example: polynomial fitting
+        #     k = 3
+        #     E = hcat(randn(k),randn(k)u1/u2,randn(k)u1/u3)
+        #     y = randn(k)u1
+        #     x = [randn()u1; randn()u2; randn()u3] 
+
+        #     F = BestMultipliableMatrix(E)
+        #     G = convert_unitdomain(F,unit.(x))
+        #     convert_unitdomain!(F,unit.(x))
+
+        #     # not so easy with Uniform matrices
+        #     @test unitdomain(F) == unitdomain(G)
+        #     Z2 = lu(G)
+
+        #     # failing with a small error (1e-17)
+        #     @test maximum(abs.(ustrip.(E[Z2.p,:]-Matrix(Z2.L*Z2.U)))) < 1e-5
+        #     @test ~singular(F)
+        #     det(F)
+
+        #     E⁻¹ = inv(G)
+
+        #     Eᵀ = transpose(G)
+        #     @test G[2,1] == Eᵀ[1,2]
+        #     #x̃ = E⁻¹ * (E * x) # doesn't work because Vector{Any} in parentheses, dimension() not valid, dimension deprecated?
+        #     y = G*x
+
+        #     # matrix left divide.
+        #     # just numbers.
+        #     x̃num = ustrip.(E) \ ustrip.(y)
+
+        #     # an exact matrix
+        #     x̂ = G \ y
+
+        #     #y2 = convert(Vector{Quantity},y)
+        #     #UnitfulLinearAlgebra.ldiv!(G,y2)
+            
+        #     @test abs.(maximum(ustrip.(x̂-x))) < 1e-10
+
+        #     # an inexact matrix
+        #     x′ = F \ y
+        #     @test abs.(maximum(ustrip.(x′-x))) < 1e-10
+
+        #     #easy = [1. 0.2; 0.2 1.0]
+        #     #tester = cholesky(easy)
+        #     #@which ldiv!(tester,[2.1,3.1])
+            
+        #     x̃ = E⁻¹ * y
+        #     @test abs.(maximum(ustrip.(x̃-x))) < 1e-10
+
+        #     # Does LU solve the same problem?
+        #     x̆ = Z2 \ y 
+        #     @test abs.(maximum(ustrip.(x̆-x))) < 1e-10
+
+        #     # works by hand
+        #     𝐱 = Z2.U\(Z2.L\(Z2.P'*y))
+        #     @test abs.(maximum(ustrip.(𝐱-x))) < 1e-10
+
+        # end    
+
+
     end
 end
