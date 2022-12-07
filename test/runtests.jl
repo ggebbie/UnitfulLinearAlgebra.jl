@@ -3,6 +3,7 @@ using Revise
 using UnitfulLinearAlgebra
 using Unitful
 using LinearAlgebra
+using SparseArrays
 using Test
 
 # test/learn from Hart's book
