@@ -1,9 +1,9 @@
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
-
 using Revise
 using UnitfulLinearAlgebra
 using Unitful
 using LinearAlgebra
+using SparseArrays
 using Test
 
 # test/learn from Hart's book
@@ -451,5 +451,57 @@ using Test
 
         end    
 
+        @testset "briochemc" begin
+
+            
+            A = rand(3, 3) + I
+            Au = A * 1u"1/s"
+
+            # A with multipliable matrix
+            Amm = BestMultipliableMatrix(Au)
+            
+            x = rand(3)
+            xu = x * 1u"mol/m^3"
+            # Test *
+            A * x
+            Au * xu
+            Au * x
+            A * xu
+            # Test \
+            A \ x # works with a UniformMatrix or LeftUnitformMatrix
+            #Au \ x # won't work
+            Amm \ x # gets units right
+            #A \ xu # won't work
+            #Au \ xu # no existing method
+            Amm \ xu
+
+            # ---------- Sparse tests ----------
+            A = sprand(3, 3, 0.5) + I
+            Au = A * 1u"1/s"
+            Ammfull = BestMultipliableMatrix(Matrix(Au))# not working with SparseArray now
+            Amm = BestMultipliableMatrix(A,fill(u"mol/m^3",3),fill(u"s*mol/m^3",3))  # use constructor, internally stores a sparse matrix
+            x = rand(3)
+            xu = x * 1u"mol/m^3"
+
+            
+            # Test *
+            A * x
+            Au * x
+            A * xu
+            Au * xu
+            Amm* xu
+            # Test \
+
+            # Problem: units not right for x to be conformable with Au.
+            # change x to y
+            y = rand(3);
+            yu = y.*unitrange(Amm)
+            A \ y 
+            #Au \ x # stack overflow, doesn't work at lu, no method
+            Amm \ y # is UniformMatrix, so it works
+            #A \ yu # doesn't work, no method
+            #Au \ yu, doens't work, no lu method
+            Amm \ yu # works, same units as x
+        end
     end
 end

@@ -415,14 +415,15 @@ end
     efficiency in the storage of units/dimensions by accounting
     for the necessary structure of the matrix.
 """
-function *(A::T,b::Vector) where T<: AbstractMultipliableMatrix
+function *(A::T,b::AbstractVector) where T<: AbstractMultipliableMatrix
 
     if dimension.(unitdomain(A)) == dimension.(b)
     #if unitdomain(A) ~ b
-        return (A.numbers*ustrip.(b)).*A.unitrange
+        return (A.numbers*ustrip.(b)).*unitrange(A)
     elseif ~exact(A) && (unitdomain(A) ∥ b)
-        Anew = convert_unitdomain(A,b) # inefficient?
-        return (Anew.numbers*ustrip.(b)).*Anew.unitrange
+        #Anew = convert_unitdomain(A,unit.(b)) # inefficient?
+        convert_unitdomain!(A,unit.(b)) # inefficient?
+        return (A.numbers*ustrip.(b)).*unitrange(A)
     else
         error("Dimensions of MultipliableMatrix and vector not compatible")
     end
@@ -460,8 +461,9 @@ function *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractM
     if unitrange(B) == unitdomain(A) # should this be similarity()?
         return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=exactproduct) 
     elseif unitrange(B) ∥ unitdomain(A) && ~exactproduct
-        A2 = convert_unitdomain(A,unitrange(B)) 
-        return BestMultipliableMatrix(A2.numbers*B.numbers,unitrange(A2),unitdomain(B),exact=exactproduct)
+        #A2 = convert_unitdomain(A,unitrange(B)) 
+        convert_unitdomain!(A,unitrange(B)) 
+        return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=exactproduct)
     else
         error("matrix dimensional domain/unitrange not conformable")
     end
@@ -903,13 +905,13 @@ end
 
 #function (\)(F::LU{T,AbstractMultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 """
-    function ldiv(F::LU{T,LeftUniformMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
+    function ldiv(F::LU{T,MultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 
     Perform matrix left divide on LU factorization object,
     where LU object contains unit information.
-     Requires LeftUniformMatrix in type signature (?). 
+    Doesn't require LeftUniformMatrix. 
 """
-function (\)(F::LU{T,LeftUniformMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
+function (\)(F::LU{T,<: AbstractMultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 
     # UnitfulLinearAlgebra: F - > F.factors
     LinearAlgebra.require_one_based_indexing(B)
