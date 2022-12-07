@@ -903,13 +903,13 @@ end
 
 #function (\)(F::LU{T,AbstractMultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 """
-    function ldiv(F::LU{T,LeftUniformMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
+    function ldiv(F::LU{T,MultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 
     Perform matrix left divide on LU factorization object,
     where LU object contains unit information.
-     Requires LeftUniformMatrix in type signature (?). 
+    Doesn't require LeftUniformMatrix. 
 """
-function (\)(F::LU{T,LeftUniformMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
+function (\)(F::LU{T,MultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 
     # UnitfulLinearAlgebra: F - > F.factors
     LinearAlgebra.require_one_based_indexing(B)
