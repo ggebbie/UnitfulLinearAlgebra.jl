@@ -421,8 +421,9 @@ function *(A::T,b::Vector) where T<: AbstractMultipliableMatrix
     #if unitdomain(A) ~ b
         return (A.numbers*ustrip.(b)).*A.unitrange
     elseif ~exact(A) && (unitdomain(A) ∥ b)
-        Anew = convert_unitdomain(A,b) # inefficient?
-        return (Anew.numbers*ustrip.(b)).*Anew.unitrange
+        #Anew = convert_unitdomain(A,unit.(b)) # inefficient?
+        convert_unitdomain!(A,unit.(b)) # inefficient?
+        return (A.numbers*ustrip.(b)).*A.unitrange
     else
         error("Dimensions of MultipliableMatrix and vector not compatible")
     end

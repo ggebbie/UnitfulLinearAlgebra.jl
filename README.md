@@ -5,11 +5,75 @@
 [![Build Status](https://github.com/ggebbie/UnitfulLinearAlgebra.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ggebbie/UnitfulLinearAlgebra.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/ggebbie/UnitfulLinearAlgebra.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ggebbie/UnitfulLinearAlgebra.jl)
 
-Vectors and matrices with units. 
+Operate on vectors and matrices with units following dimensional linear algebra
 
-Approach: ad-hoc attempt to get simple operations to work
+## Usage
 
-# Performance
+1. Define a `MultipliableMatrix` using the constructor or convert a matrix of quantities.
+2. Do linear algebra operations like `inv`, `svd`, `cholesky`, and more.
+
+```
+import Pkg; Pkg.add("https://github.com/ggebbie/UnitfulLinearAlgebra.jl")
+ENV["UNITFUL_FANCY_EXPONENTS"] = true
+using UnitfulLinearAlgebra
+using Unitful
+using LinearAlgebra
+m = u"m"
+s = u"s"
+K = u"K"
+m² = u"m^2"
+
+# example: fit a polynomial of order k-1 to data points at t = 0,1,2
+k = 3
+y = [3,4,5]m 
+ỹ = y .+ randn()m
+k = length(y)
+t = [0,1,2]s
+
+julia> # random matrix with right units
+       E = hcat(ones(k),t.*ones(k),t.^2 .*ones(k))
+3×3 Matrix{Quantity{Float64}}:
+ 1.0  0.0 s  0.0 s²
+ 1.0  1.0 s  1.0 s²
+ 1.0  2.0 s  4.0 s²
+
+julia> # use AbstractMultipliableMatrix object
+       F = BestMultipliableMatrix(E)
+3×3 LeftUniformMatrix{Float64}:
+ 1.0  0.0 s  0.0 s²
+ 1.0  1.0 s  1.0 s²
+ 1.0  2.0 s  4.0 s²
+
+julia> x̃ = F\ỹ
+3-element Vector{Quantity{Float64}}:
+ 1.953135929373488 m
+           1.0 m s⁻¹
+          -0.0 m s⁻²
+
+julia> inv(F)
+3×3 RightUniformMatrix{Float64}:
+        1.0         0.0        -0.0
+ -1.5 s⁻¹     2.0 s⁻¹    -0.5 s⁻¹
+  0.5 s⁻²    -1.0 s⁻²     0.5 s⁻²
+
+julia> x̆ = inv(F)*ỹ
+3-element Vector{Quantity{Float64}}:
+ 1.953135929373488 m
+           1.0 m s⁻¹
+           0.0 m s⁻²
+```
+
+## Motivation
+
+Julia provides a great environment for defining quantities with units and doing calculations with those unitful quantities  (`Unitful.jl`), where plots (`UnitfulRecipes.jl`), LaTeX output (`UnitfulLatexify.jl`), and educational notebooks (`Pluto.jl`) can be automatically added to this unitful workflow. Common linear algebra functions, such as matrix left divide, do not appear to be fully implemented, however. This package aims to extend common functions like `inv`, `(\)`, `svd`, `lu`, `cholesky` and `eigen` to unitful matrices and vectors.
+
+## Approach
+
+George W. Hart lays it out in "Multidimensional Analysis: Algebras and Systems for Science and Engineering." His approach fits nicely into Julia's type system and multiple dispatch. This packages aims to return objects defined by the `LinearAlgebra` package but extended for use with `MultipliableMatrix`s. 
+
+Due to Unitful quantities that change types, it is not always easy to properly compose UnitfulLinearAlgebra functions with Unitful and LinearAlgebra functions. Also, some LinearAlgebra functions like `eigen` are highly restricted with unitful matrices. The `SVD` factorization object also makes assumptions that do not hold for matrices with units. Some compromises and design choices are necessary.
+
+## Performance
 
 Including units on matrices would seem to require twice the overhead of a dimensionless (purely numerical) matrix. Matrices that arise in scientific and engineering problems typically have a specific structure of units that permits the matrix to be used in linear algebraic operations. Such "multipliable matrices" have at most n+m+1 degrees of dimensional freedom, rather than the m*n degrees of numerical freedom. Conceptually it is possible to store this information in a efficient way and to keep the overhead in propagating units low. 
 

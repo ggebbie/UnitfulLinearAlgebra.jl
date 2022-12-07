@@ -10,12 +10,16 @@ m = u"m"
 s = u"s"
 K = u"K"
 m² = u"m^2"
+J = u"J"
+J² = u"J^2"
+kg = u"kg"
+N = u"N"
 
 unts = [m,s,K,m²]
-
+unts2 = [J,N,kg,J²]
 n = 1000
 r = rand(unts,n)
-d = rand(unts,n)
+d = rand(unts2,n)
 num = rand(n,n)
 A = BestMultipliableMatrix(num,r,d)
 xnd = rand(n)
@@ -40,3 +44,4 @@ Alu = lu(A)
 println("LU left divide")
 @btime numlu\ynd;
 @btime Alu\y;
+
