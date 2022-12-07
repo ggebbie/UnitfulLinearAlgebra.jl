@@ -5,6 +5,7 @@ using UnitfulLinearAlgebra
 using Unitful
 using LinearAlgebra
 using Test
+using BenchmarkTools
 
 m = u"m"
 s = u"s"

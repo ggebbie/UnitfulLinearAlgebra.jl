@@ -46,8 +46,10 @@ abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
 """
 struct MultipliableMatrix{T <:Number} <: AbstractMultipliableMatrix{T}
     numbers::AbstractMatrix{T}
-    unitrange::Vector
-    unitdomain::Vector
+    unitrange::Vector{N1} where N1 <: Unitful.Unitlike
+    unitdomain::Vector{N2} where N2 <: Unitful.Unitlike
+    #unitrange::AbstractVector
+    #unitdomain::AbstractVector
     exact::Bool
 end
 
@@ -64,7 +66,8 @@ end
 """
 struct EndomorphicMatrix{T<:Number} <: AbstractMultipliableMatrix{T} 
     numbers::AbstractMatrix{T}
-    unitrange::Vector
+    #unitrange::Vector
+    unitrange::Vector{N1} where N1 <: Unitful.Unitlike
     exact::Bool
 end
 
@@ -82,7 +85,8 @@ end
 """
 struct SquarableMatrix{T<:Number} <: AbstractMultipliableMatrix{T} 
     numbers::AbstractMatrix{T}
-    unitrange::Vector
+    #unitrange::Vector
+    unitrange::Vector{N} where N <: Unitful.Unitlike
     Δunitdomain
     exact::Bool
 end
@@ -102,7 +106,8 @@ end
 """
 struct UnitSymmetricMatrix{T<:Number} <: AbstractMultipliableMatrix{T} 
     numbers::AbstractMatrix{T}
-    unitrange::Vector
+    unitrange::Vector{N1} where N1 <: Unitful.Unitlike
+    #unitrange::Vector
     Δunitdomain
     exact::Bool
 end
@@ -121,9 +126,11 @@ end
 struct UniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
     numbers::AbstractMatrix{T}
 #    unitrange::AbstractVector # just one entry
-#    unitdomain::AbstractVector # just one entry
-    unitrange::Vector{Unitful.FreeUnits} # just one entry
-    unitdomain::Vector{Unitful.FreeUnits} # just one entry
+    #    unitdomain::AbstractVector # just one entry
+    unitrange::Vector{N1} where N1 <: Unitful.Unitlike
+    unitdomain::Vector{N2} where N2 <: Unitful.Unitlike
+    #unitrange::Vector{Unitful.FreeUnits} # just one entry
+    #unitdomain::Vector{Unitful.FreeUnits} # just one entry
     exact::Bool
 end
 # struct UniformMatrix{T,R,D} <: AbstractMultipliableMatrix where {T <: Number} where {R,D <: Unitful.Unitlike}
