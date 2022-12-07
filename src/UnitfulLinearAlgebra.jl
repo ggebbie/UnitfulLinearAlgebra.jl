@@ -461,8 +461,9 @@ function *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractM
     if unitrange(B) == unitdomain(A) # should this be similarity()?
         return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=exactproduct) 
     elseif unitrange(B) ∥ unitdomain(A) && ~exactproduct
-        A2 = convert_unitdomain(A,unitrange(B)) 
-        return BestMultipliableMatrix(A2.numbers*B.numbers,unitrange(A2),unitdomain(B),exact=exactproduct)
+        #A2 = convert_unitdomain(A,unitrange(B)) 
+        convert_unitdomain!(A,unitrange(B)) 
+        return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=exactproduct)
     else
         error("matrix dimensional domain/unitrange not conformable")
     end

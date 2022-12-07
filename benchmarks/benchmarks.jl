@@ -35,8 +35,8 @@ println("matrix left divide")
 @btime A\y;
 
 println("LU factorization")
-@btime lu(A.numbers)
-@btime lu(A)
+@btime lu(A.numbers);
+@btime lu(A);
 
 numlu = lu(num)
 Alu = lu(A)
