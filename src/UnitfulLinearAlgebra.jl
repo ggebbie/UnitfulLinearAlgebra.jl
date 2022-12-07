@@ -415,15 +415,15 @@ end
     efficiency in the storage of units/dimensions by accounting
     for the necessary structure of the matrix.
 """
-function *(A::T,b::Vector) where T<: AbstractMultipliableMatrix
+function *(A::T,b::AbstractVector) where T<: AbstractMultipliableMatrix
 
     if dimension.(unitdomain(A)) == dimension.(b)
     #if unitdomain(A) ~ b
-        return (A.numbers*ustrip.(b)).*A.unitrange
+        return (A.numbers*ustrip.(b)).*unitrange(A)
     elseif ~exact(A) && (unitdomain(A) ∥ b)
         #Anew = convert_unitdomain(A,unit.(b)) # inefficient?
         convert_unitdomain!(A,unit.(b)) # inefficient?
-        return (A.numbers*ustrip.(b)).*A.unitrange
+        return (A.numbers*ustrip.(b)).*unitrange(A)
     else
         error("Dimensions of MultipliableMatrix and vector not compatible")
     end
@@ -911,7 +911,7 @@ end
     where LU object contains unit information.
     Doesn't require LeftUniformMatrix. 
 """
-function (\)(F::LU{T,MultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
+function (\)(F::LU{T,<: AbstractMultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 
     # UnitfulLinearAlgebra: F - > F.factors
     LinearAlgebra.require_one_based_indexing(B)
