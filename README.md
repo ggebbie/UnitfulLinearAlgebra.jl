@@ -5,7 +5,7 @@
 [![Build Status](https://github.com/ggebbie/UnitfulLinearAlgebra.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ggebbie/UnitfulLinearAlgebra.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/ggebbie/UnitfulLinearAlgebra.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ggebbie/UnitfulLinearAlgebra.jl)
 
-Operate on vectors and matrices with units following dimensional linear algebra
+More linear algebra functions for matrices with units
 
 ## Usage
 
@@ -24,9 +24,8 @@ K = u"K"
 m² = u"m^2"
 
 # example: fit a polynomial of order k-1 to data points at t = 0,1,2
-k = 3
 y = [3,4,5]m 
-ỹ = y .+ randn()m
+ỹ = y .+ randn()m # contaminated observations
 k = length(y)
 t = [0,1,2]s
 
@@ -69,13 +68,13 @@ Julia provides a great environment for defining quantities with units and doing 
 
 ## Approach
 
-George W. Hart lays it out in "Multidimensional Analysis: Algebras and Systems for Science and Engineering." His approach fits nicely into Julia's type system and multiple dispatch. This packages aims to return objects defined by the `LinearAlgebra` package but extended for use with `MultipliableMatrix`s. 
+George W. Hart lays it out in "Multidimensional Analysis: Algebras and Systems for Science and Engineering" (Springer-Verlag, 1995). His approach fits nicely into Julia's type system and multiple dispatch. This packages aims to return objects defined by the `LinearAlgebra` package but extended for use with `MultipliableMatrix`s. 
 
 Due to Unitful quantities that change types, it is not always easy to properly compose UnitfulLinearAlgebra functions with Unitful and LinearAlgebra functions. Also, some LinearAlgebra functions like `eigen` are highly restricted with unitful matrices. The `SVD` factorization object also makes assumptions that do not hold for matrices with units. Some compromises and design choices are necessary.
 
 ## Performance
 
-Including units on matrices would seem to require twice the overhead of a dimensionless (purely numerical) matrix. Matrices that arise in scientific and engineering problems typically have a specific structure of units that permits the matrix to be used in linear algebraic operations. Such "multipliable matrices" have at most n+m+1 degrees of dimensional freedom, rather than the m*n degrees of numerical freedom. Conceptually it is possible to store this information in a efficient way and to keep the overhead in propagating units low. 
+Including units on matrices would seem to require twice the overhead of a dimensionless (purely numerical) matrix. Matrices that arise in scientific and engineering problems typically have a specific structure of units that permits the matrix to be used in linear algebraic operations. Such "multipliable matrices" have at most m+n-1 degrees of dimensional freedom, rather than the m*n degrees of numerical freedom. Conceptually it is possible to store this information in a efficient way and to keep the overhead in propagating units low. 
 
 Benchmarks with a random 1000 x 1000 dimensional (unitful) matrix show that the LU decomposition is currently about 20% slower when units are included. This slowdown is probably due to the lack of optimization in matrix multiplication with unitful matrices, where matrix multiplication is currently about 10x slower for this matrix.
 ```
