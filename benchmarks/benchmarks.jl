@@ -22,14 +22,26 @@ n = 1000
 r = rand(unts,n)
 d = rand(unts2,n)
 num = rand(n,n)
-A = BestMultipliableMatrix(num,r,d)
+A = BestMultipliableMatrix(num,r,d,exact=true)
 xnd = rand(n)
 x = xnd.*d
 ynd = num*xnd
 y = A*x
-println("matrix multiplication")
+
+println("matrix-vector multiplication")
 @btime num*xnd;
 @btime A*x;
+#@btime UnitfulLinearAlgebra.longmultiply(A,x);
+
+println("matrix inversion")
+@btime inv(num);
+@btime inv(A);
+
+println("matrix-matrix multiply")
+numinv = inv(num)
+Ainv = inv(A)
+@btime numinv*num;
+@btime Ainv*A;
 
 println("matrix left divide")
 @btime num\ynd;
@@ -46,3 +58,20 @@ println("LU left divide")
 @btime numlu\ynd;
 @btime Alu\y;
 
+# very slow, just as a check
+function longmultiply(A::T,b::AbstractVector) where T<: AbstractMultipliableMatrix
+
+    if dimension.(unitdomain(A)) == dimension.(b)
+        #if unitdomain(A) ~ b
+        #Amat = Matrix(A);
+        return Matrix(A)*b
+        #return (A.numbers*ustrip.(b)).*unitrange(A)
+        #return Quantity.((A.numbers*ustrip.(b)),unitrange(A)) # slower
+    elseif ~exact(A) && (unitdomain(A) ∥ b)
+        #Anew = convert_unitdomain(A,unit.(b)) # inefficient?
+        convert_unitdomain!(A,unit.(b)) # inefficient?
+        return (A.numbers*ustrip.(b)).*unitrange(A)
+    else
+        error("Dimensions of MultipliableMatrix and vector not compatible")
+    end
+end

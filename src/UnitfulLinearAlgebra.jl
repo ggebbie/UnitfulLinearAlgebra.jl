@@ -192,7 +192,7 @@ MultipliableMatrix(numbers,unitrange,unitdomain;exact=false) =
     UniformMatrix, EndomorphicMatrix, or MultipliableMatrix.
     Assumes `exact=false`
 """
-function BestMultipliableMatrix(A::Matrix)
+function BestMultipliableMatrix(A::Matrix)::AbstractMultipliableMatrix
 
     numbers = ustrip.(A)
     M,N = size(numbers)
@@ -225,7 +225,7 @@ end
 
     What kind of Multipliable Matrix is the best representation?
 """
-function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVector,unitdomain::AbstractVector;exact=false)
+function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVector,unitdomain::AbstractVector;exact=false)::AbstractMultipliableMatrix
     if uniform(unitrange) && uniform(unitdomain)
         ur = Base.convert(Vector{Unitful.FreeUnits},[unitrange[1]])
         ud = Base.convert(Vector{Unitful.FreeUnits},[unitdomain[1]])
@@ -425,10 +425,13 @@ end
 function *(A::T,b::AbstractVector) where T<: AbstractMultipliableMatrix
 
     if dimension.(unitdomain(A)) == dimension.(b)
-    #if unitdomain(A) ~ b
-        return (A.numbers*ustrip.(b)).*unitrange(A)
+        #if unitdomain(A) ~ b
+        # try column by column to reduce allocations
+        ur = unitrange(A)
+        return (A.numbers*ustrip.(b)).*unitrange(A) 
+
+        #return Quantity.((A.numbers*ustrip.(b)),unitrange(A)) # slower
     elseif ~exact(A) && (unitdomain(A) ∥ b)
-        #Anew = convert_unitdomain(A,unit.(b)) # inefficient?
         convert_unitdomain!(A,unit.(b)) # inefficient?
         return (A.numbers*ustrip.(b)).*unitrange(A)
     else
