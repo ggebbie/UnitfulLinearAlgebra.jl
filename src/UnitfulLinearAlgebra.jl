@@ -420,20 +420,22 @@ end
     Matrix-vector multiplication with units/dimensions.
     Unitful also handles this case, but here there is added
     efficiency in the storage of units/dimensions by accounting
-    for the necessary structure of the matrix.
+    for the necessary structure of the matrix. Check.
 """
 function *(A::T,b::AbstractVector) where T<: AbstractMultipliableMatrix
 
+    ur = unitrange(A)
     if dimension.(unitdomain(A)) == dimension.(b)
         #if unitdomain(A) ~ b
         # try column by column to reduce allocations
-        ur = unitrange(A)
         return (A.numbers*ustrip.(b)).*unitrange(A) 
 
         #return Quantity.((A.numbers*ustrip.(b)),unitrange(A)) # slower
     elseif ~exact(A) && (unitdomain(A) ∥ b)
-        convert_unitdomain!(A,unit.(b)) # inefficient?
-        return (A.numbers*ustrip.(b)).*unitrange(A)
+        #convert_unitdomain!(A,unit.(b)) # inefficient?
+
+        shift = ustrip(b[1])/unitdomain(A)[1]
+        return (A.numbers*ustrip.(b)).*(unitrange(A).*shift)
     else
         error("Dimensions of MultipliableMatrix and vector not compatible")
     end
@@ -749,6 +751,8 @@ function convert_unitdomain!(A::AbstractMultipliableMatrix, newdomain::Vector)
                 A.unitrange[ii] *= shift
             end
         end
+        # make sure the matrix is now exact
+        #A.exact = true # immutable
     else
         error("New domain not parallel to domain of Multipliable Matrix")
     end
@@ -793,6 +797,7 @@ function convert_unitrange!(A::AbstractMultipliableMatrix, newrange::Vector)
                 A.unitrange[ii] *= shift
             end
         end
+        #A.exact = true , immutable
      else
          error("New range not parallel to range of Multipliable Matrix")
      end
