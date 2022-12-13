@@ -33,6 +33,10 @@ println("matrix-vector multiplication")
 @btime A*x;
 #@btime UnitfulLinearAlgebra.longmultiply(A,x);
 
+# transfer vector to Multipliable Matrix
+@btime xmm = BestMultipliableMatrix(x[:,:]);
+@btime A*xmm;
+
 println("matrix inversion")
 @btime inv(num);
 @btime inv(A);
@@ -57,6 +61,10 @@ Alu = lu(A)
 println("LU left divide")
 @btime numlu\ynd;
 @btime Alu\y;
+
+# does it help to make y vector a multipliable matrix?
+y2 = BestMultipliableMatrix(y[:,:]);
+@btime Alu\y2 #fails
 
 # very slow, just as a check
 function longmultiply(A::T,b::AbstractVector) where T<: AbstractMultipliableMatrix
