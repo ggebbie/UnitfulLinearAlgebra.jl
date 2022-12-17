@@ -17,11 +17,11 @@ export exact, multipliable, dimensionless, endomorphic
 export svd, inv, transpose
 export unitrange, unitdomain
 export square, squarable, singular, unit_symmetric
-export lu, det, diagm, Diagonal, (\), cholesky
+export lu, det, diag, diagm, Diagonal, (\), cholesky
 export identitymatrix
 
 import LinearAlgebra: inv, det, lu, svd, getproperty,
-    diagm, Diagonal, cholesky
+    diag, diagm, Diagonal, cholesky
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
     size, range, transpose
 #import Base.similar
@@ -1094,6 +1094,25 @@ end
 diagm(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = BestMultipliableMatrix(spdiagm(length(r),length(d),ustrip.(v)),r,d; exact=exact)    
 #Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false) = MultipliableMatrix(Diagonal(ustrip.(v)),r,d ; exact=exact)    
 #end
+
+"""
+    function diag(A::AbstractMultipliableMatrix)
+
+    Diagonal elements of matrix with units.
+
+    Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
+ """
+function diag(A::AbstractMultipliableMatrix)
+
+    m,n = size(A)
+    ndiag = max(m,n)
+    vdiag = Vector{Quantity}(undef,ndiag)
+    for nd in 1:ndiag
+        vdiag[nd] = getindex(A,nd,nd)
+    end
+    return vdiag
+
+end
 
 """
     function cholesky(A::AbstractMultipliableMatrix)
