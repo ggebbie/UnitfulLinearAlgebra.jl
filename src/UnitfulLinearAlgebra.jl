@@ -468,14 +468,14 @@ end
 """
 function *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractMultipliableMatrix
     #if unitrange(B) ~ unitdomain(A) # should this be similarity()?
-
-    exactproduct = exact(A) && exact(B)
+ 
+    bothexact = exact(A) && exact(B)
     if unitrange(B) == unitdomain(A) # should this be similarity()?
-        return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=exactproduct) 
-    elseif unitrange(B) ∥ unitdomain(A) && ~exactproduct
+        return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact) 
+    elseif unitrange(B) ∥ unitdomain(A) && ~bothexact
         #A2 = convert_unitdomain(A,unitrange(B)) 
         convert_unitdomain!(A,unitrange(B)) 
-        return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=exactproduct)
+        return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact)
     else
         error("matrix dimensional domain/unitrange not conformable")
     end
@@ -493,11 +493,12 @@ end
 """
 function +(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
 
+    bothexact = exact(A) && exact(B)
+
     #if unitrange(A) ~ unitrange(B) && unitdomain(A) ~ unitdomain(B)
     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
-        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~exactproduct)
-        exactproduct = exact(A) && exact(B)
-        return MultipliableMatrix(A.numbers+B.numbers,unitrange(A),unitdomain(A),exact=exactproduct) 
+        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
+        return MultipliableMatrix(A.numbers+B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
     else
         error("matrices not dimensionally conformable for addition")
     end
@@ -511,11 +512,12 @@ end
 """
 function -(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
 
+    bothexact = exact(A) && exact(B)
+
     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
-       ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~exactproduct)
+       ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
     #if unitrange(A) ~ unitrange(B) && unitdomain(A) ~ unitdomain(B)
     #if unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)
-        bothexact = exact(A) && exact(B)
         return MultipliableMatrix(A.numbers-B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
     else
         error("matrices not dimensionally conformable for subtraction")
