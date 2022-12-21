@@ -494,7 +494,8 @@ end
 function +(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
 
     #if unitrange(A) ~ unitrange(B) && unitdomain(A) ~ unitdomain(B)
-    if unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)
+    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
+        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~exactproduct)
         exactproduct = exact(A) && exact(B)
         return MultipliableMatrix(A.numbers+B.numbers,unitrange(A),unitdomain(A),exact=exactproduct) 
     else
@@ -510,8 +511,10 @@ end
 """
 function -(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
 
+    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
+       ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~exactproduct)
     #if unitrange(A) ~ unitrange(B) && unitdomain(A) ~ unitdomain(B)
-    if unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)
+    #if unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)
         bothexact = exact(A) && exact(B)
         return MultipliableMatrix(A.numbers-B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
     else

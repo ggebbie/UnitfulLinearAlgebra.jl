@@ -7,14 +7,14 @@ using LinearAlgebra
 using Test
 using BenchmarkTools
 
-m = u"m"
-s = u"s"
-K = u"K"
-m² = u"m^2"
-J = u"J"
-J² = u"J^2"
-kg = u"kg"
-N = u"N"
+const m = u"m"
+const s = u"s"
+const K = u"K"
+const m² = u"m^2"
+const J = u"J"
+const J² = u"J^2"
+const kg = u"kg"
+const N = u"N"
 
 unts = [m,s,K,m²]
 unts2 = [J,N,kg,J²]
@@ -34,6 +34,7 @@ println("matrix-vector multiplication")
 #@btime UnitfulLinearAlgebra.longmultiply(A,x);
 
 # transfer vector to Multipliable Matrix
+xmm = BestMultipliableMatrix(x[:,:]);
 @btime xmm = BestMultipliableMatrix(x[:,:]);
 @btime A*xmm;
 
