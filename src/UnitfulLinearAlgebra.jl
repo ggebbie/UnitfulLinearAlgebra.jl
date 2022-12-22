@@ -2,6 +2,7 @@ module UnitfulLinearAlgebra
 
 using Unitful, LinearAlgebra, SparseArrays
 
+export AbstractMultipliableMatrix
 export MultipliableMatrix, EndomorphicMatrix
 export SquarableMatrix, UniformMatrix
 export LeftUniformMatrix, RightUniformMatrix
@@ -1130,7 +1131,7 @@ end
 function cholesky(A::AbstractMultipliableMatrix)
     if unit_symmetric(A)
         C = LinearAlgebra.cholesky(A.numbers)
-        factors = BestMultipliableMatrix(C.factors,unitdomain(A)./unitdomain(A),unitdomain(A))
+        factors = BestMultipliableMatrix(C.factors,unitdomain(A)./unitdomain(A),unitdomain(A),exact=exact(A))
 
         return Cholesky(factors,C.uplo,C.info)
     else
