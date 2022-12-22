@@ -915,7 +915,7 @@ function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
     if unitrange(A) == unitrange(B)
         #return (A.numbers\B.numbers).*unitdomain(A)
         return BestMultipliableMatrix(A.numbers\B.numbers,unitdomain(A),unitdomain(B),exact = (exact(A) && exact(B)))
-    elseif ~exact(A) && (unitrange(A) ∥ b)
+    elseif ~exact(A) && (unitrange(A) ∥ B)
         convert_unitrange!(A,unitrange(B)) # inefficient?
         return BestMultipliableMatrix(A.numbers\B.numbers,unitdomain(A),unitdomain(B),exact = (exact(A)&&exact(B)))
     else
