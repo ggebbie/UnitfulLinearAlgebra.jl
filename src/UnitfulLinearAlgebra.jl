@@ -382,16 +382,23 @@ end
 """
 function Matrix(A::T) where T<: AbstractMultipliableMatrix
 
-    M = rangelength(A)
-    N = domainlength(A)
-    T2 = eltype(A.numbers)
-    B = Matrix{Quantity{T2}}(undef,M,N)
-    for m = 1:M
-        for n = 1:N
-            B[m,n] = getindex(A,m,n)
+    M,N = size(A)
+    #M = rangelength(A)
+    #N = domainlength(A)
+    if uniform(A)
+        #B = A.numbers.*unit(getindex(A,1,1))
+        B = A.numbers.*(unitrange(A)[1]/unitdomain(A)[1]) 
+        return B
+    else
+        T2 = eltype(A.numbers)
+        B = Matrix{Quantity{T2}}(undef,M,N)
+        for m = 1:M
+            for n = 1:N
+                B[m,n] = getindex(A,m,n)
+            end
         end
+        return B
     end
-    return B
 end
 
 # """
