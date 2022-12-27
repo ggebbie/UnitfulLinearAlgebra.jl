@@ -15,7 +15,7 @@ export getindex, setindex!, size, similar
 export convert_unitrange, convert_unitdomain
 export convert_unitrange!, convert_unitdomain!
 export exact, multipliable, dimensionless, endomorphic
-export svd, eigen, inv, transpose
+export svd, eigen, isposdef, inv, transpose
 export unitrange, unitdomain
 export square, squarable, singular, unit_symmetric
 export lu, det, trace, diag, diagm
@@ -23,7 +23,7 @@ export Diagonal, (\), cholesky
 export identitymatrix
 
 import LinearAlgebra: inv, det, lu,
-    svd, getproperty, eigen,
+    svd, getproperty, eigen, isposdef,
     diag, diagm, Diagonal, cholesky
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
     size, range, transpose, similar
@@ -483,7 +483,7 @@ function *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractM
     if unitrange(B) == unitdomain(A) # should this be similarity()?
         return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact) 
     elseif unitrange(B) ∥ unitdomain(A) && ~bothexact
-        A2 = convert_unitdomain(A,unitrange(B)) 
+        #A2 = convert_unitdomain(A,unitrange(B)) 
         #convert_unitdomain!(A,unitrange(B))
         newrange = unitrange(A).*(unitrange(B)[1]/unitdomain(A)[1])
 
@@ -740,8 +740,10 @@ dottable(a,b) = parallel(a, 1 ./ b)
 """
 function convert_unitdomain(A::AbstractMultipliableMatrix, newdomain::Vector) 
     if unitdomain(A) ∥ newdomain
-        shift = newdomain./unitdomain(A)
-        newrange = unitrange(A).*shift
+        #shift = newdomain./unitdomain(A)
+        #newrange = unitrange(A).*shift
+        newrange = unitrange(A).*(newdomain[1]/unitdomain(A)[1])
+
         B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New unitdomain not parallel to unitdomain of Multipliable Matrix")
@@ -769,7 +771,7 @@ function convert_unitdomain!(A::AbstractMultipliableMatrix, newdomain::Vector)
             end
         end
         # make sure the matrix is now exact
-        #A.exact = true # immutable
+        #A.exact = true # immutable so not possible
     else
         error("New domain not parallel to domain of Multipliable Matrix")
     end
@@ -786,8 +788,9 @@ end
 """
 function convert_unitrange(A::AbstractMultipliableMatrix, newrange::Vector)
     if unitrange(A) ∥ newrange
-        shift = newrange[1]./unitrange(A)[1]
-        newdomain = unitdomain(A).*shift
+        #shift = newrange[1]./unitrange(A)[1]
+        #newdomain = unitdomain(A).*shift
+        newdomain = unitdomain(A).*(newrange[1]./unitrange(A)[1])
         B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New unitrange not parallel to unitrange of Multipliable Matrix")
@@ -927,7 +930,7 @@ function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
     if unitrange(A) == unitrange(B)
         #return (A.numbers\B.numbers).*unitdomain(A)
         return BestMultipliableMatrix(A.numbers\B.numbers,unitdomain(A),unitdomain(B),exact = (exact(A) && exact(B)))
-    elseif ~exact(A) && (unitrange(A) ∥ B)
+    elseif ~exact(A) && (unitrange(A) ∥ unitrange(B))
         convert_unitrange!(A,unitrange(B)) # inefficient?
         return BestMultipliableMatrix(A.numbers\B.numbers,unitdomain(A),unitdomain(B),exact = (exact(A)&&exact(B)))
     else
@@ -1055,7 +1058,8 @@ trace(A::T) where T<: AbstractMultipliableMatrix = sum(diag(A.numbers)).*(unitra
     Here, physical intuition and the equation 𝐀𝐱 = λ𝐱
     dictate that the units of the eigenvectors are equal to the unit domain of 𝐀 (pp. 206, Hart, 1995).
     Ideally the AbstractArray interface would automatically handle this,
-    but there is an unsolved issue with Unitful conversions. 
+    but there is an unsolved issue with Unitful conversions.
+     The following functions are available for `Eigen` objects:  [`det`](@ref). The functions [`inv`](@ref) and [`isposdef`](@ref) are not yet implemented.
 """
 function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) where T <: AbstractMultipliableMatrix
 
@@ -1064,6 +1068,40 @@ function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function
         return Eigen(F.values.*(unitrange(A)[1]/unitdomain(A)[1]), BestMultipliableMatrix(F.vectors,unitdomain(A),fill(unit(1.0),size(A,2))))
     else
         error("UnitfulLinearAlgebra: Eigenvalue decomposition doesn't exist for for non-squarable matrices")
+    end
+end
+
+"""
+   Extend `isposdef` for Eigen factorizations of `MultipliableMatrix`s.
+    Should the units be stripped out of the function?
+    Only defined for matrices with uniform units (pp. 101, Hart, 1995). 
+"""
+isposdef(A::Eigen{T,V,S,U}) where T where V where S <: AbstractMultipliableMatrix where U = (uniform(A.vectors) && isreal(A.values)) && all(x -> x > 0, ustrip.(A.values))
+
+"""
+   Extend `inv` for Eigen factorizations of `MultipliableMatrix`s.
+    Only defined for matrices with uniform units (pp. 101, Hart, 1995). 
+"""
+function inv(A::Eigen{T,V,S,U}) where {U <: AbstractVector, S <: AbstractMultipliableMatrix, V, T <: Number}
+
+    if (uniform(A.vectors) && isreal(A.values))
+        ur = unitrange(A.vectors)
+        ud = unit.(A.values)
+        #Λ = Diagonal(A.values,ur,ud)
+        Λ⁻¹ = Diagonal(A.values.^-1,ud,ur)
+        println(Λ⁻¹)
+        tmp = transpose(copy(transpose(A.vectors)) \ Λ⁻¹)
+        return A.vectors*tmp
+        #return A.vectors * Λ⁻¹ / A.vectors
+        #println(Λ⁻¹ * A.vectors)
+        #println(unitrange(Λ \ A.vectors))
+        #println(unitrange(A.vectors))
+        #
+        #return A.vectors\ (Λ \ A.vectors)
+        #return A.vectors * tmp
+        #A.vectors*Λ/inv(A.vectors)
+    else
+        error("UnitfulLinearAlgebra: Eigen factorization can only be inverted for uniform matrices")
     end
 end
 
