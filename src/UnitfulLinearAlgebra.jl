@@ -11,21 +11,22 @@ export BestMultipliableMatrix
 export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
 export invdimension, dottable
-export getindex, setindex!, size
+export getindex, setindex!, size, similar
 export convert_unitrange, convert_unitdomain
 export convert_unitrange!, convert_unitdomain!
 export exact, multipliable, dimensionless, endomorphic
-export svd, inv, transpose
+export svd, eigen, inv, transpose
 export unitrange, unitdomain
 export square, squarable, singular, unit_symmetric
-export lu, det, diag, diagm, Diagonal, (\), cholesky
+export lu, det, trace, diag, diagm
+export Diagonal, (\), cholesky
 export identitymatrix
 
-import LinearAlgebra: inv, det, lu, svd, getproperty,
+import LinearAlgebra: inv, det, lu,
+    svd, getproperty, eigen,
     diag, diagm, Diagonal, cholesky
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
-    size, range, transpose
-#import Base.similar
+    size, range, transpose, similar
 
 abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
 
@@ -336,13 +337,15 @@ endomorphic(A::T) where T <: Number = dimensionless(A) # scalars must be dimensi
 UniformMatrix(numbers,unitrange,unitdomain;exact=false) =
     UniformMatrix(numbers,unitrange,unitdomain,exact)
 
+similar(A::AbstractMultipliableMatrix{T}) where T <: Number =  BestMultipliableMatrix(Matrix{T}(undef,size(A)),unitrange(A),unitdomain(A);exact=exact(A))
+        
 """
-    function getindex(A::MultipliableMatrix,i::Integer,j::Integer)
+    function getindex(A::AbstractMultipliableMatrix,i::Integer,j::Integer)
 
-    Recover element (i,j) of a MultipliableMatrix.
+    Recover element (i,j) of a AbstractMultipliableMatrix.
     Part of the AbstractArray interface.
 #Input
-- `A::MultipliableMatrix`
+- `A::AbstractMultipliableMatrix`
 - `i::Integer`: row index
 - `j::Integer`: column index
 #Output
@@ -356,7 +359,7 @@ getindex(A::T,i::Int,j::Int) where T <: AbstractMultipliableMatrix = Quantity(A.
     Set element (i,j) of a MultipliableMatrix.
     Part of the AbstractArray interface.
 #Input
-- `A::MultipliableMatrix`
+- `A::AbstractMultipliableMatrix`
 - `v`: new value
 - `i::Integer`: row index
 - `j::Integer`: column index
@@ -370,7 +373,6 @@ function setindex!(A::T,v,i::Int,j::Int) where T <: AbstractMultipliableMatrix
     else error("new value has incompatible units")
     end
 end
-
 #function setindex!(A::T,v,i::Int,j::Int) where T <: AbstractMultipliableMatrix = A.numbers[i,j] = ustrip(v)) 
 
 """
@@ -1041,6 +1043,26 @@ end
 
 singular(A::T) where T <: AbstractMultipliableMatrix = iszero(ustrip(det(A)))
 
+trace(A::T) where T<: AbstractMultipliableMatrix = sum(A.numbers).*(unitrange(A)[1]/unitdomain(A)[1])
+
+"""
+    function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=eigsortby) where T <: AbstractMultipliableMatrix
+
+    Thin wrapper for `UnitfulLinearAlgebra.eigen`.
+    Keep same keyword arguments as `LinearAlgebra.eigen`.
+    Ideally would simply work using AbstractArray interface,
+    but there is an unsolved issue with Unitful conversions. 
+"""
+function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) where T <: AbstractMultipliableMatrix
+
+    if squarable(A) 
+        F = LinearAlgebra.eigen(A.numbers, permute=permute, scale=scale, sortby=sortby)
+        return Eigen(F.values.*(unitrange(A)[1]/unitdomain(A)[1]), BestMultipliableMatrix(F.vectors,unitdomain(A),fill(unit(1.0),size(A,2))))
+    else
+        error("UnitfulLinearAlgebra: Eigenvalue decomposition doesn't exist for for non-squarable matrices")
+    end
+end
+
 """
     svd(A; full::Bool = false, alg::Algorithm = default_svd_alg(A)) -> SVD
 
@@ -1054,7 +1076,7 @@ function svd(A::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorit
         # They are also Uniform and Endomorphic
         return SVD(F.U,F.S * unitrange(A)[1]./unitdomain(A)[1],F.Vt)
     else
-        error("SVD not implemented for non-uniform matrices")
+        error("SVD doesn't exist for non-uniform matrices")
     end
 end
 

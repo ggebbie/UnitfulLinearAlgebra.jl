@@ -205,6 +205,12 @@ using Test
             @test endomorphic(B)
             @test endomorphic(A)
 
+            # endomorphic should have dimensionless eigenvalues
+            F = UnitfulLinearAlgebra.eigen(B)
+            for j in F.values
+                @test dimensionless(j)
+            end
+            
             #change domain of B3
             convert_unitrange!(B3,[m²,s*m])
             @test unitrange(B3) == [m²,s*m]
@@ -224,16 +230,29 @@ using Test
             B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=false)
             @test square(B)
             @test squarable(B)
-            B*B
-            
+            B*B == B^2
+
             convert_unitrange!(B,K*[m,s])
             @test unitrange(B) == K*[m,s]
 
             convert_unitdomain!(B,K*[m,s])
             @test unitdomain(B) == K*[m,s]
 
-        end
+            # try to get eigenstructure
+            F = UnitfulLinearAlgebra.eigen(B)
 
+            @test abs(ustrip(det(B) - prod(F.values))) < 1e-5
+
+            for k = 1:2
+                Δ = B*Matrix(F.vectors)[:,k] - 
+                    F.values[k]*Matrix(F.vectors)[:,k]
+
+                @test maximum(abs.(ustrip.(Δ))) < 1e-5
+
+            end
+            
+        end
+        
         @testset "unit symmetric" begin
             p = [2.0m, 1.0s]
             q̃ = p
