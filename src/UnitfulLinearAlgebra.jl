@@ -484,8 +484,10 @@ function *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractM
         return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact) 
     elseif unitrange(B) ∥ unitdomain(A) && ~bothexact
         A2 = convert_unitdomain(A,unitrange(B)) 
-        #convert_unitdomain!(A,unitrange(B)) 
-        return BestMultipliableMatrix(A2.numbers*B.numbers,unitrange(A2),unitdomain(B),exact=bothexact)
+        #convert_unitdomain!(A,unitrange(B))
+        newrange = unitrange(A).*(unitrange(B)[1]/unitdomain(A)[1])
+
+        return BestMultipliableMatrix(A.numbers*B.numbers,newrange,unitdomain(B),exact=bothexact)
     else
         error("matrix dimensional domain/unitrange not conformable")
     end
