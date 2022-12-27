@@ -76,7 +76,7 @@ Due to Unitful quantities that change types, it is not always easy to properly c
 
 Including units on matrices would seem to require twice the overhead of a dimensionless (purely numerical) matrix. Matrices that arise in scientific and engineering problems typically have a specific structure of units that permits the matrix to be used in linear algebraic operations. Such "multipliable matrices" have at most m+n-1 degrees of dimensional freedom, rather than the m*n degrees of numerical freedom. Conceptually it is possible to store this information in a efficient way and to keep the overhead in propagating units low. 
 
-Benchmarks with a random 1000 x 1000 dimensional (unitful) matrix show that the LU decomposition is currently about 20% slower when units are included. This slowdown is probably due to the lack of optimization in matrix multiplication with unitful matrices, where matrix multiplication is currently about 10x slower for this matrix.
+Benchmarks with a random 1000 x 1000 dimensional (unitful) matrix show that the LU decomposition is currently about 20% slower when units are included. This slowdown could be due to the lack of optimization in matrix multiplication with unitful matrices, where matrix-vector multiplication is currently about 5x slower for this matrix. Matrix-matrix multiplication incurs less than 1% slowdown and is better optimized than matrix-vector multiplication.
 ```
 julia> @btime lu(A.numbers)
   6.883 ms (5 allocations: 7.64 MiB)
@@ -168,7 +168,7 @@ Run the following Julia code
     ],
              )`
 
-`t("GGplot.jl")`
+`t("UnitfulLinearAlgebra.jl")`
 
 2. Make a new empty repository on GitHub.
 	
@@ -176,7 +176,7 @@ Run the following Julia code
     `git push -u origin main`
 
 	Previously it required setting the remote and branch name via the following settings. Not anymore.
-    `git remote add origin git@github.com:ggebbie/IsopycnalSurfaces.jl.git`\
+    `git remote add origin git@github.com:ggebbie/UnitfulLinearAlgebra.jl.git`\
    `git branch -M main`
  
   In magit, use the command `M a` to set origin, but it's not necessary anymore.
