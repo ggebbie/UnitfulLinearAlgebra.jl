@@ -483,9 +483,9 @@ function *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractM
     if unitrange(B) == unitdomain(A) # should this be similarity()?
         return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact) 
     elseif unitrange(B) ∥ unitdomain(A) && ~bothexact
-        #A2 = convert_unitdomain(A,unitrange(B)) 
-        convert_unitdomain!(A,unitrange(B)) 
-        return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact)
+        A2 = convert_unitdomain(A,unitrange(B)) 
+        #convert_unitdomain!(A,unitrange(B)) 
+        return BestMultipliableMatrix(A2.numbers*B.numbers,unitrange(A2),unitdomain(B),exact=bothexact)
     else
         error("matrix dimensional domain/unitrange not conformable")
     end
@@ -1043,14 +1043,16 @@ end
 
 singular(A::T) where T <: AbstractMultipliableMatrix = iszero(ustrip(det(A)))
 
-trace(A::T) where T<: AbstractMultipliableMatrix = sum(A.numbers).*(unitrange(A)[1]/unitdomain(A)[1])
+trace(A::T) where T<: AbstractMultipliableMatrix = sum(diag(A.numbers)).*(unitrange(A)[1]/unitdomain(A)[1])
 
 """
     function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=eigsortby) where T <: AbstractMultipliableMatrix
 
-    Thin wrapper for `UnitfulLinearAlgebra.eigen`.
-    Keep same keyword arguments as `LinearAlgebra.eigen`.
-    Ideally would simply work using AbstractArray interface,
+    Thin wrapper for `UnitfulLinearAlgebra.eigen` with same keyword arguments as `LinearAlgebra.eigen`.
+    There are multiple ways to distribute the units amongst the values and vectors.
+    Here, physical intuition and the equation 𝐀𝐱 = λ𝐱
+    dictate that the units of the eigenvectors are equal to the unit domain of 𝐀 (pp. 206, Hart, 1995).
+    Ideally the AbstractArray interface would automatically handle this,
     but there is an unsolved issue with Unitful conversions. 
 """
 function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) where T <: AbstractMultipliableMatrix
