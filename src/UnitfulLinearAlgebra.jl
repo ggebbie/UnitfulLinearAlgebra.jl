@@ -6,7 +6,7 @@ export AbstractMultipliableMatrix
 export MultipliableMatrix, EndomorphicMatrix
 export SquarableMatrix, UniformMatrix
 export LeftUniformMatrix, RightUniformMatrix
-export UnitSymmetricMatrix
+export UnitSymmetricMatrix, DSVD
 export BestMultipliableMatrix
 export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
@@ -15,18 +15,19 @@ export getindex, setindex!, size, similar
 export convert_unitrange, convert_unitdomain
 export convert_unitrange!, convert_unitdomain!
 export exact, multipliable, dimensionless, endomorphic
-export svd, eigen, isposdef, inv, transpose
+export svd, dsvd
+export eigen, isposdef, inv, transpose
 export unitrange, unitdomain
 export square, squarable, singular, unit_symmetric
 export lu, det, trace, diag, diagm
 export Diagonal, (\), cholesky
-export identitymatrix
+export identitymatrix, show
 
 import LinearAlgebra: inv, det, lu,
     svd, getproperty, eigen, isposdef,
     diag, diagm, Diagonal, cholesky
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
-    size, range, transpose, similar
+    size, range, transpose, similar, show
 
 abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
 
@@ -1062,8 +1063,8 @@ trace(A::T) where T<: AbstractMultipliableMatrix = sum(diag(A.numbers)).*(unitra
     Only squarable matrices have eigenstructure (pp. 96, Hart, 1995).
     Ideally the AbstractArray interface would automatically handle `eigen`,
     but there is an unsolved issue with Unitful conversions.
-     The following functions are available for `Eigen` objects:  [`det`](@ref), [`inv`](@ref) and [`isposdef`](@ref). Some are restricted to uniform matrices.
-    `eigvals` is not currently implemented.
+    The following functions are available for `Eigen` objects:  [`det`](@ref), [`inv`](@ref) and [`isposdef`](@ref). Some are restricted to uniform matrices.
+    `eigvals` of Eigen struct also available.
 """
 function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) where T <: AbstractMultipliableMatrix
 
@@ -1106,7 +1107,10 @@ end
 """
     svd(A; full::Bool = false, alg::Algorithm = default_svd_alg(A)) -> SVD
 
-Compute the singular value decomposition (SVD) of `A` and return an `SVD` object. Extended for MultipliableMatrix input.
+    Singular value decomposition (SVD) of `AbstractMultipliableMatrix`.
+    Only exists for uniform matrices (pp. 124, Hart, 1995).
+    Functions for `SVD{AbstractMultipliableMatrix}` object: `inv`, `size`, `adjoint`, `svdvals`.
+    Not implemented: `ldiv!`.
 """
 #function svd(A::AbstractMultipliableMatrix;full=false) where T <: AbstractMultipliableMatrix
 function svd(A::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
@@ -1116,24 +1120,83 @@ function svd(A::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorit
         # They are also Uniform and Endomorphic
         return SVD(F.U,F.S * unitrange(A)[1]./unitdomain(A)[1],F.Vt)
     else
-        error("SVD doesn't exist for non-uniform matrices")
+        error("UnitfulLinearAlgebra: SVD doesn't exist for non-uniform matrices")
     end
 end
 
+# Dimensional Singular Value Decomposition, following Singular Value Decomposition from Julia LinearAlgebra.jl
 """
-    function svd(A::AbstractMultipliableMatrix,Pdomain::UnitSymmetricMatrix,Prange::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
+    DSVD <: Factorization
 
-    Singular value decomposition for matrices with non-uniform units.
+Matrix factorization type of the dimensional singular value decomposition (DSVD) of a matrix `A`.
+This is the return type of [`dsvd(_)`](@ref), the corresponding matrix factorization function.
+
+If `F::DSVD` is the factorization object, `U`, `S`, `V` and `V⁻¹` can be obtained
+via `F.U`, `F.S`, `F.V` and `F.V⁻¹`, such that `A = U * Diagonal(S) * V⁻¹`.
+The singular values in `S` are sorted in descending order.
+
+Iterating the decomposition produces the components `U`, `S`, and `V`.
+
+Differences from SVD struct: Vt -> V⁻¹, U and V can have different types.
+```
+"""
+struct DSVD{T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}} <: Factorization{T}
+    U::MU
+    S::C
+    V⁻¹::MV
+    function DSVD{T,Tr,MU,MV,C}(U, S, V⁻¹) where {T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}}
+        LinearAlgebra.require_one_based_indexing(U, S, V⁻¹)
+        new{T,Tr,MU,MV,C}(U, S, V⁻¹)
+    end
+end
+DSVD(U::AbstractArray{T}, S::AbstractVector{Tr}, V⁻¹::AbstractArray{T}) where {T,Tr} =
+    DSVD{T,Tr,typeof(U),typeof(V⁻¹),typeof(S)}(U, S, V⁻¹)
+DSVD{T}(U::AbstractArray, S::AbstractVector{Tr}, V⁻¹::AbstractArray) where {T,Tr} =
+    DSVD(convert(AbstractArray{T}, U),
+        convert(AbstractVector{Tr}, S),
+        convert(AbstractArray{T}, V⁻¹))
+# backwards-compatible constructors (remove with Julia 2.0)
+@deprecate(DSVD{T,Tr,MU,MV}(U::AbstractArray{T}, S::AbstractVector{Tr}, V⁻¹::AbstractArray{T}) where {T,Tr,MU,MV},
+           DSVD{T,Tr,MU,MV,typeof(S)}(U, S, V⁻¹))
+
+DSVD{T}(F::DSVD) where {T} = DSVD(
+    convert(AbstractMatrix{T}, F.U),
+    convert(AbstractVector{real(T)}, F.S),
+    convert(AbstractMatrix{T}, F.V⁻¹))
+Factorization{T}(F::DSVD) where {T} = DSVD{T}(F)
+
+# iteration for destructuring into components
+Base.iterate(S::DSVD) = (S.U, Val(:S))
+Base.iterate(S::DSVD, ::Val{:S}) = (S.S, Val(:V))
+Base.iterate(S::DSVD, ::Val{:V}) = (S.V, Val(:done))
+Base.iterate(S::DSVD, ::Val{:done}) = nothing
+
+function getproperty(F::DSVD, d::Symbol)
+    if d === :V
+        return inv(getfield(F, :V⁻¹)) # change from SVD
+    else
+        return getfield(F, d)
+    end
+end
+
+Base.propertynames(F::DSVD, private::Bool=false) =
+    private ? (:V, fieldnames(typeof(F))...) : (:U, :S, :V, :V⁻¹)
+
+"""
+    function dsvd(A::AbstractMultipliableMatrix,Pdomain::UnitSymmetricMatrix,Prange::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
+
+    Dimensional singular value decomposition (DSVD).
+    Appropriate version of SVD for non-uniform matrices.
 # Input
 - `A::AbstractMultipliableMatrix`
-- `Prange::UnitSymmetricMatrix`: square matrix defining norm of range
-- `Pdomain::UnitSymmetricMatrix`: square matrix defining norm of domain
+- `Pr::UnitSymmetricMatrix`: square matrix defining norm of range
+- `Pd::UnitSymmetricMatrix`: square matrix defining norm of domain
 - `full=false`: optional argument
 - `alg`: optional argument for algorithm
 # Output:
 - `F::SVD`: SVD object with units that can be deconstructed
 """
-function svd(A::AbstractMultipliableMatrix,Pr::AbstractMultipliableMatrix,Pd::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
+function dsvd(A::AbstractMultipliableMatrix,Pr::AbstractMultipliableMatrix,Pd::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
 
     unit_symmetric(Pr) ? Qr = getproperty(cholesky(Pr),:U) : error("norm matrix for range not unit symmetric")
     unit_symmetric(Pd) ? Qd = getproperty(cholesky(Pd),:U) : error("norm matrix for domain not unit symmetric")
@@ -1151,12 +1214,21 @@ function svd(A::AbstractMultipliableMatrix,Pr::AbstractMultipliableMatrix,Pd::Ab
     #return SVD( Qr\BestMultipliableMatrix(F′.U),F′.S,F′.Vt*Qd)
 
     U = Qr\BestMultipliableMatrix(F′.U)
-    Û = MultipliableMatrix(U.numbers,unitrange(U),unitdomain(U),exact(U))
+    Û = BestMultipliableMatrix(U.numbers,unitrange(U),unitdomain(U),exact=exact(U))
 
-    Vt = F′.Vt*Qd
-    V̂t = MultipliableMatrix(Vt.numbers,unitrange(Vt),unitdomain(Vt),exact(Vt))
-    return SVD(Û,F′.S,V̂t)
-    
+    V⁻¹ = F′.Vt*Qd
+    V̂⁻¹ = BestMultipliableMatrix(V⁻¹.numbers,unitrange(V⁻¹),unitdomain(V⁻¹),exact=exact(V⁻¹))
+    return DSVD(Û,F′.S,V̂⁻¹)
+end
+
+function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractVector})
+    summary(io, F); println(io)
+    println(io, "U factor:")
+    show(io, mime, F.U)
+    println(io, "\nsingular values:")
+    show(io, mime, F.S)
+    println(io, "\nV⁻¹ factor:")
+    show(io, mime, F.V⁻¹)
 end
 
 """

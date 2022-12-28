@@ -6,10 +6,7 @@ using LinearAlgebra
 using SparseArrays
 using Test
 
-# test/learn from Hart's book
-
 @testset "UnitfulLinearAlgebra.jl" begin
-    # Write your tests here.
 
     m = u"m"
     s = u"s"
@@ -452,6 +449,16 @@ using Test
             Ẽ = F2.U*(Λ*F2.Vt)
 
             @test ustrip(abs.(maximum(Matrix(Ẽ) - E))) < 1e-10
+
+            # solve a linear system with SVD
+            # could also be solved with ldiv! but not yet implemented.
+            x = [1.0, 2.0]
+            y = E*x
+            y2 = E2*x
+            x̃ = E2\y
+            x̃2 = inv(F2)*y
+            @test maximum(abs.(ustrip.(x̃2 - x))) < 1e-10
+
 #             K = length(λ) # rank
 # 	    y = 5randn(3)u"s"
 # 	    σₙ = randn(3)u"s"
@@ -462,7 +469,7 @@ using Test
 
         end
 
-        @testset "non-uniform svd" begin
+        @testset "dimensional svd (DSVD)" begin
            
             u1 = m
             u2 = m/s
@@ -484,7 +491,6 @@ using Test
             # covariance for domain.
             Cd = Diagonal([1,0.1,0.01],p1,q1)
             Pd = inv(Cd)
-
             #Pd = Diagonal([1m,0.1m/s,0.01m/s/s],p1,q1)
 
             p2 = [m,m,m]
@@ -493,7 +499,18 @@ using Test
             Pr = inv(Cr)
 
             ##
-            G = svd(F,Pr,Pd) 
+            G = dsvd(F,Pr,Pd) 
+
+            # Diagonal makes dimensionless S matrix
+            # (but could usage be simplified? if uniform diagonal, make whole matrix uniform?)
+            F̃ = G.U * Diagonal(G.S,fill(unit(1.0),size(F,1)),fill(unit(1.0),size(F,2))) * G.V⁻¹
+
+            # even longer method to make S
+            #F̃ = G.U * BestMultipliableMatrix(Matrix(Diagonal(G.S))) * G.V⁻¹
+            @test maximum(abs.(ustrip.(F̃-F))) < 1e-10
+
+            u, s, v = G; # destructuring via iteration
+            @test u == G.U && s == G.S && v == G.V
 
             ## doesn't work because I can't call (i.e., getindex!) of a column
             # Krank = length(G.S)
@@ -505,17 +522,17 @@ using Test
             # @test ustrip(abs.(maximum(G- E) )) < 1e-10
 
 
+            # another way to decompose matrix.
             # recover using Diagonal dimensional matrix
  	    # Λ = diagm(G.S,unitrange(F),unitdomain(G),exact=true)
- 	    Λ = diagm(size(F)[1],size(F)[2],G.S)
-            Ẽ = G.U*(Λ*G.Vt)
+ 	    Λ = diagm(size(F)[1],size(F)[2],G.S) 
+            Ẽ = G.U*(Λ*G.V⁻¹)
 
             @test abs.(maximum(ustrip.(Matrix(Ẽ) - E))) < 1e-10
 
         end    
 
         @testset "briochemc" begin
-
             
             A = rand(3, 3) + I
             Au = A * 1u"1/s"
