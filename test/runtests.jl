@@ -501,6 +501,17 @@ using Test
             ##
             G = dsvd(F,Pr,Pd) 
 
+            # Diagonal makes dimensionless S matrix
+            # (but could usage be simplified? if uniform diagonal, make whole matrix uniform?)
+            F̃ = G.U * Diagonal(G.S,fill(unit(1.0),size(F,1)),fill(unit(1.0),size(F,2))) * G.V⁻¹
+
+            # even longer method to make S
+            #F̃ = G.U * BestMultipliableMatrix(Matrix(Diagonal(G.S))) * G.V⁻¹
+            @test maximum(abs.(ustrip.(F̃-F))) < 1e-10
+
+            u, s, v = G; # destructuring via iteration
+            @test u == G.U && s == G.S && v == G.V
+
             ## doesn't work because I can't call (i.e., getindex!) of a column
             # Krank = length(G.S)
             # H = 0 .*E
@@ -511,10 +522,11 @@ using Test
             # @test ustrip(abs.(maximum(G- E) )) < 1e-10
 
 
+            # another way to decompose matrix.
             # recover using Diagonal dimensional matrix
  	    # Λ = diagm(G.S,unitrange(F),unitdomain(G),exact=true)
  	    Λ = diagm(size(F)[1],size(F)[2],G.S) 
-            Ẽ = G.U*(Λ*G.Vt)
+            Ẽ = G.U*(Λ*G.V⁻¹)
 
             @test abs.(maximum(ustrip.(Matrix(Ẽ) - E))) < 1e-10
 
