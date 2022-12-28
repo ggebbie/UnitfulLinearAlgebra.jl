@@ -1062,8 +1062,8 @@ trace(A::T) where T<: AbstractMultipliableMatrix = sum(diag(A.numbers)).*(unitra
     Only squarable matrices have eigenstructure (pp. 96, Hart, 1995).
     Ideally the AbstractArray interface would automatically handle `eigen`,
     but there is an unsolved issue with Unitful conversions.
-     The following functions are available for `Eigen` objects:  [`det`](@ref), [`inv`](@ref) and [`isposdef`](@ref). Some are restricted to uniform matrices.
-    `eigvals` is not currently implemented.
+    The following functions are available for `Eigen` objects:  [`det`](@ref), [`inv`](@ref) and [`isposdef`](@ref). Some are restricted to uniform matrices.
+    `eigvals` of Eigen struct also available.
 """
 function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) where T <: AbstractMultipliableMatrix
 
@@ -1106,7 +1106,10 @@ end
 """
     svd(A; full::Bool = false, alg::Algorithm = default_svd_alg(A)) -> SVD
 
-Compute the singular value decomposition (SVD) of `A` and return an `SVD` object. Extended for MultipliableMatrix input.
+    Singular value decomposition (SVD) of `AbstractMultipliableMatrix`.
+    Only exists for uniform matrices.
+    Functions for `SVD{AbstractMultipliableMatrix}` object: `inv`, `size`, `adjoint`, `svdvals`.
+    Not implemented: `ldiv!`.
 """
 #function svd(A::AbstractMultipliableMatrix;full=false) where T <: AbstractMultipliableMatrix
 function svd(A::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 

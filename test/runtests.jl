@@ -452,6 +452,18 @@ using Test
             Ẽ = F2.U*(Λ*F2.Vt)
 
             @test ustrip(abs.(maximum(Matrix(Ẽ) - E))) < 1e-10
+
+            # solve a linear system with SVD
+            # could also be solved with ldiv! but not yet implemented.
+            x = [1.0, 2.0]
+            y = E*x
+            y2 = E2*x
+            x̃ = E2\y
+            x̃2 = inv(F2)*y
+
+            #F\y
+            @test maximum(abs.(ustrip.(x̃2 - x))) < 1e-10
+
 #             K = length(λ) # rank
 # 	    y = 5randn(3)u"s"
 # 	    σₙ = randn(3)u"s"
@@ -484,7 +496,6 @@ using Test
             # covariance for domain.
             Cd = Diagonal([1,0.1,0.01],p1,q1)
             Pd = inv(Cd)
-
             #Pd = Diagonal([1m,0.1m/s,0.01m/s/s],p1,q1)
 
             p2 = [m,m,m]
@@ -515,7 +526,6 @@ using Test
         end    
 
         @testset "briochemc" begin
-
             
             A = rand(3, 3) + I
             Au = A * 1u"1/s"
