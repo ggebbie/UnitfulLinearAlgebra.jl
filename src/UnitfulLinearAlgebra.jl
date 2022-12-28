@@ -21,13 +21,13 @@ export unitrange, unitdomain
 export square, squarable, singular, unit_symmetric
 export lu, det, trace, diag, diagm
 export Diagonal, (\), cholesky
-export identitymatrix
+export identitymatrix, show
 
 import LinearAlgebra: inv, det, lu,
     svd, getproperty, eigen, isposdef,
     diag, diagm, Diagonal, cholesky
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
-    size, range, transpose, similar
+    size, range, transpose, similar, show
 
 abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
 
@@ -1214,11 +1214,21 @@ function dsvd(A::AbstractMultipliableMatrix,Pr::AbstractMultipliableMatrix,Pd::A
     #return SVD( Qr\BestMultipliableMatrix(F′.U),F′.S,F′.Vt*Qd)
 
     U = Qr\BestMultipliableMatrix(F′.U)
-    Û = MultipliableMatrix(U.numbers,unitrange(U),unitdomain(U),exact(U))
+    Û = BestMultipliableMatrix(U.numbers,unitrange(U),unitdomain(U),exact=exact(U))
 
-    Vt = F′.Vt*Qd
-    V̂t = MultipliableMatrix(Vt.numbers,unitrange(Vt),unitdomain(Vt),exact(Vt))
-    return DSVD(Û,F′.S,V̂t)
+    V⁻¹ = F′.Vt*Qd
+    V̂⁻¹ = BestMultipliableMatrix(V⁻¹.numbers,unitrange(V⁻¹),unitdomain(V⁻¹),exact=exact(V⁻¹))
+    return DSVD(Û,F′.S,V̂⁻¹)
+end
+
+function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractVector})
+    summary(io, F); println(io)
+    println(io, "U factor:")
+    show(io, mime, F.U)
+    println(io, "\nsingular values:")
+    show(io, mime, F.S)
+    println(io, "\nV⁻¹ factor:")
+    show(io, mime, F.V⁻¹)
 end
 
 """
