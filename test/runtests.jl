@@ -284,6 +284,13 @@ using Test
             B̃ = C.vectors * Λ* inv(C.vectors)
             @test maximum(abs.(ustrip.(B̃-B))) < 1e-10
 
+            # check eigenvalue condition
+            for k = 1:2
+                Δ = B*Matrix(C.vectors)[:,k] - 
+                    C.values[k]*Matrix(C.vectors)[:,k]
+                @test maximum(abs.(ustrip.(Δ))) < 1e-10
+            end
+
             # compute det using Eigen factorization
             @test abs(ustrip(det(C)-det(B))) < 1e-10
             @test UnitfulLinearAlgebra.isposdef(C)

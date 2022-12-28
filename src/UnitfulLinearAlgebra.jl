@@ -1059,7 +1059,8 @@ trace(A::T) where T<: AbstractMultipliableMatrix = sum(diag(A.numbers)).*(unitra
     There are multiple ways to distribute the units amongst the values and vectors.
     Here, physical intuition and the equation 𝐀𝐱 = λ𝐱
     dictate that the units of the eigenvectors are equal to the unit domain of 𝐀 (pp. 206, Hart, 1995).
-    Ideally the AbstractArray interface would automatically handle this,
+    Only squarable matrices have eigenstructure (pp. 96, Hart, 1995).
+    Ideally the AbstractArray interface would automatically handle `eigen`,
     but there is an unsolved issue with Unitful conversions.
      The following functions are available for `Eigen` objects:  [`det`](@ref), [`inv`](@ref) and [`isposdef`](@ref). Some are restricted to uniform matrices.
     `eigvals` is not currently implemented.
