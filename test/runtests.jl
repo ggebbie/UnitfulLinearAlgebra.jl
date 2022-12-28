@@ -239,18 +239,55 @@ using Test
             @test unitdomain(B) == K*[m,s]
 
             # try to get eigenstructure
-            F = UnitfulLinearAlgebra.eigen(B)
+            F = eigen(B)
 
-            @test abs(ustrip(det(B) - prod(F.values))) < 1e-5
+            # Hart, 1995, pp. 97
+            @test abs(ustrip(trace(B) - sum(F.values))) < 1e-10
+            @test abs(ustrip(det(B) - prod(F.values))) < 1e-10
 
             for k = 1:2
                 Δ = B*Matrix(F.vectors)[:,k] - 
                     F.values[k]*Matrix(F.vectors)[:,k]
 
-                @test maximum(abs.(ustrip.(Δ))) < 1e-5
-
+                @test maximum(abs.(ustrip.(Δ))) < 1e-10
             end
+        end
+        
+        @testset "eigenvalues" begin
+            # requires uniform, squarable matrix
+            p = [1.0, 2.0]m
+            q̃ = 1 ./ [2.0, 3.0]
+
+            q = ustrip.(q̃).*unit.(1 ./q̃)
             
+            # outer product to make a multipliable matrix
+            A = p*q̃'
+            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=false)
+            B[2,2] += 1m # make it non-singular
+            @test square(B)
+            @test squarable(B)
+            B*B == B^2
+
+            C = UnitfulLinearAlgebra.eigen(B)
+            vals, vecs = C; # destructuring via iteration
+            @test vals == C.values && vecs == C.vectors
+
+            #@test inv(B) == inv(C) # not exact
+            @test maximum(abs.(ustrip.(inv(B) - inv(C)))) < 1e-10
+
+            # reconstruct using factorization
+            ur = unitrange(C.vectors)
+            ud = unit.(C.values)
+            Λ = Diagonal(C.values,ur,ud)
+            # use matrix right divide would be best
+            #transpose(transpose(C.vectors)\ (Λ*transpose(C.vectors)))
+            B̃ = C.vectors * Λ* inv(C.vectors)
+            @test maximum(abs.(ustrip.(B̃-B))) < 1e-10
+
+            # compute det using Eigen factorization
+            @test abs(ustrip(det(C)-det(B))) < 1e-10
+            @test UnitfulLinearAlgebra.isposdef(C)
+
         end
         
         @testset "unit symmetric" begin
@@ -275,11 +312,11 @@ using Test
 
             Q = UnitfulLinearAlgebra.cholesky(B)
             test1 = Matrix(transpose(Q.U)*Q.U)
-            @test maximum(abs.(ustrip.(B-test1))) < 1e-5
+            @test maximum(abs.(ustrip.(B-test1))) < 1e-10
 
             test2 = Matrix(Q.L*transpose(Q.L))
-            @test maximum(abs.(ustrip.(B-test2))) < 1e-5
-            @test maximum(abs.(ustrip.(B-Q.L*transpose(Q.L)))) < 1e-5
+            @test maximum(abs.(ustrip.(B-test2))) < 1e-10
+            @test maximum(abs.(ustrip.(B-Q.L*transpose(Q.L)))) < 1e-10
 
             # do operations directly with Q?
             Qnodims.U\[0.5, 0.8]
@@ -337,7 +374,7 @@ using Test
             Z2 = lu(G)
 
             # failing with a small error (1e-17)
-            @test maximum(abs.(ustrip.(E[Z2.p,:]-Matrix(Z2.L*Z2.U)))) < 1e-5
+            @test maximum(abs.(ustrip.(E[Z2.p,:]-Matrix(Z2.L*Z2.U)))) < 1e-10
             @test ~singular(F)
             det(F)
 

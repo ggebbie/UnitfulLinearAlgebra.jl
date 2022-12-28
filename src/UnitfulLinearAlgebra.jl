@@ -33,14 +33,14 @@ abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
 """
     struct MultipliableMatrix
 
-    Matrices with units that a physically reasonable,
+    Matrices with units that are physically reasonable,
     i.e., more than just an array of values with units.
 
-    Multipliable matrices have dimensions that are consistent with many linear algebraic manipulations, including multiplication.
+    Units are consistent with many linear algebraic manipulations, including multiplication.
 
-    Hart suggests that these matrices simply be called "matrices", and that matrices with dimensional values that cannot be multiplied should be called "arrays."
+    Hart (1995) suggests that these matrices simply be called "matrices", and that matrices with dimensional values that cannot be multiplied should be called "arrays."
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
 - `unitrange`: dimensional range in terms of units
 - `unitdomain`: dimensional domain in terms of units
@@ -58,12 +58,12 @@ end
 """
     struct EndomorphicMatrix
 
-    An endomorphic matrix maps a dimensioned vector space
-    to itself. The dimensional range and domain are the same.
+    Maps dimensioned vector space to itself.
+    Equivalent unit (dimensional) range and domain.
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
-- `unitrange`: dimensional range in terms of units, and also equal the dimensional domain
+- `unitrange`: unit (dimensional) range in terms of units, and also equal the unit (dimensional) domain
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
 struct EndomorphicMatrix{T<:Number} <: AbstractMultipliableMatrix{T} 
@@ -77,11 +77,13 @@ end
     struct SquarableMatrix
 
     An squarable matrix is one where 𝐀² is defined.
-    Definition: dimensional range and domain are parallel.
+    Unit (dimensional) range and domain are parallel.
+    Key for solving difference and differential equations.
+    Have eigenstructure. 
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
-- `unitrange`: dimensional range in terms of units, this is also the domain
+- `unitrange`: unit (dimensional) range
 - `Δunitdomain`: shift to range that gives the domain
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
@@ -96,11 +98,11 @@ end
 """
     struct UnitSymmetricMatrix
 
-    An squarable matrix is one where 𝐀² is defined.
+    `UnitSymmetricMatrix`s have units that are symmetric about the main diagonal and define weighted norms. 
     Definition: inverse dimensional range and dimensional domain are parallel.
-    Called "dimensionally symmetric" by Hart.
+    Called "dimensionally symmetric" by Hart, 1995.
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
 - `unitrange`: dimensional range in terms of units, this is also the domain
 - `Δunitdomain`: shift to range that gives the domain
@@ -117,13 +119,13 @@ end
 """
     struct UniformMatrix
 
-    Uniform matrix
+    Uniform matrix: All entries have the same units
 
 # Attributes
 - `numbers`: numerical (dimensionless) matrix
-- `unitrange`:  uniform dimensional range expressed as a single unit
-- `unitdomain`: uniform dimensional domain expressed as a single unit
-- `exact`: geometric (`true`) or algebraic (`false`) interpretation
+- `unitrange`:  uniform unit (dimensional) range expressed as a single unit
+- `unitdomain`: uniform unit (dimensional) domain expressed as a single unit
+- `exact`: geometric (`true`) or algebraic (`false`) interpretation of matrix
 """
 struct UniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
     numbers::AbstractMatrix{T}
@@ -145,9 +147,9 @@ end
 """
     struct LeftUniformMatrix
 
-    Left uniform matrix
+    Left uniform matrix: output of matrix has uniform units
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
 - `unitrange`:  uniform dimensional range expressed as a single unit
 - `unitdomain`: dimensional domain (Vector)
@@ -163,9 +165,9 @@ end
 """
     struct RightUniformMatrix
 
-    Right uniform matrix
+    Right uniform matrix: input of matrix must have uniform units
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
 - `unitrange::Vector`:  unit (dimensional) range
 - `unitdomain`: uniform dimensional domain expressed as a single unit
@@ -1059,7 +1061,8 @@ trace(A::T) where T<: AbstractMultipliableMatrix = sum(diag(A.numbers)).*(unitra
     dictate that the units of the eigenvectors are equal to the unit domain of 𝐀 (pp. 206, Hart, 1995).
     Ideally the AbstractArray interface would automatically handle this,
     but there is an unsolved issue with Unitful conversions.
-     The following functions are available for `Eigen` objects:  [`det`](@ref). The functions [`inv`](@ref) and [`isposdef`](@ref) are not yet implemented.
+     The following functions are available for `Eigen` objects:  [`det`](@ref), [`inv`](@ref) and [`isposdef`](@ref). Some are restricted to uniform matrices.
+    `eigvals` is not currently implemented.
 """
 function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) where T <: AbstractMultipliableMatrix
 
@@ -1087,19 +1090,13 @@ function inv(A::Eigen{T,V,S,U}) where {U <: AbstractVector, S <: AbstractMultipl
     if (uniform(A.vectors) && isreal(A.values))
         ur = unitrange(A.vectors)
         ud = unit.(A.values)
-        #Λ = Diagonal(A.values,ur,ud)
         Λ⁻¹ = Diagonal(A.values.^-1,ud,ur)
-        println(Λ⁻¹)
-        tmp = transpose(copy(transpose(A.vectors)) \ Λ⁻¹)
-        return A.vectors*tmp
+        return A.vectors* transpose(transpose(A.vectors) \ Λ⁻¹)
+
+        # LinearAlgebra.eigen uses matrix right divide, i.e., 
         #return A.vectors * Λ⁻¹ / A.vectors
-        #println(Λ⁻¹ * A.vectors)
-        #println(unitrange(Λ \ A.vectors))
-        #println(unitrange(A.vectors))
-        #
-        #return A.vectors\ (Λ \ A.vectors)
-        #return A.vectors * tmp
-        #A.vectors*Λ/inv(A.vectors)
+        # but this is not available yet for `Multipliable Matrix`s.
+
     else
         error("UnitfulLinearAlgebra: Eigen factorization can only be inverted for uniform matrices")
     end
