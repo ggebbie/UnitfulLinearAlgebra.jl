@@ -15,7 +15,8 @@ export getindex, setindex!, size, similar
 export convert_unitrange, convert_unitdomain
 export convert_unitrange!, convert_unitdomain!
 export exact, multipliable, dimensionless, endomorphic
-export svd, eigen, isposdef, inv, transpose
+export svd, dsvd
+export eigen, isposdef, inv, transpose
 export unitrange, unitdomain
 export square, squarable, singular, unit_symmetric
 export lu, det, trace, diag, diagm
@@ -1119,24 +1120,25 @@ function svd(A::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorit
         # They are also Uniform and Endomorphic
         return SVD(F.U,F.S * unitrange(A)[1]./unitdomain(A)[1],F.Vt)
     else
-        error("SVD doesn't exist for non-uniform matrices")
+        error("UnitfulLinearAlgebra: SVD doesn't exist for non-uniform matrices")
     end
 end
 
 """
-    function svd(A::AbstractMultipliableMatrix,Pdomain::UnitSymmetricMatrix,Prange::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
+    function dsvd(A::AbstractMultipliableMatrix,Pdomain::UnitSymmetricMatrix,Prange::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
 
-    Singular value decomposition for matrices with non-uniform units.
+    Dimensional singular value decomposition (DSVD).
+    Appropriate version of SVD for non-uniform matrices.
 # Input
 - `A::AbstractMultipliableMatrix`
-- `Prange::UnitSymmetricMatrix`: square matrix defining norm of range
-- `Pdomain::UnitSymmetricMatrix`: square matrix defining norm of domain
+- `Pr::UnitSymmetricMatrix`: square matrix defining norm of range
+- `Pd::UnitSymmetricMatrix`: square matrix defining norm of domain
 - `full=false`: optional argument
 - `alg`: optional argument for algorithm
 # Output:
 - `F::SVD`: SVD object with units that can be deconstructed
 """
-function svd(A::AbstractMultipliableMatrix,Pr::AbstractMultipliableMatrix,Pd::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
+function dsvd(A::AbstractMultipliableMatrix,Pr::AbstractMultipliableMatrix,Pd::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
 
     unit_symmetric(Pr) ? Qr = getproperty(cholesky(Pr),:U) : error("norm matrix for range not unit symmetric")
     unit_symmetric(Pd) ? Qd = getproperty(cholesky(Pd),:U) : error("norm matrix for domain not unit symmetric")

@@ -460,8 +460,6 @@ using Test
             y2 = E2*x
             x̃ = E2\y
             x̃2 = inv(F2)*y
-
-            #F\y
             @test maximum(abs.(ustrip.(x̃2 - x))) < 1e-10
 
 #             K = length(λ) # rank
