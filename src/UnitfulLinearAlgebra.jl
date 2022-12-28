@@ -6,7 +6,7 @@ export AbstractMultipliableMatrix
 export MultipliableMatrix, EndomorphicMatrix
 export SquarableMatrix, UniformMatrix
 export LeftUniformMatrix, RightUniformMatrix
-export UnitSymmetricMatrix
+export UnitSymmetricMatrix, DSVD
 export BestMultipliableMatrix
 export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
@@ -1108,7 +1108,7 @@ end
     svd(A; full::Bool = false, alg::Algorithm = default_svd_alg(A)) -> SVD
 
     Singular value decomposition (SVD) of `AbstractMultipliableMatrix`.
-    Only exists for uniform matrices.
+    Only exists for uniform matrices (pp. 124, Hart, 1995).
     Functions for `SVD{AbstractMultipliableMatrix}` object: `inv`, `size`, `adjoint`, `svdvals`.
     Not implemented: `ldiv!`.
 """
@@ -1123,6 +1123,104 @@ function svd(A::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorit
         error("UnitfulLinearAlgebra: SVD doesn't exist for non-uniform matrices")
     end
 end
+
+# Dimensional Singular Value Decomposition, following Singular Value Decomposition from Julia LinearAlgebra.jl
+"""
+    DSVD <: Factorization
+
+Matrix factorization type of the dimensional singular value decomposition (DSVD) of a matrix `A`.
+This is the return type of [`dsvd(_)`](@ref), the corresponding matrix factorization function.
+
+If `F::DSVD` is the factorization object, `U`, `S`, `V` and `V⁻¹` can be obtained
+via `F.U`, `F.S`, `F.V` and `F.V⁻¹`, such that `A = U * Diagonal(S) * V⁻¹`.
+The singular values in `S` are sorted in descending order.
+
+Iterating the decomposition produces the components `U`, `S`, and `V`.
+
+# Examples
+# ```jldoctest
+# julia> A = [1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]
+# 4×5 Matrix{Float64}:
+#  1.0  0.0  0.0  0.0  2.0
+#  0.0  0.0  3.0  0.0  0.0
+#  0.0  0.0  0.0  0.0  0.0
+#  0.0  2.0  0.0  0.0  0.0
+
+# julia> F = svd(A)
+# SVD{Float64, Float64, Matrix{Float64}, Vector{Float64}}
+# U factor:
+# 4×4 Matrix{Float64}:
+#  0.0  1.0  0.0   0.0
+#  1.0  0.0  0.0   0.0
+#  0.0  0.0  0.0  -1.0
+#  0.0  0.0  1.0   0.0
+# singular values:
+# 4-element Vector{Float64}:
+#  3.0
+#  2.23606797749979
+#  2.0
+#  0.0
+# Vt factor:
+# 4×5 Matrix{Float64}:
+#  -0.0       0.0  1.0  -0.0  0.0
+#   0.447214  0.0  0.0   0.0  0.894427
+#  -0.0       1.0  0.0  -0.0  0.0
+#   0.0       0.0  0.0   1.0  0.0
+
+# julia> F.U * Diagonal(F.S) * F.Vt
+# 4×5 Matrix{Float64}:
+#  1.0  0.0  0.0  0.0  2.0
+#  0.0  0.0  3.0  0.0  0.0
+#  0.0  0.0  0.0  0.0  0.0
+#  0.0  2.0  0.0  0.0  0.0
+
+# julia> u, s, v = F; # destructuring via iteration
+
+# julia> u == F.U && s == F.S && v == F.V
+# true
+```
+"""
+struct DSVD{T,Tr,M<:AbstractArray{T},C<:AbstractVector{Tr}} <: Factorization{T}
+    U::M
+    S::C
+    V⁻¹::M
+    function DSVD{T,Tr,M,C}(U, S, V⁻¹) where {T,Tr,M<:AbstractArray{T},C<:AbstractVector{Tr}}
+        LinearAlgebra.require_one_based_indexing(U, S, V⁻¹)
+        new{T,Tr,M,C}(U, S, V⁻¹)
+    end
+end
+DSVD(U::AbstractArray{T}, S::AbstractVector{Tr}, V⁻¹::AbstractArray{T}) where {T,Tr} =
+    DSVD{T,Tr,typeof(U),typeof(S)}(U, S, V⁻¹)
+DSVD{T}(U::AbstractArray, S::AbstractVector{Tr}, V⁻¹::AbstractArray) where {T,Tr} =
+    DSVD(convert(AbstractArray{T}, U),
+        convert(AbstractVector{Tr}, S),
+        convert(AbstractArray{T}, V⁻¹))
+# backwards-compatible constructors (remove with Julia 2.0)
+@deprecate(DSVD{T,Tr,M}(U::AbstractArray{T}, S::AbstractVector{Tr}, V⁻¹::AbstractArray{T}) where {T,Tr,M},
+           DSVD{T,Tr,M,typeof(S)}(U, S, V⁻¹))
+
+DSVD{T}(F::DSVD) where {T} = DSVD(
+    convert(AbstractMatrix{T}, F.U),
+    convert(AbstractVector{real(T)}, F.S),
+    convert(AbstractMatrix{T}, F.V⁻¹))
+Factorization{T}(F::DSVD) where {T} = DSVD{T}(F)
+
+# iteration for destructuring into components
+Base.iterate(S::DSVD) = (S.U, Val(:S))
+Base.iterate(S::DSVD, ::Val{:S}) = (S.S, Val(:V))
+Base.iterate(S::DSVD, ::Val{:V}) = (S.V, Val(:done))
+Base.iterate(S::DSVD, ::Val{:done}) = nothing
+
+function getproperty(F::DSVD, d::Symbol)
+    if d === :V
+        return inv(getfield(F, :V⁻¹)) # change from SVD
+    else
+        return getfield(F, d)
+    end
+end
+
+Base.propertynames(F::DSVD, private::Bool=false) =
+    private ? (:V, fieldnames(typeof(F))...) : (:U, :S, :V, :V⁻¹)
 
 """
     function dsvd(A::AbstractMultipliableMatrix,Pdomain::UnitSymmetricMatrix,Prange::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
@@ -1160,8 +1258,7 @@ function dsvd(A::AbstractMultipliableMatrix,Pr::AbstractMultipliableMatrix,Pd::A
 
     Vt = F′.Vt*Qd
     V̂t = MultipliableMatrix(Vt.numbers,unitrange(Vt),unitdomain(Vt),exact(Vt))
-    return SVD(Û,F′.S,V̂t)
-    
+    return DSVD(Û,F′.S,V̂t)
 end
 
 """

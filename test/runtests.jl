@@ -6,10 +6,7 @@ using LinearAlgebra
 using SparseArrays
 using Test
 
-# test/learn from Hart's book
-
 @testset "UnitfulLinearAlgebra.jl" begin
-    # Write your tests here.
 
     m = u"m"
     s = u"s"
@@ -472,7 +469,7 @@ using Test
 
         end
 
-        @testset "non-uniform svd" begin
+        @testset "dimensional svd (DSVD)" begin
            
             u1 = m
             u2 = m/s
@@ -502,7 +499,7 @@ using Test
             Pr = inv(Cr)
 
             ##
-            G = svd(F,Pr,Pd) 
+            G = dsvd(F,Pr,Pd) 
 
             ## doesn't work because I can't call (i.e., getindex!) of a column
             # Krank = length(G.S)
@@ -516,7 +513,7 @@ using Test
 
             # recover using Diagonal dimensional matrix
  	    # Λ = diagm(G.S,unitrange(F),unitdomain(G),exact=true)
- 	    Λ = diagm(size(F)[1],size(F)[2],G.S)
+ 	    Λ = diagm(size(F)[1],size(F)[2],G.S) 
             Ẽ = G.U*(Λ*G.Vt)
 
             @test abs.(maximum(ustrip.(Matrix(Ẽ) - E))) < 1e-10
