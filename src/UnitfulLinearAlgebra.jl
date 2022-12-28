@@ -1137,67 +1137,27 @@ The singular values in `S` are sorted in descending order.
 
 Iterating the decomposition produces the components `U`, `S`, and `V`.
 
-# Examples
-# ```jldoctest
-# julia> A = [1. 0. 0. 0. 2.; 0. 0. 3. 0. 0.; 0. 0. 0. 0. 0.; 0. 2. 0. 0. 0.]
-# 4×5 Matrix{Float64}:
-#  1.0  0.0  0.0  0.0  2.0
-#  0.0  0.0  3.0  0.0  0.0
-#  0.0  0.0  0.0  0.0  0.0
-#  0.0  2.0  0.0  0.0  0.0
-
-# julia> F = svd(A)
-# SVD{Float64, Float64, Matrix{Float64}, Vector{Float64}}
-# U factor:
-# 4×4 Matrix{Float64}:
-#  0.0  1.0  0.0   0.0
-#  1.0  0.0  0.0   0.0
-#  0.0  0.0  0.0  -1.0
-#  0.0  0.0  1.0   0.0
-# singular values:
-# 4-element Vector{Float64}:
-#  3.0
-#  2.23606797749979
-#  2.0
-#  0.0
-# Vt factor:
-# 4×5 Matrix{Float64}:
-#  -0.0       0.0  1.0  -0.0  0.0
-#   0.447214  0.0  0.0   0.0  0.894427
-#  -0.0       1.0  0.0  -0.0  0.0
-#   0.0       0.0  0.0   1.0  0.0
-
-# julia> F.U * Diagonal(F.S) * F.Vt
-# 4×5 Matrix{Float64}:
-#  1.0  0.0  0.0  0.0  2.0
-#  0.0  0.0  3.0  0.0  0.0
-#  0.0  0.0  0.0  0.0  0.0
-#  0.0  2.0  0.0  0.0  0.0
-
-# julia> u, s, v = F; # destructuring via iteration
-
-# julia> u == F.U && s == F.S && v == F.V
-# true
+Differences from SVD struct: Vt -> V⁻¹, U and V can have different types.
 ```
 """
-struct DSVD{T,Tr,M<:AbstractArray{T},C<:AbstractVector{Tr}} <: Factorization{T}
-    U::M
+struct DSVD{T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}} <: Factorization{T}
+    U::MU
     S::C
-    V⁻¹::M
-    function DSVD{T,Tr,M,C}(U, S, V⁻¹) where {T,Tr,M<:AbstractArray{T},C<:AbstractVector{Tr}}
+    V⁻¹::MV
+    function DSVD{T,Tr,MU,MV,C}(U, S, V⁻¹) where {T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}}
         LinearAlgebra.require_one_based_indexing(U, S, V⁻¹)
-        new{T,Tr,M,C}(U, S, V⁻¹)
+        new{T,Tr,MU,MV,C}(U, S, V⁻¹)
     end
 end
 DSVD(U::AbstractArray{T}, S::AbstractVector{Tr}, V⁻¹::AbstractArray{T}) where {T,Tr} =
-    DSVD{T,Tr,typeof(U),typeof(S)}(U, S, V⁻¹)
+    DSVD{T,Tr,typeof(U),typeof(V⁻¹),typeof(S)}(U, S, V⁻¹)
 DSVD{T}(U::AbstractArray, S::AbstractVector{Tr}, V⁻¹::AbstractArray) where {T,Tr} =
     DSVD(convert(AbstractArray{T}, U),
         convert(AbstractVector{Tr}, S),
         convert(AbstractArray{T}, V⁻¹))
 # backwards-compatible constructors (remove with Julia 2.0)
-@deprecate(DSVD{T,Tr,M}(U::AbstractArray{T}, S::AbstractVector{Tr}, V⁻¹::AbstractArray{T}) where {T,Tr,M},
-           DSVD{T,Tr,M,typeof(S)}(U, S, V⁻¹))
+@deprecate(DSVD{T,Tr,MU,MV}(U::AbstractArray{T}, S::AbstractVector{Tr}, V⁻¹::AbstractArray{T}) where {T,Tr,MU,MV},
+           DSVD{T,Tr,MU,MV,typeof(S)}(U, S, V⁻¹))
 
 DSVD{T}(F::DSVD) where {T} = DSVD(
     convert(AbstractMatrix{T}, F.U),
