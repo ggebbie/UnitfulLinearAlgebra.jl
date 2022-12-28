@@ -15,7 +15,7 @@ export getindex, setindex!, size, similar
 export convert_unitrange, convert_unitdomain
 export convert_unitrange!, convert_unitdomain!
 export exact, multipliable, dimensionless, endomorphic
-export svd, eigen, inv, transpose
+export svd, eigen, isposdef, inv, transpose
 export unitrange, unitdomain
 export square, squarable, singular, unit_symmetric
 export lu, det, trace, diag, diagm
@@ -23,7 +23,7 @@ export Diagonal, (\), cholesky
 export identitymatrix
 
 import LinearAlgebra: inv, det, lu,
-    svd, getproperty, eigen,
+    svd, getproperty, eigen, isposdef,
     diag, diagm, Diagonal, cholesky
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
     size, range, transpose, similar
@@ -33,14 +33,14 @@ abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
 """
     struct MultipliableMatrix
 
-    Matrices with units that a physically reasonable,
+    Matrices with units that are physically reasonable,
     i.e., more than just an array of values with units.
 
-    Multipliable matrices have dimensions that are consistent with many linear algebraic manipulations, including multiplication.
+    Units are consistent with many linear algebraic manipulations, including multiplication.
 
-    Hart suggests that these matrices simply be called "matrices", and that matrices with dimensional values that cannot be multiplied should be called "arrays."
+    Hart (1995) suggests that these matrices simply be called "matrices", and that matrices with dimensional values that cannot be multiplied should be called "arrays."
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
 - `unitrange`: dimensional range in terms of units
 - `unitdomain`: dimensional domain in terms of units
@@ -58,12 +58,12 @@ end
 """
     struct EndomorphicMatrix
 
-    An endomorphic matrix maps a dimensioned vector space
-    to itself. The dimensional range and domain are the same.
+    Maps dimensioned vector space to itself.
+    Equivalent unit (dimensional) range and domain.
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
-- `unitrange`: dimensional range in terms of units, and also equal the dimensional domain
+- `unitrange`: unit (dimensional) range in terms of units, and also equal the unit (dimensional) domain
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
 struct EndomorphicMatrix{T<:Number} <: AbstractMultipliableMatrix{T} 
@@ -77,11 +77,13 @@ end
     struct SquarableMatrix
 
     An squarable matrix is one where 𝐀² is defined.
-    Definition: dimensional range and domain are parallel.
+    Unit (dimensional) range and domain are parallel.
+    Key for solving difference and differential equations.
+    Have eigenstructure. 
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
-- `unitrange`: dimensional range in terms of units, this is also the domain
+- `unitrange`: unit (dimensional) range
 - `Δunitdomain`: shift to range that gives the domain
 - `exact`: geometric (`true`) or algebraic (`false`) interpretation
 """
@@ -96,11 +98,11 @@ end
 """
     struct UnitSymmetricMatrix
 
-    An squarable matrix is one where 𝐀² is defined.
+    `UnitSymmetricMatrix`s have units that are symmetric about the main diagonal and define weighted norms. 
     Definition: inverse dimensional range and dimensional domain are parallel.
-    Called "dimensionally symmetric" by Hart.
+    Called "dimensionally symmetric" by Hart, 1995.
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
 - `unitrange`: dimensional range in terms of units, this is also the domain
 - `Δunitdomain`: shift to range that gives the domain
@@ -117,13 +119,13 @@ end
 """
     struct UniformMatrix
 
-    Uniform matrix
+    Uniform matrix: All entries have the same units
 
 # Attributes
 - `numbers`: numerical (dimensionless) matrix
-- `unitrange`:  uniform dimensional range expressed as a single unit
-- `unitdomain`: uniform dimensional domain expressed as a single unit
-- `exact`: geometric (`true`) or algebraic (`false`) interpretation
+- `unitrange`:  uniform unit (dimensional) range expressed as a single unit
+- `unitdomain`: uniform unit (dimensional) domain expressed as a single unit
+- `exact`: geometric (`true`) or algebraic (`false`) interpretation of matrix
 """
 struct UniformMatrix{T<:Number} <: AbstractMultipliableMatrix{T}
     numbers::AbstractMatrix{T}
@@ -145,9 +147,9 @@ end
 """
     struct LeftUniformMatrix
 
-    Left uniform matrix
+    Left uniform matrix: output of matrix has uniform units
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
 - `unitrange`:  uniform dimensional range expressed as a single unit
 - `unitdomain`: dimensional domain (Vector)
@@ -163,9 +165,9 @@ end
 """
     struct RightUniformMatrix
 
-    Right uniform matrix
+    Right uniform matrix: input of matrix must have uniform units
 
-# Attributes
+# Fields
 - `numbers`: numerical (dimensionless) matrix
 - `unitrange::Vector`:  unit (dimensional) range
 - `unitdomain`: uniform dimensional domain expressed as a single unit
@@ -484,8 +486,10 @@ function *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractM
         return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact) 
     elseif unitrange(B) ∥ unitdomain(A) && ~bothexact
         #A2 = convert_unitdomain(A,unitrange(B)) 
-        convert_unitdomain!(A,unitrange(B)) 
-        return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact)
+        #convert_unitdomain!(A,unitrange(B))
+        newrange = unitrange(A).*(unitrange(B)[1]/unitdomain(A)[1])
+
+        return BestMultipliableMatrix(A.numbers*B.numbers,newrange,unitdomain(B),exact=bothexact)
     else
         error("matrix dimensional domain/unitrange not conformable")
     end
@@ -738,8 +742,10 @@ dottable(a,b) = parallel(a, 1 ./ b)
 """
 function convert_unitdomain(A::AbstractMultipliableMatrix, newdomain::Vector) 
     if unitdomain(A) ∥ newdomain
-        shift = newdomain./unitdomain(A)
-        newrange = unitrange(A).*shift
+        #shift = newdomain./unitdomain(A)
+        #newrange = unitrange(A).*shift
+        newrange = unitrange(A).*(newdomain[1]/unitdomain(A)[1])
+
         B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New unitdomain not parallel to unitdomain of Multipliable Matrix")
@@ -767,7 +773,7 @@ function convert_unitdomain!(A::AbstractMultipliableMatrix, newdomain::Vector)
             end
         end
         # make sure the matrix is now exact
-        #A.exact = true # immutable
+        #A.exact = true # immutable so not possible
     else
         error("New domain not parallel to domain of Multipliable Matrix")
     end
@@ -784,8 +790,9 @@ end
 """
 function convert_unitrange(A::AbstractMultipliableMatrix, newrange::Vector)
     if unitrange(A) ∥ newrange
-        shift = newrange[1]./unitrange(A)[1]
-        newdomain = unitdomain(A).*shift
+        #shift = newrange[1]./unitrange(A)[1]
+        #newdomain = unitdomain(A).*shift
+        newdomain = unitdomain(A).*(newrange[1]./unitrange(A)[1])
         B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New unitrange not parallel to unitrange of Multipliable Matrix")
@@ -925,7 +932,7 @@ function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
     if unitrange(A) == unitrange(B)
         #return (A.numbers\B.numbers).*unitdomain(A)
         return BestMultipliableMatrix(A.numbers\B.numbers,unitdomain(A),unitdomain(B),exact = (exact(A) && exact(B)))
-    elseif ~exact(A) && (unitrange(A) ∥ B)
+    elseif ~exact(A) && (unitrange(A) ∥ unitrange(B))
         convert_unitrange!(A,unitrange(B)) # inefficient?
         return BestMultipliableMatrix(A.numbers\B.numbers,unitdomain(A),unitdomain(B),exact = (exact(A)&&exact(B)))
     else
@@ -1043,15 +1050,20 @@ end
 
 singular(A::T) where T <: AbstractMultipliableMatrix = iszero(ustrip(det(A)))
 
-trace(A::T) where T<: AbstractMultipliableMatrix = sum(A.numbers).*(unitrange(A)[1]/unitdomain(A)[1])
+trace(A::T) where T<: AbstractMultipliableMatrix = sum(diag(A.numbers)).*(unitrange(A)[1]/unitdomain(A)[1])
 
 """
     function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=eigsortby) where T <: AbstractMultipliableMatrix
 
-    Thin wrapper for `UnitfulLinearAlgebra.eigen`.
-    Keep same keyword arguments as `LinearAlgebra.eigen`.
-    Ideally would simply work using AbstractArray interface,
-    but there is an unsolved issue with Unitful conversions. 
+    Thin wrapper for `UnitfulLinearAlgebra.eigen` with same keyword arguments as `LinearAlgebra.eigen`.
+    There are multiple ways to distribute the units amongst the values and vectors.
+    Here, physical intuition and the equation 𝐀𝐱 = λ𝐱
+    dictate that the units of the eigenvectors are equal to the unit domain of 𝐀 (pp. 206, Hart, 1995).
+    Only squarable matrices have eigenstructure (pp. 96, Hart, 1995).
+    Ideally the AbstractArray interface would automatically handle `eigen`,
+    but there is an unsolved issue with Unitful conversions.
+     The following functions are available for `Eigen` objects:  [`det`](@ref), [`inv`](@ref) and [`isposdef`](@ref). Some are restricted to uniform matrices.
+    `eigvals` is not currently implemented.
 """
 function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) where T <: AbstractMultipliableMatrix
 
@@ -1060,6 +1072,34 @@ function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function
         return Eigen(F.values.*(unitrange(A)[1]/unitdomain(A)[1]), BestMultipliableMatrix(F.vectors,unitdomain(A),fill(unit(1.0),size(A,2))))
     else
         error("UnitfulLinearAlgebra: Eigenvalue decomposition doesn't exist for for non-squarable matrices")
+    end
+end
+
+"""
+   Extend `isposdef` for Eigen factorizations of `MultipliableMatrix`s.
+    Should the units be stripped out of the function?
+    Only defined for matrices with uniform units (pp. 101, Hart, 1995). 
+"""
+isposdef(A::Eigen{T,V,S,U}) where {U<: AbstractVector, S<:AbstractMultipliableMatrix, V, T <: Number} = (uniform(A.vectors) && isreal(A.values)) && all(x -> x > 0, ustrip.(A.values))
+
+"""
+   Extend `inv` for Eigen factorizations of `MultipliableMatrix`s.
+    Only defined for matrices with uniform units (pp. 101, Hart, 1995). 
+"""
+function inv(A::Eigen{T,V,S,U}) where {U <: AbstractVector, S <: AbstractMultipliableMatrix, V, T <: Number}
+
+    if (uniform(A.vectors) && isreal(A.values))
+        ur = unitrange(A.vectors)
+        ud = unit.(A.values)
+        Λ⁻¹ = Diagonal(A.values.^-1,ud,ur)
+        return A.vectors* transpose(transpose(A.vectors) \ Λ⁻¹)
+
+        # LinearAlgebra.eigen uses matrix right divide, i.e., 
+        #return A.vectors * Λ⁻¹ / A.vectors
+        # but this is not available yet for `Multipliable Matrix`s.
+
+    else
+        error("UnitfulLinearAlgebra: Eigen factorization can only be inverted for uniform matrices")
     end
 end
 
