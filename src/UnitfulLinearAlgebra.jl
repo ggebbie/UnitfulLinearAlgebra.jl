@@ -1080,7 +1080,7 @@ end
     Should the units be stripped out of the function?
     Only defined for matrices with uniform units (pp. 101, Hart, 1995). 
 """
-isposdef(A::Eigen{T,V,S,U}) where T where V where S <: AbstractMultipliableMatrix where U = (uniform(A.vectors) && isreal(A.values)) && all(x -> x > 0, ustrip.(A.values))
+isposdef(A::Eigen{T,V,S,U}) where {U<: AbstractVector, S<:AbstractMultipliableMatrix, V, T <: Number} = (uniform(A.vectors) && isreal(A.values)) && all(x -> x > 0, ustrip.(A.values))
 
 """
    Extend `inv` for Eigen factorizations of `MultipliableMatrix`s.
