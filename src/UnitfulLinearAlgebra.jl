@@ -21,13 +21,13 @@ export unitrange, unitdomain
 export square, squarable, singular, unit_symmetric
 export lu, det, trace, diag, diagm
 export Diagonal, (\), cholesky
-export identitymatrix, show
+export identitymatrix, show, vcat
 
 import LinearAlgebra: inv, det, lu,
     svd, getproperty, eigen, isposdef,
     diag, diagm, Diagonal, cholesky
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
-    size, range, transpose, similar, show
+    size, range, transpose, similar, show, vcat
 
 abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
 
@@ -1309,5 +1309,18 @@ end
 """
 Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = (length(r) == length(d)) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
 
+"""
+    function vcat
+
+    Modeled after function `VERTICAL` (pp. 203, Hart, 1995).
+"""
+function vcat(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
+
+    numbers = vcat(A.numbers,B.numbers)
+    shift = unitdomain(A)[1]./unitdomain(B)[1]
+    ur = vcat(unitrange(A),unitrange(B).*shift)
+    bothexact = (exact(A) && exact(B))
+    return BestMultipliableMatrix(numbers,ur,unitdomain(A),exact=bothexact)
+end
 
 end

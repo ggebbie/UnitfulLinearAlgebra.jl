@@ -95,6 +95,9 @@ using Test
             @test isequal(right_uniform(A),right_uniform(B))
             @test ~dimensionless(B)
 
+            y1 = B*q
+            Bcat = vcat(B,B)
+            @test Bcat*q == vcat(y1,y1)
         end
 
         @testset "dimensionless" begin
