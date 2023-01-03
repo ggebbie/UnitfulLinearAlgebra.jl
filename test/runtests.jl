@@ -462,8 +462,8 @@ using Test
             x = [1.0, 2.0]
             y = E*x
             y2 = E2*x
-            x̃ = E2\y
-            x̃2 = inv(F2)*y
+            x̃ = E2\y 
+            x̃2 = inv(F2)*y # find particular solution
             @test maximum(abs.(ustrip.(x̃2 - x))) < 1e-10
 
 #             K = length(λ) # rank
@@ -506,8 +506,14 @@ using Test
             Pr = inv(Cr)
 
             ##
-            G = dsvd(F,Pr,Pd) 
+            G = dsvd(F,Pr,Pd)
 
+            # provides inverse of singular vectors in an efficient way.
+            # are they correct?
+            @test maximum(abs.(ustrip.(G.V - inv(G.V⁻¹)))) < 1e-10
+            @test maximum(abs.(ustrip.(G.U - inv(G.U⁻¹)))) < 1e-10
+
+            
             # Diagonal makes dimensionless S matrix
             # (but could usage be simplified? if uniform diagonal, make whole matrix uniform?)
             F̃ = G.U * Diagonal(G.S,fill(unit(1.0),size(F,1)),fill(unit(1.0),size(F,2))) * G.V⁻¹
@@ -535,8 +541,21 @@ using Test
  	    Λ = diagm(size(F)[1],size(F)[2],G.S) 
             Ẽ = G.U*(Λ*G.V⁻¹)
 
+            @test size(G) == size(F)
             @test abs.(maximum(ustrip.(Matrix(Ẽ) - E))) < 1e-10
 
+            # test other DSVD properties
+            @test maximum(abs.(ustrip.(transpose(G.Qx)*G.Qx - Pd))) < 1e-10            
+            @test maximum(abs.(ustrip.(transpose(G.Qy)*G.Qy - Pr))) < 1e-10            
+
+            @test dimensionless(G.U′)
+            @test dimensionless(G.V′⁻¹)
+            #@test dimensionless(G.S) # not implemented for AbstractVector
+
+            # Test orthogonality within normed space
+
+            # Test domain to range connections
+            
         end    
 
         @testset "briochemc" begin
