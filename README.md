@@ -9,11 +9,11 @@ More linear algebra functions for matrices with units
 
 ## Usage
 
-1. Define a `MultipliableMatrix` using the constructor or convert a matrix of quantities.
-2. Do linear algebra operations like `inv`, `svd`, `cholesky`, and more.
+1. Define a concrete type of an `AbstractMultipliableMatrix` using the constructor or convert a matrix of quantities.
+2. Do linear algebra operations like `inv`, `svd`, `cholesky`, `\`, `eigen`, and more.
 
 ```
-import Pkg; Pkg.add("https://github.com/ggebbie/UnitfulLinearAlgebra.jl")
+import Pkg; Pkg.add(url="https://github.com/ggebbie/UnitfulLinearAlgebra.jl")
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
 using UnitfulLinearAlgebra
 using Unitful
@@ -29,7 +29,7 @@ ỹ = y .+ randn()m # contaminated observations
 k = length(y)
 t = [0,1,2]s
 
-julia> # random matrix with right units
+julia> # Vandermonde matrix with right units
        E = hcat(ones(k),t.*ones(k),t.^2 .*ones(k))
 3×3 Matrix{Quantity{Float64}}:
  1.0  0.0 s  0.0 s²
@@ -64,11 +64,11 @@ julia> x̆ = inv(F)*ỹ
 
 ## Motivation
 
-Julia provides a great environment for defining quantities with units and doing calculations with those unitful quantities  (`Unitful.jl`), where plots (`UnitfulRecipes.jl`), LaTeX output (`UnitfulLatexify.jl`), and educational notebooks (`Pluto.jl`) can be automatically added to this unitful workflow. Common linear algebra functions, such as matrix left divide, do not appear to be fully implemented, however. This package aims to extend common functions like `inv`, `(\)`, `svd`, `lu`, `cholesky` and `eigen` to unitful matrices and vectors.
+Julia provides a great environment for defining quantities with units and doing calculations with those unitful quantities  (`Unitful.jl`), where plots (`UnitfulRecipes.jl`, now deprecated), LaTeX output (`UnitfulLatexify.jl`), and educational notebooks (`Pluto.jl`) can be automatically added to this unitful workflow. Common linear algebra functions, such as matrix left divide, do not appear to be fully implemented, however. This package aims to extend common functions like `inv`, `(\)`, `svd`, `lu`, `cholesky` and `eigen` to unitful matrices and vectors.
 
 ## Approach
 
-George W. Hart lays it out in "Multidimensional Analysis: Algebras and Systems for Science and Engineering" (Springer-Verlag, 1995). His approach fits nicely into Julia's type system and multiple dispatch. This packages aims to return objects defined by the `LinearAlgebra` package but extended for use with `MultipliableMatrix`s. 
+George W. Hart lays it out in "Multidimensional Analysis: Algebras and Systems for Science and Engineering" (Springer-Verlag, 1995). His approach fits nicely into Julia's type system and multiple dispatch. This packages aims to return objects defined by the `LinearAlgebra` package but extended for use with `AbstractMultipliableMatrix`s. 
 
 Due to Unitful quantities that change types, it is not always easy to properly compose UnitfulLinearAlgebra functions with Unitful and LinearAlgebra functions. Also, some LinearAlgebra functions like `eigen` are highly restricted with unitful matrices. The `SVD` factorization object also makes assumptions that do not hold for matrices with units. Some compromises and design choices are necessary.
 
