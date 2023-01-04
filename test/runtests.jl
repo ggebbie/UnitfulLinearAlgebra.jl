@@ -579,10 +579,11 @@ using Test
             x = randn(size(F,2)).*unitdomain(F)
             y = F*x
             xₚ1 = F\y # find particular solution
-            xₚ2 = G\y # find particular solution
-            @test maximum(abs.(ustrip.(x̃2 - x))) < 1e-10
+            xₚ2 = inv(G)*y # find particular solution
+            @test maximum(abs.(ustrip.(xₚ1 - xₚ2))) < 1e-10
 
-            
+            # inverse of DSVD object
+            @test maximum(abs.(ustrip.(inv(F) - inv(G)))) < 1e-10
             
         end    
 
