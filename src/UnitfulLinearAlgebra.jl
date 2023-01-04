@@ -255,6 +255,11 @@ function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVecto
 end
 
 """
+    MMatrix (Multipliable Matrix): shortcut for `BestMultipliableMatrix`
+"""
+MMatrix = BestMultipliableMatrix
+
+"""
     function multipliable(A)::Bool
 
     Is an array multipliable?
@@ -352,9 +357,18 @@ similar(A::AbstractMultipliableMatrix{T}) where T <: Number =  BestMultipliableM
 - `i::Integer`: row index
 - `j::Integer`: column index
 #Output
-- `Quantity`: numerical value and units
+- `Quantity`: numerical value and units (for vector)
+- `AbstractMultipliableMatrix`: for matrix output
 """
-getindex(A::T,i::Int,j::Int) where T <: AbstractMultipliableMatrix = Quantity(A.numbers[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+getindex(A::T,i::Union{Colon,UnitRange},j::Int) where T <: AbstractMultipliableMatrix = Quantity.(A.numbers[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+
+getindex(A::T,i::Int,j::Union{Colon,Int,UnitRange}) where T <: AbstractMultipliableMatrix = Quantity.(A.numbers[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+
+#       getindex(::A{T,N}, ::Vararg{Int, N}) where {T,N} # if IndexCartesian()
+getindex(A::T,i::Union{UnitRange,Colon},j::Union{UnitRange,Colon}) where T <: AbstractMultipliableMatrix = MMatrix(A.numbers[i,j],unitrange(A)[i],unitdomain(A)[j],exact=exact(A)) 
+
+#getindex(A::T,i::Colon,j::UnitRange) where T <: AbstractMultipliableMatrix = MMatrix(A.numbers[i,j],unitrange(A)[i],unitdomain(A)[j],exact=exact(A)) 
+
 
 """
     function setindex!(A::MultipliableMatrix,v,i,j)
@@ -881,9 +895,6 @@ transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),
                                             Base.convert(Vector{Unitful.FreeUnits},[unitdomain(A)[1]^-1]),
                                             Base.convert(Vector{Unitful.FreeUnits},[unitrange(A)[1]^-1]),
                                             exact(A)) 
-# transpose(A::AbstractMultipliableMatrix) = MultipliableMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)), unit.(1 ./unitrange(A)),exact(A)) 
-# transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unit.(1 ./unitrange(A)), exact(A)) 
-# transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),unit.(1 ./unitdomain(A)[1]), unit.(1 ./unitrange(A)[1]), exact(A)) 
 
 """
     function identitymatrix(dimrange)
@@ -1124,7 +1135,9 @@ function svd(A::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorit
     end
 end
 
-# Dimensional Singular Value Decomposition, following Singular Value Decomposition from Julia LinearAlgebra.jl
+
+
+# Dimensional (Unitful) Singular Value Decomposition, following Singular Value Decomposition from Julia LinearAlgebra.jl
 """
     DSVD <: Factorization
 
@@ -1138,31 +1151,42 @@ The singular values in `S` are sorted in descending order.
 Iterating the decomposition produces the components `U`, `S`, and `V`.
 
 Differences from SVD struct: Vt -> V⁻¹, U and V can have different types.
+
+Functions available for DSVD: `size`, `dsvdvals`, 
+Function available for SVD that would be good to have to DSVD: `ldiv!`, `transpose`, `inv`. 
 ```
 """
-struct DSVD{T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}} <: Factorization{T}
-    U::MU
+struct DSVD{T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},MQY<:AbstractMultipliableMatrix{T},MQX<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}} <: Factorization{T}
+    U′::MU
     S::C
-    V⁻¹::MV
-    function DSVD{T,Tr,MU,MV,C}(U, S, V⁻¹) where {T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}}
-        LinearAlgebra.require_one_based_indexing(U, S, V⁻¹)
-        new{T,Tr,MU,MV,C}(U, S, V⁻¹)
+    V′⁻¹::MV
+    Qy::MQY
+    Qx::MQX
+    function DSVD{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx) where {T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},MQY<:AbstractMultipliableMatrix{T},MQX<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}}
+        LinearAlgebra.require_one_based_indexing(U′, S, V′⁻¹,Qy,Qx)
+        new{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx)
     end
 end
-DSVD(U::AbstractArray{T}, S::AbstractVector{Tr}, V⁻¹::AbstractArray{T}) where {T,Tr} =
-    DSVD{T,Tr,typeof(U),typeof(V⁻¹),typeof(S)}(U, S, V⁻¹)
-DSVD{T}(U::AbstractArray, S::AbstractVector{Tr}, V⁻¹::AbstractArray) where {T,Tr} =
-    DSVD(convert(AbstractArray{T}, U),
+DSVD(U′::AbstractArray{T}, S::AbstractVector{Tr}, V′⁻¹::AbstractArray{T}, Qy::AbstractArray{T}, Qx::AbstractArray{T}) where {T,Tr} =
+    DSVD{T,Tr,typeof(U′),typeof(V′⁻¹),typeof(Qy),typeof(Qx),typeof(S)}(U′, S, V′⁻¹,Qy,Qx)
+DSVD{T}(U′::AbstractArray, S::AbstractVector{Tr}, V′⁻¹::AbstractArray,Qy::AbstractArray, Qx::AbstractArray) where {T,Tr} =
+    DSVD(convert(AbstractArray{T}, U′),
         convert(AbstractVector{Tr}, S),
-        convert(AbstractArray{T}, V⁻¹))
+         convert(AbstractArray{T}, V′⁻¹),
+         convert(AbstractArray{T}, Qy),
+         convert(AbstractArray{T}, Qx))
 # backwards-compatible constructors (remove with Julia 2.0)
-@deprecate(DSVD{T,Tr,MU,MV}(U::AbstractArray{T}, S::AbstractVector{Tr}, V⁻¹::AbstractArray{T}) where {T,Tr,MU,MV},
-           DSVD{T,Tr,MU,MV,typeof(S)}(U, S, V⁻¹))
+@deprecate(DSVD{T,Tr,MU,MV,MQY,MQX}(U′::AbstractArray{T}, S::AbstractVector{Tr}, V′⁻¹::AbstractArray{T}, Qy::AbstractArray{T}, Qx::AbstractArray{T}) where {T,Tr,MU,MV,MQY,MQX},
+           DSVD{T,Tr,MU,MV,MQY,MQX,typeof(S)}(U′, S, V′⁻¹,Qy,Qx))
 
 DSVD{T}(F::DSVD) where {T} = DSVD(
-    convert(AbstractMatrix{T}, F.U),
+    convert(AbstractMatrix{T}, F.U′),
     convert(AbstractVector{real(T)}, F.S),
-    convert(AbstractMatrix{T}, F.V⁻¹))
+    convert(AbstractMatrix{T}, F.V′⁻¹),
+    convert(AbstractMatrix{T}, F.Qy),
+    convert(AbstractMatrix{T}, F.Qx))
+
+
 Factorization{T}(F::DSVD) where {T} = DSVD{T}(F)
 
 # iteration for destructuring into components
@@ -1172,21 +1196,40 @@ Base.iterate(S::DSVD, ::Val{:V}) = (S.V, Val(:done))
 Base.iterate(S::DSVD, ::Val{:done}) = nothing
 
 function getproperty(F::DSVD, d::Symbol)
-    if d === :V
-        return inv(getfield(F, :V⁻¹)) # change from SVD
+    if d === :U
+        return F.Qy\F.U′
+        #return F.Qy\MMatrix(F.U′)
+        # why next line necessary?
+        #return BestMultipliableMatrix(Û.numbers,unitrange(Û),unitdomain(Û),exact=exact(Û))
+    elseif d === :U⁻¹
+        return transpose(F.U′)*F.Qy
+        #return MMatrix(transpose(F.U′)*F.Qy)
+        #U′ = transpose(Qr)\BestMultipliableMatrix(F.F.U)
+        #return BestMultipliableMatrix(U′.numbers,unitrange(U′),unitdomain(U′),exact=exact(U′))
+    elseif d === :V⁻¹
+        return F.V′⁻¹*F.Qx
+        #V̂⁻¹ = F.F.Vt*Qd
+        #return BestMultipliableMatrix(V̂⁻¹.numbers,unitrange(V̂⁻¹),unitdomain(V̂⁻¹),exact=exact(V̂⁻¹))
+    elseif d === :V
+        return F.Qx\transpose(F.V′⁻¹)
+        #V̂ = transpose(F.F.Vt)*Qd
+        #return BestMultipliableMatrix(V̂.numbers,unitrange(V̂),unitdomain(V̂),exact=exact(V̂))
+    #elseif d === :S
+    #    return F.S # not needed with fallback below
     else
         return getfield(F, d)
     end
 end
 
 Base.propertynames(F::DSVD, private::Bool=false) =
-    private ? (:V, fieldnames(typeof(F))...) : (:U, :S, :V, :V⁻¹)
+    private ? (:U, :U⁻¹, :V, :V⁻¹,  fieldnames(typeof(F))...) : (:U, :U⁻¹, :S, :V, :V⁻¹)
 
 """
-    function dsvd(A::AbstractMultipliableMatrix,Pdomain::UnitSymmetricMatrix,Prange::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
+    function dsvd(A::AbstractMultipliableMatrix,Prange::UnitSymmetricMatrix,Pdomain::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
 
     Dimensional singular value decomposition (DSVD).
     Appropriate version of SVD for non-uniform matrices.
+    `svd` can be computed for `Number`s, `Adjoint`s, `Tranpose`s, and `Integers`; `dsvd` doesn't yet implement these.
 # Input
 - `A::AbstractMultipliableMatrix`
 - `Pr::UnitSymmetricMatrix`: square matrix defining norm of range
@@ -1194,31 +1237,31 @@ Base.propertynames(F::DSVD, private::Bool=false) =
 - `full=false`: optional argument
 - `alg`: optional argument for algorithm
 # Output:
-- `F::SVD`: SVD object with units that can be deconstructed
+- `F::DSVD`: Dimensional SVD object with units that can be deconstructed
 """
-function dsvd(A::AbstractMultipliableMatrix,Pr::AbstractMultipliableMatrix,Pd::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
+function dsvd(A::AbstractMultipliableMatrix,Py::AbstractMultipliableMatrix,Px::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
 
-    unit_symmetric(Pr) ? Qr = getproperty(cholesky(Pr),:U) : error("norm matrix for range not unit symmetric")
-    unit_symmetric(Pd) ? Qd = getproperty(cholesky(Pd),:U) : error("norm matrix for domain not unit symmetric")
+    unit_symmetric(Py) ? Qy = getproperty(cholesky(Py),:U) : error("norm matrix for range not unit symmetric")
+    unit_symmetric(Px) ? Qx = getproperty(cholesky(Px),:U) : error("norm matrix for domain not unit symmetric")
 
     # must be more efficient way
-    A′ = Qr*(A*inv(Qd))
+    #A′ = Qr*(A*inv(Qd))
+    # still inefficient with copy
+    A′ =   copy(transpose(transpose(Qx)\transpose(Qy*A)))
 
     ~dimensionless(A′) && error("A′ should be dimensionless to implement `LinearAlgebra.svd`")
 
-    F′ = svd(A′.numbers, full=full, alg=alg)
+    F = svd(A′.numbers, full=full, alg=alg)
 
-    # Issue: SVD structure calls for Vt, but it is really V⁻¹
+    println(typeof(MMatrix(F.U)))
+    return DSVD(MMatrix(F.U),F.S,MMatrix(F.Vt),Qy,Qx)
 
-    # Issue: SVD wants first and last matrices to have the same type.
-    #return SVD( Qr\BestMultipliableMatrix(F′.U),F′.S,F′.Vt*Qd)
+    #U = Qr\BestMultipliableMatrix(F′.U)
+    #Û = BestMultipliableMatrix(U.numbers,unitrange(U),unitdomain(U),exact=exact(U))
 
-    U = Qr\BestMultipliableMatrix(F′.U)
-    Û = BestMultipliableMatrix(U.numbers,unitrange(U),unitdomain(U),exact=exact(U))
-
-    V⁻¹ = F′.Vt*Qd
-    V̂⁻¹ = BestMultipliableMatrix(V⁻¹.numbers,unitrange(V⁻¹),unitdomain(V⁻¹),exact=exact(V⁻¹))
-    return DSVD(Û,F′.S,V̂⁻¹)
+    #V⁻¹ = F′.Vt*Qd
+    #V̂⁻¹ = BestMultipliableMatrix(V⁻¹.numbers,unitrange(V⁻¹),unitdomain(V⁻¹),exact=exact(V⁻¹))
+    #return DSVD(Û,F′.S,V̂⁻¹)
 end
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractVector})
@@ -1230,6 +1273,34 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:Ab
     println(io, "\nV⁻¹ factor:")
     show(io, mime, F.V⁻¹)
 end
+
+dsvdvals(S::DSVD{<:Any,T}) where {T} = (S.S)::Vector{T}
+
+### DSVD least squares ### Not implemented
+# function ldiv!(A::SVD{T}, B::StridedVecOrMat) where T
+#     m, n = size(A)
+#     k = searchsortedlast(A.S, eps(real(T))*A.S[1], rev=true)
+#     mul!(view(B, 1:n, :), view(A.Vt, 1:k, :)', view(A.S, 1:k) .\ (view(A.U, :, 1:k)' * _cut_B(B, 1:m)))
+#     return B
+# end
+
+# function inv(F::DSVD{T}) where T
+#     @inbounds for i in eachindex(F.S)
+#         iszero(F.S[i]) && throw(SingularException(i))
+#     end
+#     k = searchsortedlast(F.S, eps(real(T))*F.S[1], rev=true)
+#     println("effective rank ",k)
+#     # This line must cause problem because of slices.
+#     @views (F.S[1:k] .\ F.V⁻¹[1:k, :])' * F.U[:,1:k]'
+# end
+
+size(A::DSVD, dim::Integer) = dim == 1 ? size(A.U, dim) : size(A.V⁻¹, dim)
+size(A::DSVD) = (size(A, 1), size(A, 2))
+
+# adjoint not yet defined for AbstractMultipliableMatrix
+#function adjoint(F::DSVD)
+#    return SVD(F.V⁻¹', F.S, F.U')
+#end
 
 """
     function diagm(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
