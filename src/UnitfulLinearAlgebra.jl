@@ -1198,24 +1198,12 @@ Base.iterate(S::DSVD, ::Val{:done}) = nothing
 function getproperty(F::DSVD, d::Symbol)
     if d === :U
         return F.Qy\F.U′
-        #return F.Qy\MMatrix(F.U′)
-        # why next line necessary?
-        #return BestMultipliableMatrix(Û.numbers,unitrange(Û),unitdomain(Û),exact=exact(Û))
     elseif d === :U⁻¹
         return transpose(F.U′)*F.Qy
-        #return MMatrix(transpose(F.U′)*F.Qy)
-        #U′ = transpose(Qr)\BestMultipliableMatrix(F.F.U)
-        #return BestMultipliableMatrix(U′.numbers,unitrange(U′),unitdomain(U′),exact=exact(U′))
     elseif d === :V⁻¹
         return F.V′⁻¹*F.Qx
-        #V̂⁻¹ = F.F.Vt*Qd
-        #return BestMultipliableMatrix(V̂⁻¹.numbers,unitrange(V̂⁻¹),unitdomain(V̂⁻¹),exact=exact(V̂⁻¹))
     elseif d === :V
         return F.Qx\transpose(F.V′⁻¹)
-        #V̂ = transpose(F.F.Vt)*Qd
-        #return BestMultipliableMatrix(V̂.numbers,unitrange(V̂),unitdomain(V̂),exact=exact(V̂))
-    #elseif d === :S
-    #    return F.S # not needed with fallback below
     else
         return getfield(F, d)
     end
@@ -1255,26 +1243,32 @@ function dsvd(A::AbstractMultipliableMatrix,Py::AbstractMultipliableMatrix,Px::A
 
     println(typeof(MMatrix(F.U)))
     return DSVD(MMatrix(F.U),F.S,MMatrix(F.Vt),Qy,Qx)
-
-    #U = Qr\BestMultipliableMatrix(F′.U)
-    #Û = BestMultipliableMatrix(U.numbers,unitrange(U),unitdomain(U),exact=exact(U))
-
-    #V⁻¹ = F′.Vt*Qd
-    #V̂⁻¹ = BestMultipliableMatrix(V⁻¹.numbers,unitrange(V⁻¹),unitdomain(V⁻¹),exact=exact(V⁻¹))
-    #return DSVD(Û,F′.S,V̂⁻¹)
 end
 
-function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractVector})
+function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractVector})
     summary(io, F); println(io)
-    println(io, "U factor:")
+    println(io, "U (left singular vectors):")
     show(io, mime, F.U)
     println(io, "\nsingular values:")
     show(io, mime, F.S)
-    println(io, "\nV⁻¹ factor:")
-    show(io, mime, F.V⁻¹)
+    println(io, "\nV (right singular vectors):")
+    show(io, mime, F.V)
 end
 
 dsvdvals(S::DSVD{<:Any,T}) where {T} = (S.S)::Vector{T}
+
+function inv(F::DSVD{T}) where T
+    @inbounds for i in eachindex(F.S)
+        iszero(F.S[i]) && throw(SingularException(i))
+    end
+    k = searchsortedlast(F.S, eps(real(T))*F.S[1], rev=true)
+    # from `svd.jl`
+    #@views (F.S[1:k] .\ F.Vt[1:k, :])' * F.U[:,1:k]'
+
+    
+end
+
+
 
 ### DSVD least squares ### Not implemented
 # function ldiv!(A::SVD{T}, B::StridedVecOrMat) where T

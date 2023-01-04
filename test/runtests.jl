@@ -525,16 +525,6 @@ using Test
             u, s, v = G; # destructuring via iteration
             @test u == G.U && s == G.S && v == G.V
 
-            ## doesn't work because I can't call (i.e., getindex!) of a column
-            # Krank = length(G.S)
-            # H = 0 .*E
-            # for k = 1:Krank
-            #     # outer product
-            #     H += G.S[k] * G.U[:,k] * transpose(G.Vt[k,:])
-            # end
-            # @test ustrip(abs.(maximum(G- E) )) < 1e-10
-
-
             # another way to decompose matrix.
             # recover using Diagonal dimensional matrix
  	    # Λ = diagm(G.S,unitrange(F),unitdomain(G),exact=true)
@@ -584,6 +574,14 @@ using Test
             for kk = 1:k
                @test maximum(ustrip.(abs.(F*G.V[:,kk] .- G.S[kk]*G.U[:,kk]))) < 1e-10
             end
+
+            # solve for particular solution.
+            x = randn(size(F,2)).*unitdomain(F)
+            y = F*x
+            xₚ1 = F\y # find particular solution
+            xₚ2 = G\y # find particular solution
+            @test maximum(abs.(ustrip.(x̃2 - x))) < 1e-10
+
             
             
         end    
