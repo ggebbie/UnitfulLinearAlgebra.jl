@@ -1152,8 +1152,8 @@ Iterating the decomposition produces the components `U`, `S`, and `V`.
 
 Differences from SVD struct: Vt -> V⁻¹, U and V can have different types.
 
-Functions available for DSVD: `size`, `dsvdvals`, 
-Function available for SVD that would be good to have to DSVD: `ldiv!`, `transpose`, `inv`. 
+Functions available for DSVD: `size`, `dsvdvals`, `inv`. 
+Function available for SVD that would be good to have to DSVD: `ldiv!`, `transpose`. 
 ```
 """
 struct DSVD{T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},MQY<:AbstractMultipliableMatrix{T},MQX<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}} <: Factorization{T}
