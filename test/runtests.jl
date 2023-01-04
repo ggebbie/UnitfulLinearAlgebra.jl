@@ -13,6 +13,14 @@ using Test
     K = u"K"
     m² = u"m^2"
 
+    """
+    Are two matrices within a certain tolerance?
+    Use to simplify tests.
+    """
+    within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
+
+    MMatrix = BestMultipliableMatrix
+    
     @testset "scalars" begin
         c = 1m
         d = 2m
@@ -84,7 +92,7 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
             @test A==Matrix(B)
 
@@ -124,7 +132,7 @@ using Test
             
                 # outer product to make a multipliable matrix
                 A = p*q̃'
-                B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
+                B = MMatrix(ustrip.(A),unit.(p),unit.(q))
                 if i == 1
                     @test dimensionless(B)
                     @test dimensionless(A)
@@ -143,7 +151,7 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
             Bq = B*q
             @test A==Matrix(B)
             @test isequal(A*q,Bq)
@@ -169,10 +177,10 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
             # turn array into Multipliable matrix
-            C = BestMultipliableMatrix(A)
+            C = MMatrix(A)
             @test A==Matrix(C)
             @test multipliable(A)
             @test ~left_uniform(A)
@@ -191,8 +199,8 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = BestMultipliableMatrix(A)
-            B2 = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q))
+            B = MMatrix(A)
+            B2 = MMatrix(ustrip.(A),unit.(p),unit.(q))
             B3 = EndomorphicMatrix(ustrip.(A),unit.(p))
 
             Bᵀ = transpose(B)
@@ -231,7 +239,7 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=false)
+            B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=false)
             @test square(B)
             @test squarable(B)
             B*B == B^2
@@ -250,10 +258,7 @@ using Test
             @test abs(ustrip(det(B) - prod(F.values))) < 1e-10
 
             for k = 1:2
-                Δ = B*Matrix(F.vectors)[:,k] - 
-                    F.values[k]*Matrix(F.vectors)[:,k]
-
-                @test maximum(abs.(ustrip.(Δ))) < 1e-10
+                @test within(B*Matrix(F.vectors)[:,k],F.values[k]*Matrix(F.vectors)[:,k],1e-10) 
             end
         end
         
@@ -266,7 +271,7 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=false)
+            B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=false)
             B[2,2] += 1m # make it non-singular
             @test square(B)
             @test squarable(B)
@@ -275,9 +280,7 @@ using Test
             C = UnitfulLinearAlgebra.eigen(B)
             vals, vecs = C; # destructuring via iteration
             @test vals == C.values && vecs == C.vectors
-
-            #@test inv(B) == inv(C) # not exact
-            @test maximum(abs.(ustrip.(inv(B) - inv(C)))) < 1e-10
+            @test within(inv(B),inv(C),1e-10)
 
             # reconstruct using factorization
             ur = unitrange(C.vectors)
@@ -286,17 +289,15 @@ using Test
             # use matrix right divide would be best
             #transpose(transpose(C.vectors)\ (Λ*transpose(C.vectors)))
             B̃ = C.vectors * Λ* inv(C.vectors)
-            @test maximum(abs.(ustrip.(B̃-B))) < 1e-10
+            @test within(B̃,B,1e-10)
 
             # check eigenvalue condition
             for k = 1:2
-                Δ = B*Matrix(C.vectors)[:,k] - 
-                    C.values[k]*Matrix(C.vectors)[:,k]
-                @test maximum(abs.(ustrip.(Δ))) < 1e-10
+                @test within(B*Matrix(C.vectors)[:,k],C.values[k]*Matrix(C.vectors)[:,k],1e-10)
             end
 
             # compute det using Eigen factorization
-            @test abs(ustrip(det(C)-det(B))) < 1e-10
+            @test within(det(C),det(B),1e-10)
             @test UnitfulLinearAlgebra.isposdef(C)
 
         end
@@ -310,7 +311,7 @@ using Test
             
             # outer product to make a multipliable matrix
             A = [1.0 0.1; 0.1 1.0]
-            B = BestMultipliableMatrix(A,p,q ,exact=true)
+            B = MMatrix(A,p,q ,exact=true)
             @test square(B)
             @test ~squarable(B)
 
@@ -323,11 +324,11 @@ using Test
 
             Q = UnitfulLinearAlgebra.cholesky(B)
             test1 = Matrix(transpose(Q.U)*Q.U)
-            @test maximum(abs.(ustrip.(B-test1))) < 1e-10
+            @test within(B,test1,1e-10)
 
             test2 = Matrix(Q.L*transpose(Q.L))
-            @test maximum(abs.(ustrip.(B-test2))) < 1e-10
-            @test maximum(abs.(ustrip.(B-Q.L*transpose(Q.L)))) < 1e-10
+            @test within(B,test2,1e-10)
+            @test within(B,Q.L*transpose(Q.L),1e-10)
 
             # do operations directly with Q?
             Qnodims.U\[0.5, 0.8]
@@ -342,7 +343,7 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = BestMultipliableMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
             scalar = 2.0K 
             C = B * scalar
@@ -374,23 +375,14 @@ using Test
 
             Z = lu(ustrip.(E))
             
-            F = BestMultipliableMatrix(E)
-            
+            F = MMatrix(E)
             G = convert_unitdomain(F,unit.(x))
-
-            # doesn't work due to Units type conflict.
-            #convert_unitdomain!(G,s.*unit.(x))
-            #convert_unitdomain!(G,unit.(x))
-            
             Z2 = lu(G)
-
-            # failing with a small error (1e-17)
-            @test maximum(abs.(ustrip.(E[Z2.p,:]-Matrix(Z2.L*Z2.U)))) < 1e-10
+            @test within(E[Z2.p,:],Matrix(Z2.L*Z2.U),1e-10)
             @test ~singular(F)
             det(F)
 
             E⁻¹ = inv(G)
-
             Eᵀ = transpose(G)
             @test G[2,1] == Eᵀ[1,2]
             #x̃ = E⁻¹ * (E * x) # doesn't work because Vector{Any} in parentheses, dimension() not valid, dimension deprecated?
@@ -405,23 +397,22 @@ using Test
 
             #y2 = convert(Vector{Quantity},y)
             #UnitfulLinearAlgebra.ldiv!(G,y2)
-            
-            @test abs.(maximum(ustrip.(x̂-x))) < 1e-10
+            @test within(x̂,x, 1e-10)
 
             # an inexact matrix
             x′ = F \ y
-            @test abs.(maximum(ustrip.(x′-x))) < 1e-10
+            @test within(x′,x,1e-10)
 
             #easy = [1. 0.2; 0.2 1.0]
             #tester = cholesky(easy)
             #@which ldiv!(tester,[2.1,3.1])
             
             x̃ = E⁻¹ * y
-            @test abs.(maximum(ustrip.(x̃-x))) < 1e-10
+            @test within(x̃,x,1e-10)
 
             # Does LU solve the same problem?
             x̆ = Z2 \ y 
-            @test abs.(maximum(ustrip.(x̆-x))) < 1e-10
+            @test within(x̆,x, 1e-10)
 
             # works by hand, but failed on 1.8 GitHub Action
             #𝐱 = Z2.U\(Z2.L\(Z2.P'*y))
@@ -433,7 +424,7 @@ using Test
             
 	    E = [1/2 1/2; 1/4 3/4; 3/4 1/4]m
             
-            E2 = BestMultipliableMatrix(E)
+            E2 = MMatrix(E)
             @test size(E2)==size(E)
             Eᵀ = transpose(E2)
             @test E2[2,1] == Eᵀ[1,2]
@@ -448,14 +439,13 @@ using Test
                 # outer product
                 G += F2.S[k] * F2.U[:,k] * transpose(F2.Vt[k,:])
             end
-            @test ustrip(abs.(maximum(G- E) )) < 1e-10
+            @test within(G,E, 1e-10)
 
             # recover using Diagonal dimensional matrix
             # use Full SVD (thin may not work)
  	    Λ = diagm(F2.S,unitrange(E2),unitdomain(E2),exact=true)
             Ẽ = F2.U*(Λ*F2.Vt)
-
-            @test ustrip(abs.(maximum(Matrix(Ẽ) - E))) < 1e-10
+            @test within(Matrix(Ẽ),E,1e-10)
 
             # solve a linear system with SVD
             # could also be solved with ldiv! but not yet implemented.
@@ -464,7 +454,7 @@ using Test
             y2 = E2*x
             x̃ = E2\y 
             x̃2 = inv(F2)*y # find particular solution
-            @test maximum(abs.(ustrip.(x̃2 - x))) < 1e-10
+            @test within(x̃2,x,1e-10)
 
 #             K = length(λ) # rank
 # 	    y = 5randn(3)u"s"
@@ -488,7 +478,7 @@ using Test
             y = randn(k)u1
             x = [randn()u1; randn()u2; randn()u3] 
 
-            F = BestMultipliableMatrix(E)
+            F = MMatrix(E)
             convert_unitdomain!(F,unit.(x))
 
             # Define norms for this space.
@@ -510,17 +500,16 @@ using Test
 
             # provides inverse of singular vectors in an efficient way.
             # are they correct?
-            @test maximum(abs.(ustrip.(G.V - inv(G.V⁻¹)))) < 1e-10
-            @test maximum(abs.(ustrip.(G.U - inv(G.U⁻¹)))) < 1e-10
-
+            @test within(G.V,inv(G.V⁻¹),1e-10)
+            @test within(G.U,inv(G.U⁻¹), 1e-10)
             
             # Diagonal makes dimensionless S matrix
             # (but could usage be simplified? if uniform diagonal, make whole matrix uniform?)
             F̃ = G.U * Diagonal(G.S,fill(unit(1.0),size(F,1)),fill(unit(1.0),size(F,2))) * G.V⁻¹
 
             # even longer method to make S
-            #F̃ = G.U * BestMultipliableMatrix(Matrix(Diagonal(G.S))) * G.V⁻¹
-            @test maximum(abs.(ustrip.(F̃-F))) < 1e-10
+            #F̃ = G.U * MMatrix(Matrix(Diagonal(G.S))) * G.V⁻¹
+            @test within(F̃,F, 1e-10)
 
             u, s, v = G; # destructuring via iteration
             @test u == G.U && s == G.S && v == G.V
@@ -532,11 +521,11 @@ using Test
             Ẽ = G.U*(Λ*G.V⁻¹)
 
             @test size(G) == size(F)
-            @test abs.(maximum(ustrip.(Matrix(Ẽ) - E))) < 1e-10
+            @test within(Matrix(Ẽ),E, 1e-10)
 
             # test other DSVD properties
-            @test maximum(abs.(ustrip.(transpose(G.Qx)*G.Qx - Pd))) < 1e-10            
-            @test maximum(abs.(ustrip.(transpose(G.Qy)*G.Qy - Pr))) < 1e-10            
+            @test within(transpose(G.Qx)*G.Qx,Pd,1e-10)
+            @test within(transpose(G.Qy)*G.Qy,Pr,1e-10)
 
             @test dimensionless(G.U′)
             @test dimensionless(G.V′⁻¹)
@@ -572,7 +561,7 @@ using Test
             k = searchsortedlast(G.S, eps(real(Float64))*G.S[1], rev=true)
 
             for kk = 1:k
-               @test maximum(ustrip.(abs.(F*G.V[:,kk] .- G.S[kk]*G.U[:,kk]))) < 1e-10
+               @test within(F*G.V[:,kk],G.S[kk]*G.U[:,kk], 1e-10)
             end
 
             # solve for particular solution.
@@ -580,10 +569,10 @@ using Test
             y = F*x
             xₚ1 = F\y # find particular solution
             xₚ2 = inv(G)*y # find particular solution
-            @test maximum(abs.(ustrip.(xₚ1 - xₚ2))) < 1e-10
+            @test within(xₚ1,xₚ2,1e-10)
 
             # inverse of DSVD object
-            @test maximum(abs.(ustrip.(inv(F) - inv(G)))) < 1e-10
+            @test within(inv(F),inv(G),1e-10)
             
         end    
 
@@ -593,7 +582,7 @@ using Test
             Au = A * 1u"1/s"
 
             # A with multipliable matrix
-            Amm = BestMultipliableMatrix(Au)
+            Amm = MMatrix(Au)
             
             x = rand(3)
             xu = x * 1u"mol/m^3"
@@ -613,8 +602,8 @@ using Test
             # ---------- Sparse tests ----------
             A = sprand(3, 3, 0.5) + I
             Au = A * 1u"1/s"
-            Ammfull = BestMultipliableMatrix(Matrix(Au))# not working with SparseArray now
-            Amm = BestMultipliableMatrix(A,fill(u"mol/m^3",3),fill(u"s*mol/m^3",3))  # use constructor, internally stores a sparse matrix
+            Ammfull = MMatrix(Matrix(Au))# not working with SparseArray now
+            Amm = MMatrix(A,fill(u"mol/m^3",3),fill(u"s*mol/m^3",3))  # use constructor, internally stores a sparse matrix
             x = rand(3)
             xu = x * 1u"mol/m^3"
 
