@@ -1265,10 +1265,11 @@ function inv(F::DSVD{T}) where T
     # from `svd.jl`
     #@views (F.S[1:k] .\ F.Vt[1:k, :])' * F.U[:,1:k]'
 
-    
+    # a less efficient matrix way to do it.
+#    Σ⁻¹ = Diagonal(F.S[1:k].^-1,fill(unit(1.0),k),fill(unit(1.0),k))
+    Σ⁻¹ = Diagonal(F.S[1:k].^-1,unitdomain(F.V[:,1:k]),unitrange(F.U⁻¹[1:k,:]))
+    return F.V[:,1:k]*Σ⁻¹*F.U⁻¹[1:k,:]
 end
-
-
 
 ### DSVD least squares ### Not implemented
 # function ldiv!(A::SVD{T}, B::StridedVecOrMat) where T
@@ -1276,16 +1277,6 @@ end
 #     k = searchsortedlast(A.S, eps(real(T))*A.S[1], rev=true)
 #     mul!(view(B, 1:n, :), view(A.Vt, 1:k, :)', view(A.S, 1:k) .\ (view(A.U, :, 1:k)' * _cut_B(B, 1:m)))
 #     return B
-# end
-
-# function inv(F::DSVD{T}) where T
-#     @inbounds for i in eachindex(F.S)
-#         iszero(F.S[i]) && throw(SingularException(i))
-#     end
-#     k = searchsortedlast(F.S, eps(real(T))*F.S[1], rev=true)
-#     println("effective rank ",k)
-#     # This line must cause problem because of slices.
-#     @views (F.S[1:k] .\ F.V⁻¹[1:k, :])' * F.U[:,1:k]'
 # end
 
 size(A::DSVD, dim::Integer) = dim == 1 ? size(A.U, dim) : size(A.V⁻¹, dim)
