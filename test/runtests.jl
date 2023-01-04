@@ -553,8 +553,38 @@ using Test
             @test dimensionless(G.S[:,:]) # turn vector into matrix
 
             # Test orthogonality within normed space
+            for n1 = 1:size(G,1)
+                for n2 = n1:size(G,1)
+                    v1 = G.U[:,n1]
+                    v2 = G.U[:,n2]
+                    if n1 == n2
+                        @test transpose(v1)*(Pr*v2) ≈ 1.0
+                    else
+                        @test abs(transpose(v1)*(Pr*v2)) < 1e-10
+                    end
+                end
+            end
+
+            for n1 = 1:size(G,2)
+                for n2 = n1:size(G,2)
+                    v1 = G.V[:,n1]
+                    v2 = G.V[:,n2]
+                    if n1 == n2
+                        @test transpose(v1)*(Pd*v2) ≈ 1.0
+                    else
+                        @test abs(transpose(v1)*(Pd*v2)) < 1e-10
+                    end
+                end
+            end
 
             # Test domain to range connections
+            # i.e., A*v1 = S1*u1, pp. 126, Hart 1995 
+            k = searchsortedlast(G.S, eps(real(Float64))*G.S[1], rev=true)
+
+            for kk = 1:k
+               @test maximum(ustrip.(abs.(F*G.V[:,kk] .- G.S[kk]*G.U[:,kk]))) < 1e-10
+            end
+            
             
         end    
 
