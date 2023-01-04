@@ -357,9 +357,18 @@ similar(A::AbstractMultipliableMatrix{T}) where T <: Number =  BestMultipliableM
 - `i::Integer`: row index
 - `j::Integer`: column index
 #Output
-- `Quantity`: numerical value and units
+- `Quantity`: numerical value and units (for vector)
+- `AbstractMultipliableMatrix`: for matrix output
 """
-getindex(A::T,i::Int,j::Int) where T <: AbstractMultipliableMatrix = Quantity(A.numbers[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+getindex(A::T,i::Union{Colon,UnitRange},j::Int) where T <: AbstractMultipliableMatrix = Quantity.(A.numbers[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+
+getindex(A::T,i::Int,j::Union{Colon,Int,UnitRange}) where T <: AbstractMultipliableMatrix = Quantity.(A.numbers[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+
+#       getindex(::A{T,N}, ::Vararg{Int, N}) where {T,N} # if IndexCartesian()
+getindex(A::T,i::Union{UnitRange,Colon},j::Union{UnitRange,Colon}) where T <: AbstractMultipliableMatrix = MMatrix(A.numbers[i,j],unitrange(A)[i],unitdomain(A)[j],exact=exact(A)) 
+
+#getindex(A::T,i::Colon,j::UnitRange) where T <: AbstractMultipliableMatrix = MMatrix(A.numbers[i,j],unitrange(A)[i],unitdomain(A)[j],exact=exact(A)) 
+
 
 """
     function setindex!(A::MultipliableMatrix,v,i,j)

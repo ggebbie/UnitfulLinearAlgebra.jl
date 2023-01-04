@@ -550,7 +550,7 @@ using Test
 
             @test dimensionless(G.U′)
             @test dimensionless(G.V′⁻¹)
-            #@test dimensionless(G.S) # not implemented for AbstractVector
+            @test dimensionless(G.S[:,:]) # turn vector into matrix
 
             # Test orthogonality within normed space
 
