@@ -1305,16 +1305,15 @@ diagm(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = Be
 
     Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
  """
-function diag(A::AbstractMultipliableMatrix)
+function diag(A::AbstractMultipliableMatrix{T}) where T <: Number
 
     m,n = size(A)
     ndiag = max(m,n)
-    vdiag = Vector{Quantity}(undef,ndiag)
+    dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
     for nd in 1:ndiag
         vdiag[nd] = getindex(A,nd,nd)
     end
     return vdiag
-
 end
 
 """
