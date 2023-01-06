@@ -461,7 +461,7 @@ function *(A::T,b::AbstractVector) where T<: AbstractMultipliableMatrix
     elseif ~exact(A) && (unitdomain(A) ∥ b)
         #convert_unitdomain!(A,unit.(b)) # inefficient?
 
-        shift = ustrip(b[1])/unitdomain(A)[1]
+        shift = unit(b[1])/unitdomain(A)[1]
         return (A.numbers*ustrip.(b)).*(unitrange(A).*shift)
     else
         error("Dimensions of MultipliableMatrix and vector not compatible")
