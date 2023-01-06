@@ -1362,7 +1362,7 @@ end
      and dimensional unit domain `d`.
     Like `LinearAlgebra.Diagonal`, this extension is restricted to square matrices.
 """
-Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = (length(r) == length(d)) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
+Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
 
 """
     function vcat(A,B)
