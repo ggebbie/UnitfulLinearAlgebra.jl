@@ -461,7 +461,7 @@ function *(A::T,b::AbstractVector) where T<: AbstractMultipliableMatrix
     elseif ~exact(A) && (unitdomain(A) ∥ b)
         #convert_unitdomain!(A,unit.(b)) # inefficient?
 
-        shift = ustrip(b[1])/unitdomain(A)[1]
+        shift = unit(b[1])/unitdomain(A)[1]
         return (A.numbers*ustrip.(b)).*(unitrange(A).*shift)
     else
         error("Dimensions of MultipliableMatrix and vector not compatible")
@@ -498,13 +498,13 @@ function *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractM
  
     bothexact = exact(A) && exact(B)
     if unitrange(B) == unitdomain(A) # should this be similarity()?
-        return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact) 
+        return MMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact) 
     elseif unitrange(B) ∥ unitdomain(A) && ~bothexact
         #A2 = convert_unitdomain(A,unitrange(B)) 
         #convert_unitdomain!(A,unitrange(B))
         newrange = unitrange(A).*(unitrange(B)[1]/unitdomain(A)[1])
 
-        return BestMultipliableMatrix(A.numbers*B.numbers,newrange,unitdomain(B),exact=bothexact)
+        return MMatrix(A.numbers*B.numbers,newrange,unitdomain(B),exact=bothexact)
     else
         error("matrix dimensional domain/unitrange not conformable")
     end
@@ -547,11 +547,13 @@ function -(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) 
        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
     #if unitrange(A) ~ unitrange(B) && unitdomain(A) ~ unitdomain(B)
     #if unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)
-        return MultipliableMatrix(A.numbers-B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
+        return MMatrix(A.numbers-B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
     else
         error("matrices not dimensionally conformable for subtraction")
     end
 end
+-(A::AbstractMultipliableMatrix{T}) where T <: Number = 
+MMatrix(-A.numbers,unitrange(A),unitdomain(A),exact=exact(A)) 
 
 """
     function lu(A::AbstractMultipliableMatrix{T})
@@ -565,7 +567,7 @@ end
 """
 function lu(A::AbstractMultipliableMatrix{T}) where T <: Number
     F̂ = lu(A.numbers)
-    factors = BestMultipliableMatrix(F̂.factors,unitrange(A),unitdomain(A),exact=exact(A))
+    factors = MMatrix(F̂.factors, unitrange(A), unitdomain(A), exact=exact(A))
     F = LU(factors,F̂.ipiv,F̂.info)
     return F
 end
@@ -1305,16 +1307,15 @@ diagm(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = Be
 
     Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
  """
-function diag(A::AbstractMultipliableMatrix)
+function diag(A::AbstractMultipliableMatrix{T}) where T <: Number
 
     m,n = size(A)
     ndiag = max(m,n)
-    vdiag = Vector{Quantity}(undef,ndiag)
+    dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
     for nd in 1:ndiag
         vdiag[nd] = getindex(A,nd,nd)
     end
     return vdiag
-
 end
 
 """
@@ -1363,7 +1364,7 @@ end
      and dimensional unit domain `d`.
     Like `LinearAlgebra.Diagonal`, this extension is restricted to square matrices.
 """
-Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = (length(r) == length(d)) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
+Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
 
 """
     function vcat(A,B)
