@@ -498,13 +498,13 @@ function *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractM
  
     bothexact = exact(A) && exact(B)
     if unitrange(B) == unitdomain(A) # should this be similarity()?
-        return BestMultipliableMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact) 
+        return MMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact) 
     elseif unitrange(B) ∥ unitdomain(A) && ~bothexact
         #A2 = convert_unitdomain(A,unitrange(B)) 
         #convert_unitdomain!(A,unitrange(B))
         newrange = unitrange(A).*(unitrange(B)[1]/unitdomain(A)[1])
 
-        return BestMultipliableMatrix(A.numbers*B.numbers,newrange,unitdomain(B),exact=bothexact)
+        return MMatrix(A.numbers*B.numbers,newrange,unitdomain(B),exact=bothexact)
     else
         error("matrix dimensional domain/unitrange not conformable")
     end
@@ -547,11 +547,13 @@ function -(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) 
        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
     #if unitrange(A) ~ unitrange(B) && unitdomain(A) ~ unitdomain(B)
     #if unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)
-        return MultipliableMatrix(A.numbers-B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
+        return MMatrix(A.numbers-B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
     else
         error("matrices not dimensionally conformable for subtraction")
     end
 end
+-(A::AbstractMultipliableMatrix{T}) where T <: Number = 
+MMatrix(-A.numbers,unitrange(A),unitdomain(A),exact=exact(A)) 
 
 """
     function lu(A::AbstractMultipliableMatrix{T})
@@ -565,7 +567,7 @@ end
 """
 function lu(A::AbstractMultipliableMatrix{T}) where T <: Number
     F̂ = lu(A.numbers)
-    factors = BestMultipliableMatrix(F̂.factors,unitrange(A),unitdomain(A),exact=exact(A))
+    factors = MMatrix(F̂.factors, unitrange(A), unitdomain(A), exact=exact(A))
     F = LU(factors,F̂.ipiv,F̂.info)
     return F
 end
