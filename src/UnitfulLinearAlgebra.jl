@@ -1,8 +1,12 @@
 module UnitfulLinearAlgebra
 
-using Unitful, LinearAlgebra, SparseArrays
+using Unitful
+using LinearAlgebra
+using SparseArrays
+using DimensionalData
+#using DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
 
-export AbstractMultipliableMatrix
+export AbstractMultipliableMatrix, DimMatrix
 export MultipliableMatrix, EndomorphicMatrix
 export SquarableMatrix, UniformMatrix
 export LeftUniformMatrix, RightUniformMatrix
@@ -21,7 +25,7 @@ export unitrange, unitdomain
 export square, squarable, singular, unit_symmetric
 export lu, det, trace, diag, diagm
 export Diagonal, (\), cholesky
-export identitymatrix, show, vcat, hcat
+export identitymatrix, show, vcat, hcat, rebuild
 
 import LinearAlgebra: inv, det, lu,
     svd, getproperty, eigen, isposdef,
@@ -29,7 +33,112 @@ import LinearAlgebra: inv, det, lu,
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
     size, range, transpose, similar, show, vcat, hcat
 
+import DimensionalData: rebuild, @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
+
+@dim Units "units"
+
 abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
+
+#struct DimMatrix{T<:Number,N<:Integer} <: AbstractDimArray{T,N}
+    
+#end
+
+# struct DimMatrix{T,N,D<:Tuple,A<:AbstractArray{T,N}} <: AbstractDimArray{T,N,D,A}
+#     data::A
+#     dims::D
+# end
+
+struct DimMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractDimArray{T,N,D,A}
+    data::A
+    dims::D
+    refdims::R
+    name::Na
+    metadata::Me
+    exact::Bool
+end
+
+# 2 arg version
+DimMatrix(data::AbstractArray, dims; kw...) = DimMatrix(data, (dims,); kw...)
+function DimMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; 
+    refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false
+)
+    DimMatrix(data, format(dims, data), refdims, name, metadata, exact)
+end
+# back consistency with MMatrix
+function DimMatrix(data::AbstractArray, unitrange, unitdomain; 
+    refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false
+                   )
+    
+    DimMatrix(data, format((Units(unitrange),Units(unitdomain)), data), refdims, name, metadata, exact)
+end
+
+#function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVector,unitdomain::AbstractVector;exact=false)::AbstractMultipliableMatrix
+#                V = DimMatrix(Unum,(Units(p),Units(q̃)))
+
+"""
+    rebuild(A::DimMatrix, data, [dims, refdims, name, metadata]) => DimMatrix
+    rebuild(A::DimMatrix; kw...) => DimMatrix
+
+Rebuild a `DimMatrix` with some field changes. All types
+that inherit from `DimMatrix` must define this method if they
+have any additional fields or alternate field order.
+
+Implementations can discard arguments like `refdims`, `name` and `metadata`.
+
+This method can also be used with keyword arguments in place of regular arguments.
+"""
+@inline function rebuild(
+    A::DimMatrix, data, dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
+    rebuild(A, data, dims, refdims, name, metadata(A), exact(A))
+end
+
+@inline function rebuild(
+    A::DimMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, metadata, exactflag
+)
+    DimMatrix(data, dims, refdims, name, metadata,exactflag)
+end
+
+#@inline function rebuild(
+#     A::DimMatrix, data; dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
+#     DimensionalData.rebuild(A, data, dims, refdims, name, metadata(A),exact(A))
+# end
+
+"""
+    rebuild(A::DimMatrix, data, dims, refdims, name, metadata,exactflag) => DimMatrix
+    rebuild(A::DimMatrix; kw...) => DimMatrix
+
+Rebuild a `DimMatrix` with new fields. Handling partial field
+update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
+"""
+#@inline function rebuild(
+#    A::DimMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, metadata, exactflag
+#)
+#    DimMatrix(data, dims, refdims, name, metadata, exactflag)
+#end
+
+function Base.show(io::IO, mime::MIME"text/plain", A::DimMatrix{T,N}) where {T,N}
+    lines = 0
+    summary(io, A)
+    print_name(io, name(A))
+    lines += Dimensions.print_dims(io, mime, dims(A))
+    !(isempty(dims(A)) || isempty(refdims(A))) && println(io)
+    lines += Dimensions.print_refdims(io, mime, refdims(A))
+    println(io)
+
+    # DELETED THIS OPTIONAL PART HERE
+    # Printing the array data is optional, subtypes can 
+    # show other things here instead.
+    ds = displaysize(io)
+    ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
+    #println("show after")
+    #DimensionalData.show_after(ioctx, mime, Matrix(A))
+
+    #function print_array(io::IO, mime, A::AbstractDimArray{T,2}) where T
+    T2 = eltype(A)
+    Base.print_matrix(DimensionalData._print_array_ctx(ioctx, T2), Matrix(A))
+
+    return nothing
+end
 
 """
     struct MultipliableMatrix
@@ -259,6 +368,8 @@ end
 """
 MMatrix = BestMultipliableMatrix
 
+
+
 """
     function multipliable(A)::Bool
 
@@ -418,6 +529,18 @@ function Matrix(A::T) where T<: AbstractMultipliableMatrix
         end
         return B
     end
+end
+function Matrix(A::T) where T<: DimMatrix
+
+    M,N = size(A)
+    T2 = eltype(parent(A))
+    B = Matrix{Quantity{T2}}(undef,M,N)
+    for m = 1:M
+        for n = 1:N
+            B[m,n] = Quantity.(getindex(A,m,n),unitrange(A)[m]./unitdomain(A)[n])
+        end
+    end
+    return B
 end
 
 # """
@@ -849,7 +972,7 @@ end
 -    `exact=false`: algebraic interpretation
 """
 exact(A::T) where T <: AbstractMultipliableMatrix = A.exact
-
+exact(A::DimMatrix) = A.exact
 """
     function rangelength(A::MultipliableMatrix)
 
@@ -879,9 +1002,11 @@ unitdomain(A::SquarableMatrix) = A.unitrange.*A.Δunitdomain
 unitdomain(A::UnitSymmetricMatrix) =  A.Δunitdomain./A.unitrange
 unitdomain(A::EndomorphicMatrix) = A.unitrange # unitdomain not saved and must be reconstructed
 unitdomain(A::Union{UniformMatrix,RightUniformMatrix}) = fill(A.unitdomain[1],size(A.numbers)[2])
+unitdomain(A::DimMatrix{T,2}) where T <: Number = dims(A)[2]
 
 unitrange(A::T) where T <: AbstractMultipliableMatrix = A.unitrange
 unitrange(A::Union{UniformMatrix,LeftUniformMatrix}) = fill(A.unitrange[1],size(A.numbers)[1])
+unitrange(A::DimMatrix{T,2}) where T <: Number = dims(A)[1]
 
 """
     function transpose
