@@ -195,7 +195,7 @@ M = 12; # obs
 udomain1 = [K,K/s,K/s/s]; urange1 = fill(Sv,M)
 
 # ╔═╡ 2b9d6d5e-3a88-44fa-a606-206ce0417b56
-H = MMatrix(randn(3,3),urange1,udomain1,exact=true)
+H = MMatrix(randn(M,3),urange1,udomain1,exact=true)
 
 # ╔═╡ 5766a40a-2039-4192-8b20-66bd53daf964
 k̃ = rand(3).*udomain1
