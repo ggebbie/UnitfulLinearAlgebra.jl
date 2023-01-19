@@ -107,13 +107,11 @@ using Test
             @test A==Matrix(B)
 
             # multiplication with DimMatrix requires another DimMatrix
-
-            # not working
             r = DimMatrix(reshape(ustrip.(q),2,1),(UnitDomain(unit.(q)),VectorDomain([unit(1.0)])),exact=true) 
             #r = DimMatrix(reshape(ustrip.(q),2,1),unit.(q),[unit(1.0)],exact=true) 
             
             # test multiplication
-            @test isequal(A*q,B*r)
+            @test isequal(A*q,Matrix(B*r))
             @test isequal(uniform(A),uniform(B))
             @test isequal(left_uniform(A),left_uniform(B))
             @test isequal(right_uniform(A),right_uniform(B))
