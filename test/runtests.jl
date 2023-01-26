@@ -652,6 +652,8 @@ using Test
             Unum = [1.0 2.0; 3.0 4.0]
             V = DimMatrix(Unum,(Units(p),Units(q̃)),exact=true)
 
+            vctr = DimMatrix(rand(2),(Units(q̃)),exact=true)
+
             Units(p.^-1)
             inv(Matrix(V.data))
             Vi = DimMatrix(inv(Unum),(Units(q̃),Units(p)));

@@ -120,7 +120,7 @@ function Base.show(io::IO, mime::MIME"text/plain", A::DimMatrix{T,N}) where {T,N
     lines = 0
     summary(io, A)
     print_name(io, name(A))
-    lines += Dimensions.print_dims(io, mime, dims(A))
+    #lines += Dimensions.print_dims(io, mime, dims(A))
     !(isempty(dims(A)) || isempty(refdims(A))) && println(io)
     lines += Dimensions.print_refdims(io, mime, refdims(A))
     println(io)
@@ -368,7 +368,43 @@ end
 """
 MMatrix = BestMultipliableMatrix
 
+"""
+    function BestMultipliableMatrix(numbers,unitrange,unitdomain;exact=false)
 
+    What kind of Multipliable Matrix is the best representation?
+"""
+function describe(A::DimMatrix)
+     matrixtype = ""
+
+    if dimensionless(A) # most special
+        matrixtype *= "Dimensionless "
+    end
+
+    return matrixtype*"Matrix"
+
+    
+#     if uniform(A)
+#         matrixtype *= "Uniform "
+#     elseif left_uniform(A)
+#         matrixtype *= "Left Uniform "
+#     elseif right_uniform(A)
+#         matrixtype *= "Right Uniform "
+#     end
+
+#     if endomorphic(A)
+#         matrixtype *= "Endomorphic "
+#     elseif squarable(A)
+#         matrixtype *= "Squarable "
+#     end
+    
+    
+#     elseif unitrange ∥ 1 ./unitdomain
+#         Δunitdomain = unitdomain[1] * unitrange[1]
+#         B = UnitSymmetricMatrix(numbers,unitrange,Δunitdomain,exact)
+#     else
+#         B = MultipliableMatrix(numbers,unitrange,unitdomain,exact)
+#     end
+end
 
 """
     function multipliable(A)::Bool
@@ -378,7 +414,8 @@ MMatrix = BestMultipliableMatrix
 """
 multipliable(A::Matrix) = ~isnothing(BestMultipliableMatrix(A))
 multipliable(A::T) where T <: AbstractMultipliableMatrix = true
-
+multipliable(A::DimMatrix) = true
+    
 """
     function EndomorphicMatrix
 
@@ -444,7 +481,7 @@ end
 """
 endomorphic(A::Matrix) = ~isnothing(EndomorphicMatrix(A))
 endomorphic(A::EndomorphicMatrix) = true
-endomorphic(A::T) where T <: AbstractMultipliableMatrix = isequal(unitdomain(A),unitrange(A))
+endomorphic(A::T) where T <: Union{AbstractMultipliableMatrix,DimMatrix} = isequal(unitdomain(A),unitrange(A))
 endomorphic(A::T) where T <: Number = dimensionless(A) # scalars must be dimensionless to be endomorphic
 
 """
@@ -808,6 +845,7 @@ function uniform(A::Matrix)
 end
 uniform(A::T) where T <: AbstractMultipliableMatrix = left_uniform(A) && right_uniform(A)
 uniform(A::UniformMatrix) = true
+uniform(A::DimMatrix) = left_uniform(A) && right_uniform(A)
 
 """
     function left_uniform(A)
@@ -816,6 +854,7 @@ uniform(A::UniformMatrix) = true
 """
 left_uniform(A::Union{LeftUniformMatrix,UniformMatrix}) = true
 left_uniform(A::T) where T<: AbstractMultipliableMatrix = uniform(unitrange(A)) ? true : false
+left_uniform(A::DimMatrix) = uniform(unitrange(A)) ? true : false
 function left_uniform(A::Matrix)
     B = BestMultipliableMatrix(A)
     isnothing(B) ? false : left_uniform(B)
@@ -828,6 +867,7 @@ end
 """
 right_uniform(A::Union{UniformMatrix,RightUniformMatrix}) = true
 right_uniform(A::T) where T<:AbstractMultipliableMatrix = uniform(unitdomain(A)) ? true : false
+right_uniform(A::DimMatrix) = uniform(unitdomain(A)) ? true : false
 function right_uniform(A::Matrix)
     B = BestMultipliableMatrix(A)
     isnothing(B) ? false : right_uniform(B)
