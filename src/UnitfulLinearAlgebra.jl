@@ -6,7 +6,8 @@ using SparseArrays
 using DimensionalData
 #using DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
 
-export AbstractMultipliableMatrix, DimMatrix
+export AbstractMultipliableMatrix
+export UnitfulMatrix
 export MultipliableMatrix, EndomorphicMatrix
 export SquarableMatrix, UniformMatrix
 export LeftUniformMatrix, RightUniformMatrix
@@ -40,16 +41,12 @@ import DimensionalData: rebuild, @dim, dims, DimArray, AbstractDimArray, NoName,
 
 abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
 
-#struct DimMatrix{T<:Number,N<:Integer} <: AbstractDimArray{T,N}
-    
-#end
+const AbstractUnitfulVector = AbstractDimArray{T,1} where T
+const AbstractUnitfulMatrix = AbstractDimArray{T,2} where T
 
-# struct DimMatrix{T,N,D<:Tuple,A<:AbstractArray{T,N}} <: AbstractDimArray{T,N,D,A}
-#     data::A
-#     dims::D
-# end
+# Concrete implementation ######################################################
 
-struct DimMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractDimArray{T,N,D,A}
+struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractDimArray{T,N,D,A}
     data::A
     dims::D
     refdims::R
@@ -59,29 +56,27 @@ struct DimMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractD
 end
 
 # 2 arg version
-DimMatrix(data::AbstractArray, dims; kw...) = DimMatrix(data, (dims,); kw...)
-function DimMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; 
+UnitfulMatrix(data::AbstractArray, dims; kw...) = UnitfulMatrix(data, (dims,); kw...)
+function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; 
     refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false
 )
-    DimMatrix(data, format(dims, data), refdims, name, metadata, exact)
+    UnitfulMatrix(data, format(dims, data), refdims, name, metadata, exact)
 end
 # back consistency with MMatrix
-function DimMatrix(data::AbstractArray, unitrange, unitdomain; 
-    refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false
-                   )
-    
-    DimMatrix(data, format((Units(unitrange),Units(unitdomain)), data), refdims, name, metadata, exact)
+function UnitfulMatrix(data::AbstractArray, unitrange, unitdomain; 
+    refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false)
+    return UnitfulMatrix(data, format((unitrange,unitdomain), data), refdims, name, metadata, exact)
 end
 
 #function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVector,unitdomain::AbstractVector;exact=false)::AbstractMultipliableMatrix
-#                V = DimMatrix(Unum,(Units(p),Units(q̃)))
+#                V = UnitfulMatrix(Unum,(Units(p),Units(q̃)))
 
 """
-    rebuild(A::DimMatrix, data, [dims, refdims, name, metadata]) => DimMatrix
-    rebuild(A::DimMatrix; kw...) => DimMatrix
+    rebuild(A::UnitfulMatrix, data, [dims, refdims, name, metadata]) => UnitfulMatrix
+    rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix
 
-Rebuild a `DimMatrix` with some field changes. All types
-that inherit from `DimMatrix` must define this method if they
+Rebuild a `UnitfulMatrix` with some field changes. All types
+that inherit from `UnitfulMatrix` must define this method if they
 have any additional fields or alternate field order.
 
 Implementations can discard arguments like `refdims`, `name` and `metadata`.
@@ -89,35 +84,35 @@ Implementations can discard arguments like `refdims`, `name` and `metadata`.
 This method can also be used with keyword arguments in place of regular arguments.
 """
 @inline function rebuild(
-    A::DimMatrix, data, dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
+    A::UnitfulMatrix, data, dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
     rebuild(A, data, dims, refdims, name, metadata(A), exact(A))
 end
 
 @inline function rebuild(
-    A::DimMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, metadata, exactflag
+    A::UnitfulMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, metadata, exactflag
 )
-    DimMatrix(data, dims, refdims, name, metadata,exactflag)
+    UnitfulMatrix(data, dims, refdims, name, metadata,exactflag)
 end
 
 #@inline function rebuild(
-#     A::DimMatrix, data; dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
+#     A::UnitfulMatrix, data; dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
 #     DimensionalData.rebuild(A, data, dims, refdims, name, metadata(A),exact(A))
 # end
 
 """
-    rebuild(A::DimMatrix, data, dims, refdims, name, metadata,exactflag) => DimMatrix
-    rebuild(A::DimMatrix; kw...) => DimMatrix
+    rebuild(A::UnitfulMatrix, data, dims, refdims, name, metadata,exactflag) => UnitfulMatrix
+    rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix
 
-Rebuild a `DimMatrix` with new fields. Handling partial field
+Rebuild a `UnitfulMatrix` with new fields. Handling partial field
 update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
 """
 #@inline function rebuild(
-#    A::DimMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, metadata, exactflag
+#    A::UnitfulMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, metadata, exactflag
 #)
-#    DimMatrix(data, dims, refdims, name, metadata, exactflag)
+#    UnitfulMatrix(data, dims, refdims, name, metadata, exactflag)
 #end
 
-function Base.show(io::IO, mime::MIME"text/plain", A::DimMatrix{T,N}) where {T,N}
+function Base.show(io::IO, mime::MIME"text/plain", A::UnitfulMatrix{T,N}) where {T,N}
     lines = 0
     summary(io, A)
     print_name(io, name(A))
@@ -374,7 +369,7 @@ MMatrix = BestMultipliableMatrix
 
     What kind of Multipliable Matrix is the best representation?
 """
-function describe(A::DimMatrix)
+function describe(A::UnitfulMatrix)
     matrixtype = ""
     
     dimensionless(A) && ( matrixtype *= "Dimensionless ")
@@ -423,7 +418,7 @@ end
 """
 multipliable(A::Matrix) = ~isnothing(BestMultipliableMatrix(A))
 multipliable(A::T) where T <: AbstractMultipliableMatrix = true
-multipliable(A::DimMatrix) = true
+multipliable(A::UnitfulMatrix) = true
     
 """
     function EndomorphicMatrix
@@ -490,7 +485,7 @@ end
 """
 endomorphic(A::Matrix) = ~isnothing(EndomorphicMatrix(A))
 endomorphic(A::EndomorphicMatrix) = true
-endomorphic(A::T) where T <: Union{AbstractMultipliableMatrix,DimMatrix} = isequal(unitdomain(A),unitrange(A))
+endomorphic(A::T) where T <: Union{AbstractMultipliableMatrix,UnitfulMatrix} = isequal(unitdomain(A),unitrange(A))
 endomorphic(A::T) where T <: Number = dimensionless(A) # scalars must be dimensionless to be endomorphic
 
 """
@@ -576,7 +571,7 @@ function Matrix(A::T) where T<: AbstractMultipliableMatrix
         return B
     end
 end
-function Matrix(A::T) where T<: DimMatrix
+function Matrix(A::T) where T<: AbstractUnitfulMatrix
 
     M,N = size(A)
     T2 = eltype(parent(A))
@@ -587,6 +582,16 @@ function Matrix(A::T) where T<: DimMatrix
         end
     end
     return B
+end
+function Matrix(a::T) where T<: AbstractUnitfulVector
+
+    M, = size(a)
+    T2 = eltype(parent(a))
+    b = Vector{Quantity{T2}}(undef,M)
+    for m = 1:M
+        b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
+    end
+    return b
 end
 
 # """
@@ -829,7 +834,27 @@ function parallel(a,b)::Bool
         return false
     end
 end
+function parallel(a::AbstractUnitfulVector,b::AbstractUnitfulVector)::Bool
+    if isequal(length(a),length(b))
+        if length(a) == 1
+            return true
+        else
+            Δdim = dimension(a)./dimension(b) # inconsistent function call
+            for i = 2:length(a)
+                if Δdim[i] ≠ Δdim[1]
+                    return false
+                end
+            end
+            return true
+        end
+    else
+        return false
+    end
+end
 ∥(a,b)  = parallel(a,b)
+
+# not consistent in that it should be an element-wise function
+Unitful.dimension(a::AbstractUnitfulVector) = dimension.(unitrange(a)) 
 
 """
     function uniform(a)
@@ -852,7 +877,7 @@ function uniform(A::Matrix)
     B = MMatrix(A)
     isnothing(B) ? false : uniform(B)
 end
-uniform(A::Union{DimMatrix,<: AbstractMultipliableMatrix}) = left_uniform(A) && right_uniform(A)
+uniform(A::Union{UnitfulMatrix,<: AbstractMultipliableMatrix}) = left_uniform(A) && right_uniform(A)
 uniform(A::UniformMatrix) = true
 
 """
@@ -862,7 +887,7 @@ uniform(A::UniformMatrix) = true
 """
 left_uniform(A::Union{LeftUniformMatrix,UniformMatrix}) = true
 left_uniform(A::T) where T<: AbstractMultipliableMatrix = uniform(unitrange(A)) ? true : false
-left_uniform(A::DimMatrix) = uniform(unitrange(A)) ? true : false
+left_uniform(A::UnitfulMatrix) = uniform(unitrange(A)) ? true : false
 function left_uniform(A::Matrix)
     B = BestMultipliableMatrix(A)
     isnothing(B) ? false : left_uniform(B)
@@ -875,7 +900,7 @@ end
 """
 right_uniform(A::Union{UniformMatrix,RightUniformMatrix}) = true
 right_uniform(A::T) where T<:AbstractMultipliableMatrix = uniform(unitdomain(A)) ? true : false
-right_uniform(A::DimMatrix) = uniform(unitdomain(A)) ? true : false
+right_uniform(A::UnitfulMatrix) = uniform(unitdomain(A)) ? true : false
 function right_uniform(A::Matrix)
     B = MMatrix(A)
     isnothing(B) ? false : right_uniform(B)
@@ -888,7 +913,7 @@ end
      dimensionless domain and range.
 """
 dimensionless(A::T) where T <: AbstractMultipliableMatrix = uniform(A) && unitrange(A)[1] == unitdomain(A)[1]
-dimensionless(A::Union{Matrix,DimMatrix}) = uniform(A) && dimension(A[1,1]) == NoDims
+dimensionless(A::Union{Matrix,UnitfulMatrix}) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
 function dimensionless(A::AbstractMatrix)
     B = MMatrix(A)
@@ -900,7 +925,7 @@ square(A::T) where T <: AbstractMatrix = isequal(size(A)[1],size(A)[2])
 square(A::SquarableMatrix) = true
 square(A::EndomorphicMatrix) = true
 
-squarable(A::Union{DimMatrix,<:AbstractMultipliableMatrix}) = (unitdomain(A) ∥ unitrange(A))
+squarable(A::Union{UnitfulMatrix,<:AbstractMultipliableMatrix}) = (unitdomain(A) ∥ unitrange(A))
 squarable(A::SquarableMatrix) = true
 squarable(A::EndomorphicMatrix) = true
 function squarable(A::AbstractMatrix)
@@ -908,7 +933,7 @@ function squarable(A::AbstractMatrix)
     isnothing(B) ? false : squarable(B) # fallback
 end
 
-unit_symmetric(A::Union{DimMatrix,AbstractMultipliableMatrix}) = (unitrange(A) ∥ unitdomain(A).^-1)
+unit_symmetric(A::Union{UnitfulMatrix,AbstractMultipliableMatrix}) = (unitrange(A) ∥ unitdomain(A).^-1)
 unit_symmetric(A::UnitSymmetricMatrix) = true
 function unit_symmetric(A::AbstractMatrix)
     B = MMatrix(A)
@@ -943,13 +968,21 @@ dottable(a,b) = parallel(a, 1 ./ b)
 """
 function convert_unitdomain(A::AbstractMultipliableMatrix, newdomain::Vector) 
     if unitdomain(A) ∥ newdomain
+        newrange = unitrange(A).*(newdomain[1]/unitdomain(A)[1])
+        B = UnitfulMatrix(A.numbers,newrange,newdomain,exact=true)
+    else
+        error("New unitdomain not parallel to unitdomain of Multipliable Matrix")
+    end
+end
+function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Vector) 
+    if unitdomain(A) ∥ newdomain
         #shift = newdomain./unitdomain(A)
         #newrange = unitrange(A).*shift
         newrange = unitrange(A).*(newdomain[1]/unitdomain(A)[1])
-
-        B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
+        B = rebuild(A, parent(A), (newrange, newdomain))
+        #B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
-        error("New unitdomain not parallel to unitdomain of Multipliable Matrix")
+        error("New unit domain not parallel to unit domain of Multipliable Matrix")
     end
 end
 
@@ -1033,7 +1066,7 @@ end
 -    `exact=false`: algebraic interpretation
 """
 exact(A::T) where T <: AbstractMultipliableMatrix = A.exact
-exact(A::DimMatrix) = A.exact
+exact(A::UnitfulMatrix) = A.exact
 """
     function rangelength(A::MultipliableMatrix)
 
@@ -1051,7 +1084,7 @@ rangelength(A::T) where T <: AbstractMultipliableMatrix = size(A)[1]
 domainlength(A::T) where T <: AbstractMultipliableMatrix = size(A)[2]
 
 #size(A::AbstractMultipliableMatrix) = (rangelength(A), domainlength(A))
-size(A::AbstractMultipliableMatrix) = size(A.numbers)
+size(A::AbstractMultipliableMatrix) = size(A.numbers) # necessary?
 
 convert(::Type{AbstractMatrix{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
 convert(::Type{AbstractArray{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
@@ -1063,11 +1096,12 @@ unitdomain(A::SquarableMatrix) = A.unitrange.*A.Δunitdomain
 unitdomain(A::UnitSymmetricMatrix) =  A.Δunitdomain./A.unitrange
 unitdomain(A::EndomorphicMatrix) = A.unitrange # unitdomain not saved and must be reconstructed
 unitdomain(A::Union{UniformMatrix,RightUniformMatrix}) = fill(A.unitdomain[1],size(A.numbers)[2])
-unitdomain(A::DimMatrix{T,2}) where T <: Number = dims(A)[2]
+unitdomain(A::AbstractUnitfulMatrix) = last(dims(A))
+unitdomain(A::AbstractUnitfulVector) = Unitful.FreeUnits{(), NoDims, nothing}() # nondimensional scalar 
 
 unitrange(A::T) where T <: AbstractMultipliableMatrix = A.unitrange
 unitrange(A::Union{UniformMatrix,LeftUniformMatrix}) = fill(A.unitrange[1],size(A.numbers)[1])
-unitrange(A::DimMatrix{T,2}) where T <: Number = dims(A)[1]
+unitrange(A::Union{AbstractUnitfulMatrix,AbstractUnitfulVector}) = first(dims(A))
 
 """
     function transpose
