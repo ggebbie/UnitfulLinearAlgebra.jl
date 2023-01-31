@@ -26,6 +26,7 @@ export square, squarable, singular, unit_symmetric
 export lu, det, trace, diag, diagm
 export Diagonal, (\), cholesky
 export identitymatrix, show, vcat, hcat, rebuild
+export describe
 
 import LinearAlgebra: inv, det, lu,
     svd, getproperty, eigen, isposdef,
@@ -374,36 +375,44 @@ MMatrix = BestMultipliableMatrix
     What kind of Multipliable Matrix is the best representation?
 """
 function describe(A::DimMatrix)
-     matrixtype = ""
+    matrixtype = ""
+    
+    dimensionless(A) && ( matrixtype *= "Dimensionless ")
 
-    if dimensionless(A) # most special
-        matrixtype *= "Dimensionless "
+    # check degree of uniformity
+    #if uniform(unitrange) && uniform(unitdomain)
+    if uniform(A)
+        matrixtype *= "Uniform "
+    #elseif uniform(unitrange)
+    elseif left_uniform(A)
+        matrixtype *= "Left Uniform "
+    #elseif uniform(unitdomain)
+    elseif right_uniform(A)
+        matrixtype *= "Right Uniform "
+    end
+
+    if square(A)
+        #if unitrange == unitdomain
+        if endomorphic(A)
+            matrixtype *= "Endomorphic "
+        end
+        
+        #if unitrange ∥ unitdomain
+        if squarable(A)
+            matrixtype *= "Squarable "
+        end
+        
+        #if unitrange ∥ 1 ./unitdomain
+        if unit_symmetric(A)
+            matrixtype *= "Unit Symmetric "
+        end
+
+        if ~endomorphic(A) && ~squarable(A) && ~unit_symmetric(A)
+            matrixtype *= "Square " # a fallback description
+        end
     end
 
     return matrixtype*"Matrix"
-
-    
-#     if uniform(A)
-#         matrixtype *= "Uniform "
-#     elseif left_uniform(A)
-#         matrixtype *= "Left Uniform "
-#     elseif right_uniform(A)
-#         matrixtype *= "Right Uniform "
-#     end
-
-#     if endomorphic(A)
-#         matrixtype *= "Endomorphic "
-#     elseif squarable(A)
-#         matrixtype *= "Squarable "
-#     end
-    
-    
-#     elseif unitrange ∥ 1 ./unitdomain
-#         Δunitdomain = unitdomain[1] * unitrange[1]
-#         B = UnitSymmetricMatrix(numbers,unitrange,Δunitdomain,exact)
-#     else
-#         B = MultipliableMatrix(numbers,unitrange,unitdomain,exact)
-#     end
 end
 
 """
@@ -808,7 +817,7 @@ function parallel(a,b)::Bool
         if length(a) == 1
             return true
         else
-            Δdim = dimension(a)./dimension(b)
+            Δdim = dimension.(a)./dimension.(b)
             for i = 2:length(a)
                 if Δdim[i] ≠ Δdim[1]
                     return false
@@ -830,7 +839,7 @@ end
     There must be a way to inspect the Unitful type to answer this.
 """
 uniform(a::T) where T <: Number = true # all scalars by default
-function uniform(a::Vector) 
+function uniform(a::Union{Vector,<:DimensionalData.Dimension}) 
     dima = dimension.(a)
     for dd = 2:length(dima)
         if dima[dd] ≠ dima[1]
@@ -840,12 +849,11 @@ function uniform(a::Vector)
     return true
 end
 function uniform(A::Matrix)
-    B = BestMultipliableMatrix(A)
+    B = MMatrix(A)
     isnothing(B) ? false : uniform(B)
 end
-uniform(A::T) where T <: AbstractMultipliableMatrix = left_uniform(A) && right_uniform(A)
+uniform(A::Union{DimMatrix,<: AbstractMultipliableMatrix}) = left_uniform(A) && right_uniform(A)
 uniform(A::UniformMatrix) = true
-uniform(A::DimMatrix) = left_uniform(A) && right_uniform(A)
 
 """
     function left_uniform(A)
@@ -869,7 +877,7 @@ right_uniform(A::Union{UniformMatrix,RightUniformMatrix}) = true
 right_uniform(A::T) where T<:AbstractMultipliableMatrix = uniform(unitdomain(A)) ? true : false
 right_uniform(A::DimMatrix) = uniform(unitdomain(A)) ? true : false
 function right_uniform(A::Matrix)
-    B = BestMultipliableMatrix(A)
+    B = MMatrix(A)
     isnothing(B) ? false : right_uniform(B)
 end
 
@@ -880,19 +888,32 @@ end
      dimensionless domain and range.
 """
 dimensionless(A::T) where T <: AbstractMultipliableMatrix = uniform(A) && unitrange(A)[1] == unitdomain(A)[1]
-dimensionless(A::Matrix) = uniform(A) && dimension(A[1,1]) == NoDims
+dimensionless(A::Union{Matrix,DimMatrix}) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
+function dimensionless(A::AbstractMatrix)
+    B = MMatrix(A)
+    isnothing(B) ? false : dimensionless(B) # fallback
+end
 
-square(A::T) where T <: AbstractMultipliableMatrix = (domainlength(A) == rangelength(A))
+#square(A::T) where T <: AbstractMultipliableMatrix = (domainlength(A) == rangelength(A))
+square(A::T) where T <: AbstractMatrix = isequal(size(A)[1],size(A)[2]) 
 square(A::SquarableMatrix) = true
 square(A::EndomorphicMatrix) = true
 
-squarable(A::T) where T <: AbstractMultipliableMatrix = (unitdomain(A) ∥ unitrange(A))
+squarable(A::Union{DimMatrix,<:AbstractMultipliableMatrix}) = (unitdomain(A) ∥ unitrange(A))
 squarable(A::SquarableMatrix) = true
 squarable(A::EndomorphicMatrix) = true
+function squarable(A::AbstractMatrix)
+    B = MMatrix(A)
+    isnothing(B) ? false : squarable(B) # fallback
+end
 
-unit_symmetric(A::AbstractMultipliableMatrix) = (unitrange(A) ∥ 1 ./unitdomain(A))
+unit_symmetric(A::Union{DimMatrix,AbstractMultipliableMatrix}) = (unitrange(A) ∥ unitdomain(A).^-1)
 unit_symmetric(A::UnitSymmetricMatrix) = true
+function unit_symmetric(A::AbstractMatrix)
+    B = MMatrix(A)
+    isnothing(B) ? false : unit_symmetric(B) # fallback
+end
 
 """
     function invdimension

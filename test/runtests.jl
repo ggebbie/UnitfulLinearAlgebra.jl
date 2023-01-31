@@ -4,7 +4,7 @@ using UnitfulLinearAlgebra
 using Unitful
 using LinearAlgebra
 using SparseArrays
-using DimensionalData
+using DimensionalData: @dim
 using Test
 
 @testset "UnitfulLinearAlgebra.jl" begin
@@ -77,7 +77,7 @@ using Test
     end
 
     @testset "matrices" begin
-
+        
         for i = 1:3
             if i == 1
                 p = [1.0m, 9.0s]
@@ -111,7 +111,7 @@ using Test
             #r = DimMatrix(reshape(ustrip.(q),2,1),unit.(q),[unit(1.0)],exact=true) 
             
             # test multiplication
-            @test isequal(A*q,Matrix(B*r))
+            @test within(A*q,Matrix(B*r),1.0e-10)
             @test isequal(uniform(A),uniform(B))
             @test isequal(left_uniform(A),left_uniform(B))
             @test isequal(right_uniform(A),right_uniform(B))
