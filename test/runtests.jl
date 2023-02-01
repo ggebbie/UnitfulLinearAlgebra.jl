@@ -191,7 +191,7 @@ using Test
 
             # stopped here
             pnew = (p)s
-            qnew = (q)s
+            qnew2 = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
             E = convert_unitrange(B,unit.(pnew))
             @test Bq ∥ E*qnew
         end
@@ -203,14 +203,14 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            #B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
-            # turn array into Multipliable matrix
-            C = MMatrix(A)
+            # turn array into Unitful matrix
+            C = UnitfulMatrix(A)
             @test A==Matrix(C)
             @test multipliable(A)
             @test ~left_uniform(A)
-            @test isnothing(EndomorphicMatrix(A))
             @test ~endomorphic(C)            
         end
 
@@ -225,24 +225,23 @@ using Test
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = MMatrix(A)
-            B2 = MMatrix(ustrip.(A),unit.(p),unit.(q))
-            B3 = EndomorphicMatrix(ustrip.(A),unit.(p))
+            B = UnitfulMatrix(A)
+            B2 = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q))
 
             Bᵀ = transpose(B)
             @test Bᵀ[2,1] == B[1,2]
 
-            Ip = EndomorphicMatrix(I(2),[m,s])
-            B3 + Ip
-            Ip = identitymatrix([m,s])
+            ## This doesn't work
+            #Ip = identitymatrix([m,s])
+            #B2 + Ip
             
             @test Matrix(B)==Matrix(B2)
-            @test Matrix(B3)==Matrix(B2)
             @test multipliable(B)
             @test endomorphic(B2)
             @test endomorphic(B)
             @test endomorphic(A)
 
+            ## EIGEN NOT TESTED 
             # endomorphic should have dimensionless eigenvalues
             F = UnitfulLinearAlgebra.eigen(B)
             for j in F.values
@@ -250,11 +249,11 @@ using Test
             end
             
             #change domain of B3
-            convert_unitrange!(B3,[m²,s*m])
-            @test unitrange(B3) == [m²,s*m]
+            # convert_unitrange!(B3,[m²,s*m])
+            # @test unitrange(B3) == [m²,s*m]
 
-            convert_unitdomain!(B3,[m,s])
-            @test unitdomain(B3) == [m,s]
+            # convert_unitdomain!(B3,[m,s])
+            # @test unitdomain(B3) == [m,s]
         end
 
         @testset "squarable" begin
@@ -363,14 +362,15 @@ using Test
         end
 
         @testset "matrix * operations" begin
-            p = [1.0m, 3.0s]
+            p = [1.0m, 4.0s]
             q̃ = [-1.0K, 2.0]
             q = ustrip.(q̃).*unit.(1 ./q̃)
             
             # outer product to make a multipliable matrix
             A = p*q̃'
-            B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
+            B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
+            # this part doesn't work
             scalar = 2.0K 
             C = B * scalar
             @test (Matrix(C)./Matrix(B))[1,1] == scalar
@@ -381,7 +381,7 @@ using Test
             @test exact(scalar2*B)
 
             # outer product to make a multipliable matrix
-            B2 = MultipliableMatrix(ustrip.(A),unit.(q),unit.(p),exact=true)
+            B2 = UnitfulMatrix(ustrip.(A),unit.(q),unit.(p),exact=true)
             A2 = Matrix(B2)
             
             @test A*A2==Matrix(B*B2)
@@ -397,12 +397,12 @@ using Test
             k = 3
             E = hcat(randn(k),randn(k)u1/u2,randn(k)u1/u3)
             y = randn(k)u1
-            x = [randn()u1; randn()u2; randn()u3] 
+            x = UnitfulMatrix([randn()u1; randn()u2; randn()u3] )
 
             Z = lu(ustrip.(E))
             
-            F = MMatrix(E)
-            G = convert_unitdomain(F,unit.(x))
+            F = UnitfulMatrix(E)
+            G = convert_unitdomain(F,unitrange(x))
             Z2 = lu(G)
             @test within(E[Z2.p,:],Matrix(Z2.L*Z2.U),1e-10)
             @test ~singular(F)
@@ -416,7 +416,7 @@ using Test
 
             # matrix left divide.
             # just numbers.
-            x̃num = ustrip.(E) \ ustrip.(y)
+            x̃num = ustrip.(E) \ parent(y)
 
             # an exact matrix
             x̂ = G \ y

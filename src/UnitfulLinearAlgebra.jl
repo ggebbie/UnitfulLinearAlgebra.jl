@@ -46,6 +46,12 @@ const AbstractUnitfulMatrix = AbstractDimArray{T,2} where T
 
 # Concrete implementation ######################################################
 
+
+"""
+    struct UnitfulMatrix
+
+    Take DimArray and use dimensions for units
+"""
 struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractDimArray{T,N,D,A}
     data::A
     dims::D
@@ -322,6 +328,42 @@ function BestMultipliableMatrix(A::Matrix)::AbstractMultipliableMatrix
     end
 
     B = BestMultipliableMatrix(numbers,unitrange,unitdomain)
+    # if the array is not multipliable, return nothing
+    if Matrix(B) == A
+        return B
+    else
+        return nothing
+    end
+end
+function UnitfulMatrix(A::AbstractMatrix)
+    numbers = ustrip.(A)
+    M,N = size(numbers)
+    unitdomain = Vector{Unitful.FreeUnits}(undef,N)
+    unitrange = Vector{Unitful.FreeUnits}(undef,M)
+
+    for i = 1:M
+        unitrange[i] = unit(A[i,1])
+    end
+    
+    for j = 1:N
+        unitdomain[j] = unit(A[1,1])/unit(A[1,j])
+    end
+
+    B = UnitfulMatrix(numbers,unitrange,unitdomain)
+    # if the array is not multipliable, return nothing
+    if Matrix(B) == A
+        return B
+    else
+        return nothing
+    end
+end
+function UnitfulMatrix(A::AbstractVector) # should be called UnitfulVector?
+    numbers = ustrip.(A)
+    M = size(numbers)
+    unitrange = Vector{Unitful.FreeUnits}(undef,M)
+
+    unitrange = unit.(A)
+    B = UnitfulMatrix(numbers,unitrange)
     # if the array is not multipliable, return nothing
     if Matrix(B) == A
         return B
@@ -1032,6 +1074,16 @@ function convert_unitrange(A::AbstractMultipliableMatrix, newrange::Vector)
         error("New unitrange not parallel to unitrange of Multipliable Matrix")
     end
 end
+function convert_unitrange(A::AbstractUnitfulMatrix, newrange::Vector) 
+    if unitrange(A) ∥ newrange
+        #shift = newdomain./unitdomain(A)
+        #newrange = unitrange(A).*shift
+        newdomain = unitdomain(A).*(newrange[1]/unitrange(A)[1])
+        B = rebuild(A, parent(A), (newrange, newdomain))
+    else
+        error("New unit domain not parallel to unit domain of Multipliable Matrix")
+    end
+end
 
 """
     function convert_unitrange!(A, newrange)
@@ -1128,7 +1180,8 @@ transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),
     defined by its dimensional range.
     Hart, pp. 200.                             
 """
-identitymatrix(dimrange) = EndomorphicMatrix(I(length(dimrange)),dimrange;exact=false)
+#identitymatrix(dimrange) = EndomorphicMatrix(I(length(dimrange)),dimrange;exact=false)
+identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),dimrange,dimrange;exact=false)
 
 """
      function inv
@@ -1141,6 +1194,7 @@ identitymatrix(dimrange) = EndomorphicMatrix(I(length(dimrange)),dimrange;exact=
     Hart, pp. 205. 
 """
 inv(A::T) where T <: AbstractMultipliableMatrix = ~singular(A) ? BestMultipliableMatrix(inv(A.numbers),unitdomain(A),unitrange(A),exact=exact(A)) : error("matrix is singular")
+inv(A::AbstractUnitfulMatrix) = ~singular(A) ? rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A))) : error("matrix is singular")
 
 """
      function left divide
@@ -1171,6 +1225,16 @@ function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
         return BestMultipliableMatrix(A.numbers\B.numbers,unitdomain(A),unitdomain(B),exact = (exact(A)&&exact(B)))
     else
         error("UnitfulLinearAlgebra.mldivide: Dimensions of Multipliable Matrices A and B not compatible")
+    end
+end
+function (\)(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
+    if unitrange(A) == unitrange(B) # use comparedims instead
+        return rebuild(parent(A)\parent(B),unitdomain(A),unitdomain(B),exact = (exact(A) && exact(B)))
+    elseif ~exact(A) && (unitrange(A) ∥ unitrange(B))
+        Anew = convert_unitrange(A,unitrange(B)) 
+        return rebuild(parent(A)\parent(B),unitdomain(A),unitdomain(B),exact = (exact(A)&&exact(B)))
+    else
+        error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and B not compatible")
     end
 end
 
@@ -1281,10 +1345,20 @@ function det(A::T) where T<: AbstractMultipliableMatrix
         error("Determinant requires square matrix")
     end
 end
+function det(A::AbstractUnitfulMatrix) 
+    if square(A)
+        detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
+        return Quantity(det(parent(A)),detunit)
+    else
+        error("Determinant requires square matrix")
+    end
+end
 
-singular(A::T) where T <: AbstractMultipliableMatrix = iszero(ustrip(det(A)))
+#singular(A::T) where T <: AbstractMultipliableMatrix = iszero(ustrip(det(A)))
+singular(A::Union{AbstractMultipliableMatrix,AbstractUnitfulMatrix}) = iszero(ustrip(det(A)))
 
 trace(A::T) where T<: AbstractMultipliableMatrix = sum(diag(A.numbers)).*(unitrange(A)[1]/unitdomain(A)[1])
+trace(A::AbstractUnitfulMatrix) = sum(diag(parent(A))).*(unitrange(A)[1]/unitdomain(A)[1])
 
 """
     function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=eigsortby) where T <: AbstractMultipliableMatrix
