@@ -217,8 +217,8 @@ using Test
             @test Bᵀ[2,1] == B[1,2]
 
             ## This doesn't work
-            #Ip = identitymatrix([m,s])
-            #B2 + Ip
+            Ip = identitymatrix([m,s])
+            B2 + Ip
             
             @test Matrix(B)==Matrix(B2)
             @test multipliable(B)
@@ -355,7 +355,6 @@ using Test
             A = p*q̃'
             B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
 
-            # this part doesn't work
             scalar = 2.0K 
             C = B * scalar
             @test (Matrix(C)./Matrix(B))[1,1] == scalar
@@ -403,6 +402,7 @@ using Test
             # just numbers.
             x̃num = ustrip.(E) \ parent(y)
 
+            ## Stopped here
             # an exact matrix
             x̂ = G \ y
 

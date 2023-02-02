@@ -1194,7 +1194,7 @@ transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),
     Hart, pp. 200.                             
 """
 #identitymatrix(dimrange) = EndomorphicMatrix(I(length(dimrange)),dimrange;exact=false)
-identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),dimrange,dimrange;exact=false)
+identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),(Units(dimrange),Units(dimrange));exact=false)
 
 """
      function inv
