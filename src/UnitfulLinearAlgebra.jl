@@ -41,8 +41,11 @@ import DimensionalData: rebuild, @dim, dims, DimArray, AbstractDimArray, NoName,
 
 abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
 
-const AbstractUnitfulVector = AbstractDimArray{T,1} where T
-const AbstractUnitfulMatrix = AbstractDimArray{T,2} where T
+abstract type AbstractUnitfulArray{T,N,D<:Tuple,A} <: AbstractDimArray{T,N,D,A} end
+
+# should be a subtype, not an actual type
+const AbstractUnitfulVector{T<:Number} = AbstractUnitfulArray{T,1} where T
+const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulArray{T,2} where T
 
 # Concrete implementation ######################################################
 
@@ -52,7 +55,7 @@ const AbstractUnitfulMatrix = AbstractDimArray{T,2} where T
 
     Take DimArray and use dimensions for units
 """
-struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractDimArray{T,N,D,A}
+struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractUnitfulArray{T,N,D,A}
     data::A
     dims::D
     refdims::R
@@ -66,12 +69,12 @@ UnitfulMatrix(data::AbstractArray, dims; kw...) = UnitfulMatrix(data, (dims,); k
 function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; 
     refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false
 )
-    UnitfulMatrix(data, format(dims, data), refdims, name, metadata, exact)
+    UnitfulMatrix(data, format(Units.(dims), data), refdims, name, metadata, exact)
 end
 # back consistency with MMatrix
 function UnitfulMatrix(data::AbstractArray, unitrange, unitdomain; 
     refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false)
-    return UnitfulMatrix(data, format((unitrange,unitdomain), data), refdims, name, metadata, exact)
+    return UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), refdims, name, metadata, exact)
 end
 
 #function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVector,unitdomain::AbstractVector;exact=false)::AbstractMultipliableMatrix
@@ -699,6 +702,16 @@ end
 *(A::T1,b::T2) where T1 <: AbstractMultipliableMatrix where T2 <: Number = (exact(A) && dimensionless(b)) ?  BestMultipliableMatrix(A.numbers*ustrip(b),unitrange(A).*unit(b),unitdomain(A),exact = true) : BestMultipliableMatrix(A.numbers*ustrip(b),unitrange(A).*unit(b),unitdomain(A))
 *(b::T2,A::T1) where T1 <: AbstractMultipliableMatrix where T2 <: Number = A*b
 
+# already works for dimensionless scalars
+*(A::T1,b::Quantity) where T1 <: AbstractUnitfulMatrix = rebuild(A,parent(A)*ustrip(b),(unitrange(A).*unit(b),unitdomain(A)))
+*(A::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulMatrix = rebuild(A,parent(A),(unitrange(A).*b,unitdomain(A)))
+*(b::Union{Quantity,Unitful.FreeUnits},A::T1) where T1 <: AbstractUnitfulMatrix = A*b
+
+# vector-scalar multiplication
+*(a::T1,b::Quantity) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a)*ustrip(b),(unitrange(a).*unit(b),))
+*(a::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a),(unitrange(a).*b,))
+*(b::Union{Quantity,Unitful.FreeUnits},a::T1) where T1 <: AbstractUnitfulVector = a*b
+
 """
     function *(A,B)
 
@@ -1016,7 +1029,7 @@ function convert_unitdomain(A::AbstractMultipliableMatrix, newdomain::Vector)
         error("New unitdomain not parallel to unitdomain of Multipliable Matrix")
     end
 end
-function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Vector) 
+function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Units) 
     if unitdomain(A) ∥ newdomain
         #shift = newdomain./unitdomain(A)
         #newrange = unitrange(A).*shift
@@ -1074,7 +1087,7 @@ function convert_unitrange(A::AbstractMultipliableMatrix, newrange::Vector)
         error("New unitrange not parallel to unitrange of Multipliable Matrix")
     end
 end
-function convert_unitrange(A::AbstractUnitfulMatrix, newrange::Vector) 
+function convert_unitrange(A::AbstractUnitfulMatrix, newrange::Units) 
     if unitrange(A) ∥ newrange
         #shift = newdomain./unitdomain(A)
         #newrange = unitrange(A).*shift
@@ -1227,7 +1240,8 @@ function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
         error("UnitfulLinearAlgebra.mldivide: Dimensions of Multipliable Matrices A and B not compatible")
     end
 end
-function (\)(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
+
+function (\)(A::AbstractUnitfulArray,B::AbstractUnitfulArray)
     if unitrange(A) == unitrange(B) # use comparedims instead
         return rebuild(parent(A)\parent(B),unitdomain(A),unitdomain(B),exact = (exact(A) && exact(B)))
     elseif ~exact(A) && (unitrange(A) ∥ unitrange(B))

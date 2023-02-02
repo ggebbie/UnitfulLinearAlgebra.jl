@@ -1,4 +1,3 @@
-ENV["UNITFUL_FANCY_EXPONENTS"] = true
 using Revise
 using UnitfulLinearAlgebra
 using Unitful
@@ -10,6 +9,7 @@ using Test
 
 @testset "UnitfulLinearAlgebra.jl" begin
 
+    ENV["UNITFUL_FANCY_EXPONENTS"] = true
     m = u"m"
     s = u"s"
     K = u"K"
@@ -21,8 +21,6 @@ using Test
     """
     within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
 
-    MMatrix = BestMultipliableMatrix
-    
     @testset "scalars" begin
         c = 1m
         d = 2m
@@ -109,7 +107,7 @@ using Test
             
             # can use symbols? instead of dimension names?
             # B = UnitfulMatrix(ustrip.(A),(unit.(p),unit.(q)),exact=true)
-            B = UnitfulMatrix(ustrip.(A),(unit.(p),unit.(q)),exact=true)
+            #B = UnitfulMatrix(ustrip.(A),(unit.(p),unit.(q)),exact=true)
             B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q),exact=true) # MMatrix compatible
             r = UnitfulMatrix(ustrip.(q),unit.(q),exact=false) 
             #r = DimMatrix(reshape(ustrip.(q),2,1),unit.(q),[unit(1.0)],exact=true) 
@@ -182,7 +180,7 @@ using Test
             @test isequal(A*qold,Matrix(Bq))
             
             # new domain
-            qnew = UnitfulMatrix(ustrip.(qold),unit.(qold))
+            qnew = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
             D = convert_unitdomain(B,unitrange(qnew))
             #convert_unitdomain!(B,unit.(qnew)) # removed
             #@test unitrange(D) == unitrange(B)
@@ -190,9 +188,10 @@ using Test
             @test Bq ∥ D*qnew
 
             # stopped here
-            pnew = (p)s
+            p2 = UnitfulMatrix(ustrip.(p),unit.(p))
+            pnew = p2 *s
             qnew2 = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
-            E = convert_unitrange(B,unit.(pnew))
+            E = convert_unitrange(B,unitrange(pnew))
             @test Bq ∥ E*qnew
         end
 
