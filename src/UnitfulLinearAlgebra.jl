@@ -703,13 +703,13 @@ end
 *(b::T2,A::T1) where T1 <: AbstractMultipliableMatrix where T2 <: Number = A*b
 
 # already works for dimensionless scalars
-*(A::T1,b::Quantity) where T1 <: AbstractUnitfulMatrix = rebuild(A,parent(A)*ustrip(b),(unitrange(A).*unit(b),unitdomain(A)))
-*(A::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulMatrix = rebuild(A,parent(A),(unitrange(A).*b,unitdomain(A)))
+*(A::T1,b::Quantity) where T1 <: AbstractUnitfulMatrix = rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
+*(A::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulMatrix = rebuild(A,parent(A),(Units(unitrange(A).*b),unitdomain(A)))
 *(b::Union{Quantity,Unitful.FreeUnits},A::T1) where T1 <: AbstractUnitfulMatrix = A*b
 
 # vector-scalar multiplication
-*(a::T1,b::Quantity) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a)*ustrip(b),(unitrange(a).*unit(b),))
-*(a::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a),(unitrange(a).*b,))
+*(a::T1,b::Quantity) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a)*ustrip(b),(Units(unitrange(a).*unit(b)),))
+*(a::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a),(Units(unitrange(a).*b),))
 *(b::Union{Quantity,Unitful.FreeUnits},a::T1) where T1 <: AbstractUnitfulVector = a*b
 
 """
@@ -1033,7 +1033,7 @@ function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Units)
     if unitdomain(A) ∥ newdomain
         #shift = newdomain./unitdomain(A)
         #newrange = unitrange(A).*shift
-        newrange = unitrange(A).*(newdomain[1]/unitdomain(A)[1])
+        newrange = Units(unitrange(A).*(newdomain[1]/unitdomain(A)[1]))
         B = rebuild(A, parent(A), (newrange, newdomain))
         #B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
@@ -1091,7 +1091,7 @@ function convert_unitrange(A::AbstractUnitfulMatrix, newrange::Units)
     if unitrange(A) ∥ newrange
         #shift = newdomain./unitdomain(A)
         #newrange = unitrange(A).*shift
-        newdomain = unitdomain(A).*(newrange[1]/unitrange(A)[1])
+        newdomain = Units(unitdomain(A).*(newrange[1]/unitrange(A)[1]))
         B = rebuild(A, parent(A), (newrange, newdomain))
     else
         error("New unit domain not parallel to unit domain of Multipliable Matrix")

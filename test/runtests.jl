@@ -90,23 +90,10 @@ using Test
                 q̃ = [-1.0, 2.0]
             end
             q = ustrip.(q̃).*unit.(1 ./q̃)
-            
+            q2 = UnitfulMatrix(ustrip.(q̃),unit.(q̃.^-1))
             # outer product to make a multipliable matrix
             A = p*q̃'
 
-            #= using dimension names
-            @dim Units "units"
-            @dim UnitRange "unitrange"
-            @dim UnitDomain "unitdomain"
-            @dim VectorDomain "vectordomain"
-            B = UnitfulMatrix(ustrip.(A),(UnitRange(unit.(p)),UnitDomain(unit.(q))),exact=true)
-            #B = DimMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
-            #B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
-            r = UnitfulMatrix(reshape(ustrip.(q),2,1),(UnitDomain(unit.(q)),VectorDomain([unit(1.0)])),exact=true) 
-            =#
-            
-            # can use symbols? instead of dimension names?
-            # B = UnitfulMatrix(ustrip.(A),(unit.(p),unit.(q)),exact=true)
             #B = UnitfulMatrix(ustrip.(A),(unit.(p),unit.(q)),exact=true)
             B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q),exact=true) # MMatrix compatible
             r = UnitfulMatrix(ustrip.(q),unit.(q),exact=false) 
@@ -121,14 +108,14 @@ using Test
             @test isequal(right_uniform(A),right_uniform(B))
             @test ~dimensionless(B)
 
-            #= doesn't work unless * is expanded to take vectors=> AbstractUnitfulVector
-            y1 = B*q
+            # vcat and hcat fail, both sides of equation fail
+            y1 = B*q2
             Bvcat = vcat(B,B)
-            @test Bvcat*q == vcat(y1,y1)
+            @test Bvcat*q2 == vcat(y1,y1)
 
             Bhcat = hcat(B,B)
             @test Bhcat*vcat(q,q) == 2y1
-            =#
+            #
             
         end
 
@@ -187,12 +174,11 @@ using Test
             #@test unitdomain(D) == unitdomain(B)
             @test Bq ∥ D*qnew
 
-            # stopped here
             p2 = UnitfulMatrix(ustrip.(p),unit.(p))
             pnew = p2 *s
             qnew2 = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
             E = convert_unitrange(B,unitrange(pnew))
-            @test Bq ∥ E*qnew
+            @test Bq ∥ E*qnew2
         end
 
         @testset "array" begin
