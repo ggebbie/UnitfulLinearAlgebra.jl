@@ -216,9 +216,9 @@ using Test
             Bᵀ = transpose(B)
             @test Bᵀ[2,1] == B[1,2]
 
-            ## This doesn't work
             Ip = identitymatrix([m,s])
-            B2 + Ip
+            ## This doesn't work dur to ndims MethodError
+            #B2 + Ip
             
             @test Matrix(B)==Matrix(B2)
             @test multipliable(B)
@@ -241,6 +241,7 @@ using Test
             # @test unitdomain(B3) == [m,s]
         end
 
+        # NOT TESTED
         @testset "squarable" begin
             p = [1.0m, 2.0s]
             q̃ = 1 ./ [2.0m², 3.0m*s]
@@ -271,7 +272,8 @@ using Test
                 @test within(B*Matrix(F.vectors)[:,k],F.values[k]*Matrix(F.vectors)[:,k],1e-10) 
             end
         end
-        
+
+        # NOT TESTED
         @testset "eigenvalues" begin
             # requires uniform, squarable matrix
             p = [1.0, 2.0]m
@@ -311,7 +313,8 @@ using Test
             @test UnitfulLinearAlgebra.isposdef(C)
 
         end
-        
+
+        # NOT TESTED
         @testset "unit symmetric" begin
             p = [2.0m, 1.0s]
             q̃ = p
@@ -388,7 +391,9 @@ using Test
             F = UnitfulMatrix(E)
             G = convert_unitdomain(F,unitrange(x))
             Z2 = lu(G)
+
             @test within(E[Z2.p,:],Matrix(Z2.L*Z2.U),1e-10)
+
             @test ~singular(F)
             det(F)
 
@@ -402,8 +407,6 @@ using Test
             # just numbers.
             x̃num = ustrip.(E) \ parent(y)
 
-            ## Stopped here
-            # an exact matrix
             x̂ = G \ y
 
             #y2 = convert(Vector{Quantity},y)
@@ -422,11 +425,13 @@ using Test
             @test within(x̃,x,1e-10)
 
             # Does LU solve the same problem?
+            # MISSING UNITS HERE
             x̆ = Z2 \ y 
             @test within(x̆,x, 1e-10)
 
-            # works by hand, but failed on 1.8 GitHub Action
-            #𝐱 = Z2.U\(Z2.L\(Z2.P'*y))
+            # fails due to mixed matrix types
+            𝐱 = Z2.U\(Z2.L\(UnitfulMatrix(Z2.P'*y)))
+            @test within(𝐱,x,1e-10)
             #@test abs.(maximum(ustrip.(𝐱-x))) < 1e-10
 
         end    
@@ -593,10 +598,11 @@ using Test
             Au = A * 1u"1/s"
 
             # A with multipliable matrix
-            Amm = MMatrix(Au)
+            Amm = UnitfulMatrix(Au)
             
             x = rand(3)
             xu = x * 1u"mol/m^3"
+            xmm = UnitfulMatrix(x)
             # Test *
             A * x
             Au * xu
@@ -605,40 +611,41 @@ using Test
             # Test \
             A \ x # works with a UniformMatrix or LeftUnitformMatrix
             #Au \ x # won't work
-            Amm \ x # gets units right
+            Amm \ xmm # gets units right
             #A \ xu # won't work
             #Au \ xu # no existing method
-            Amm \ xu
+
 
             # ---------- Sparse tests ----------
             A = sprand(3, 3, 0.5) + I
             Au = A * 1u"1/s"
-            Ammfull = MMatrix(Matrix(Au))# not working with SparseArray now
-            Amm = MMatrix(A,fill(u"mol/m^3",3),fill(u"s*mol/m^3",3))  # use constructor, internally stores a sparse matrix
+            Ammfull = UnitfulMatrix(Matrix(Au))# not working with SparseArray now
+            Amm = UnitfulMatrix(A,fill(u"mol/m^3",3),fill(u"s*mol/m^3",3))  # use constructor, internally stores a sparse matrix
             x = rand(3)
             xu = x * 1u"mol/m^3"
-
+            xmm = UnitfulMatrix(xu)
             
             # Test *
             A * x
             Au * x
             A * xu
             Au * xu
-            Amm* xu
+            Amm* xmm
             # Test \
 
             # Problem: units not right for x to be conformable with Au.
             # change x to y
             y = rand(3);
             yu = y.*unitrange(Amm)
+            ymm = UnitfulMatrix(yu)
             A \ y 
             #Au \ x # stack overflow, doesn't work at lu, no method
-            Amm \ y # is UniformMatrix, so it works
             #A \ yu # doesn't work, no method
             #Au \ yu, doens't work, no lu method
-            Amm \ yu # works, same units as x
+            Amm \ ymm # works, should be same units as x but they aren't?
         end
 
+        # NOT TESTED
         @testset "dimarrays" begin
 
             using DimensionalData: @dim

@@ -712,6 +712,18 @@ end
 *(a::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a),(Units(unitrange(a).*b),))
 *(b::Union{Quantity,Unitful.FreeUnits},a::T1) where T1 <: AbstractUnitfulVector = a*b
 
+# (matrix/vector)-(matrix/vector) multiplication when inexact handled here
+function *(A::AbstractUnitfulArray,B::AbstractUnitfulArray)
+    if exact(A)
+        return DimensionalData._rebuildmul(A,B)
+    elseif unitdomain(A) ∥ unitrange(B)
+        return DimensionalData._rebuildmul(convert_unitdomain(A,unitrange(B)),B)
+    else
+        error("unitdomain(A) and unitrange(B) not parallel")
+    end
+end
+
+
 """
     function *(A,B)
 
@@ -800,6 +812,14 @@ function lu(A::AbstractMultipliableMatrix{T}) where T <: Number
     F = LU(factors,F̂.ipiv,F̂.info)
     return F
 end
+function lu(A::AbstractUnitfulMatrix)
+    F̂ = lu(parent(A))
+    factors = rebuild(A,parent(F̂.factors),(unitrange(A),unitdomain(A)))
+    #factors = MMatrix(F̂.factors, unitrange(A), unitdomain(A), exact=exact(A))
+    F = LU(factors,F̂.ipiv,F̂.info)
+    return F
+end
+
 
 """
     function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Symbol) where T
@@ -827,6 +847,29 @@ function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Sym
         Unum = triu!(numbers[1:min(m,n), 1:n])
         U = BestMultipliableMatrix(Unum, unitrange(mmatrix), unitdomain(mmatrix), exact=exact(mmatrix))
         return U
+    elseif d === :p
+        return LinearAlgebra.ipiv2perm(getfield(F, :ipiv), m)
+    elseif d === :P
+        return Matrix{T}(I, m, m)[:,LinearAlgebra.invperm(F.p)]
+    else
+        getfield(F, d)
+    end
+end
+function getproperty(F::LU{T,<:AbstractUnitfulMatrix,Vector{Int64}}, d::Symbol) where T
+    m, n = size(F)
+    if d === :L
+        mmatrix = getfield(F, :factors)
+        numbers = parent(mmatrix)
+        #numbers = getfield(mmatrix,:numbers)
+        # add ustrip to get numerical values
+        Lnum = tril!(numbers[1:m, 1:min(m,n)])
+        for i = 1:min(m,n); Lnum[i,i] = one(T); end
+        return rebuild(mmatrix,Lnum,(unitrange(mmatrix),unitrange(mmatrix)))
+    elseif d === :U
+        mmatrix = getfield(F, :factors)
+        numbers = parent(mmatrix)
+        Unum = triu!(numbers[1:min(m,n), 1:n])
+        return rebuild(mmatrix,Unum,(unitrange(mmatrix),unitdomain(mmatrix)))
     elseif d === :p
         return LinearAlgebra.ipiv2perm(getfield(F, :ipiv), m)
     elseif d === :P
@@ -1024,7 +1067,7 @@ dottable(a,b) = parallel(a, 1 ./ b)
 function convert_unitdomain(A::AbstractMultipliableMatrix, newdomain::Vector) 
     if unitdomain(A) ∥ newdomain
         newrange = unitrange(A).*(newdomain[1]/unitdomain(A)[1])
-        B = UnitfulMatrix(A.numbers,newrange,newdomain,exact=true)
+        B = MMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New unitdomain not parallel to unitdomain of Multipliable Matrix")
     end
@@ -1034,7 +1077,7 @@ function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Units)
         #shift = newdomain./unitdomain(A)
         #newrange = unitrange(A).*shift
         newrange = Units(unitrange(A).*(newdomain[1]/unitdomain(A)[1]))
-        B = rebuild(A, parent(A), (newrange, newdomain))
+        return rebuild(A, parent(A), (newrange, newdomain))
         #B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New unit domain not parallel to unit domain of Multipliable Matrix")
@@ -1194,7 +1237,7 @@ transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),
     Hart, pp. 200.                             
 """
 #identitymatrix(dimrange) = EndomorphicMatrix(I(length(dimrange)),dimrange;exact=false)
-identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),(Units(dimrange),Units(dimrange));exact=false)
+identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),(dimrange,dimrange),exact=true)
 
 """
      function inv
@@ -1241,12 +1284,11 @@ function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
     end
 end
 
-function (\)(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
-
+function (\)(A::AbstractUnitfulArray,b::AbstractUnitfulArray)
     if exact(A)
         DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
 
-    return rebuild(A,parent(A)\parent(b),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
+        return rebuild(A,parent(A)\parent(b),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
     elseif ~exact(A) && (unitrange(A) ∥ unitrange(b))
         Anew = convert_unitrange(A,unitrange(b)) 
         return rebuild(Anew,parent(Anew)\parent(b),(last(dims(Anew)),))
@@ -1309,6 +1351,9 @@ function (\)(F::LU{T,<: AbstractMultipliableMatrix{T},Vector{Int64}}, B::Abstrac
     # the complete rhs
     # UnitfulLinearAlgebra: add units
     return LinearAlgebra._cut_B(BB, 1:n).*unitdomain(F.factors)
+end
+function (\)(F::LU{T,<: AbstractUnitfulMatrix,Vector{Int64}}, B::AbstractUnitfulArray) where T<:Number
+    return F.U\(F.L\(UnitfulMatrix(F.P')*B))
 end
 
 """
