@@ -1241,14 +1241,17 @@ function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
     end
 end
 
-function (\)(A::AbstractUnitfulArray,B::AbstractUnitfulArray)
-    if unitrange(A) == unitrange(B) # use comparedims instead
-        return rebuild(parent(A)\parent(B),unitdomain(A),unitdomain(B),exact = (exact(A) && exact(B)))
-    elseif ~exact(A) && (unitrange(A) ∥ unitrange(B))
-        Anew = convert_unitrange(A,unitrange(B)) 
-        return rebuild(parent(A)\parent(B),unitdomain(A),unitdomain(B),exact = (exact(A)&&exact(B)))
+function (\)(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
+
+    if exact(A)
+        DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
+
+    return rebuild(A,parent(A)\parent(b),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
+    elseif ~exact(A) && (unitrange(A) ∥ unitrange(b))
+        Anew = convert_unitrange(A,unitrange(b)) 
+        return rebuild(Anew,parent(Anew)\parent(b),(last(dims(Anew)),))
     else
-        error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and B not compatible")
+        error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
     end
 end
 

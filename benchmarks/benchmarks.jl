@@ -22,9 +22,10 @@ n = 1000
 r = rand(unts,n)
 d = rand(unts2,n)
 num = rand(n,n)
-A = BestMultipliableMatrix(num,r,d,exact=true)
+#A = BestMultipliableMatrix(num,r,d,exact=true)
+A = UnitfulMatrix(num,r,d,exact=true)
 xnd = rand(n)
-x = xnd.*d
+x = UnitfulMatrix(xnd,d,exact=true)
 ynd = num*xnd
 y = A*x
 
@@ -32,11 +33,6 @@ println("matrix-vector multiplication")
 @btime num*xnd;
 @btime A*x;
 #@btime UnitfulLinearAlgebra.longmultiply(A,x);
-
-# transfer vector to Multipliable Matrix
-xmm = BestMultipliableMatrix(x[:,:]);
-@btime xmm = BestMultipliableMatrix(x[:,:]);
-@btime A*xmm;
 
 println("matrix inversion")
 @btime inv(num);
