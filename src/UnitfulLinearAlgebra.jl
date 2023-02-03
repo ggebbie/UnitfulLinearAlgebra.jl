@@ -1352,8 +1352,28 @@ function (\)(F::LU{T,<: AbstractMultipliableMatrix{T},Vector{Int64}}, B::Abstrac
     # UnitfulLinearAlgebra: add units
     return LinearAlgebra._cut_B(BB, 1:n).*unitdomain(F.factors)
 end
-function (\)(F::LU{T,<: AbstractUnitfulMatrix,Vector{Int64}}, B::AbstractUnitfulArray) where T<:Number
-    return F.U\(F.L\(UnitfulMatrix(F.P')*B))
+function (\)(F::LU{T,<: AbstractUnitfulMatrix,Vector{Int64}}, B::AbstractUnitfulVector) where T<:Number
+    if unitrange(F.factors) == unitrange(B)
+         # pass without any issues
+    elseif unitrange(F.factors) ∥ unitrange(B)
+        # convert_range of F.factors
+        # is allocating, will affect performance
+        convert_unitrange(F.factors,unitrange(B))
+    else
+        error("LU left divide: units of F, B, are not conformable")
+    end
+    LinearAlgebra.require_one_based_indexing(B)
+    m, n = size(F)
+    TFB = typeof(oneunit(eltype(parent(B))) / oneunit(eltype(parent(F.factors))))
+    FF = LinearAlgebra.Factorization{TFB}(LU(parent(F.factors),F.ipiv,F.info))
+    BB = LinearAlgebra._zeros(TFB, B, n)
+    if n > size(B, 1)
+        LinearAlgebra.copyto!(view(BB, 1:m, :), parent(B))
+    else
+        LinearAlgebra.copyto!(BB, parent(B))
+    end
+    LinearAlgebra.ldiv!(FF, BB)
+    return rebuild(B,LinearAlgebra._cut_B(BB, 1:n),(unitdomain(F.factors),))
 end
 
 """

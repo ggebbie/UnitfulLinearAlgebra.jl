@@ -16,18 +16,18 @@ const J² = u"J^2"
 const kg = u"kg"
 const N = u"N"
 
-unts = [m,s,K,m²]
-unts2 = [J,N,kg,J²]
-n = 1000
-r = rand(unts,n)
-d = rand(unts2,n)
-num = rand(n,n)
+unts = [m,s,K,m²];
+unts2 = [J,N,kg,J²];
+n = 1000;
+r = rand(unts,n);
+d = rand(unts2,n);
+num = rand(n,n);
 #A = BestMultipliableMatrix(num,r,d,exact=true)
-A = UnitfulMatrix(num,r,d,exact=true)
-xnd = rand(n)
-x = UnitfulMatrix(xnd,d,exact=true)
-ynd = num*xnd
-y = A*x
+A = UnitfulMatrix(num,r,d,exact=true);
+xnd = rand(n);
+x = UnitfulMatrix(xnd,d,exact=true);
+ynd = num*xnd;
+y = A*x;
 
 println("matrix-vector multiplication")
 @btime num*xnd;
@@ -39,8 +39,8 @@ println("matrix inversion")
 @btime inv(A);
 
 println("matrix-matrix multiply")
-numinv = inv(num)
-Ainv = inv(A)
+numinv = inv(num);
+Ainv = inv(A);
 @btime numinv*num;
 @btime Ainv*A;
 
@@ -49,11 +49,11 @@ println("matrix left divide")
 @btime A\y;
 
 println("LU factorization")
-@btime lu(A.numbers);
+@btime lu(parent(A));
 @btime lu(A);
 
-numlu = lu(num)
-Alu = lu(A)
+numlu = lu(num);
+Alu = lu(A);
 
 println("LU left divide")
 @btime numlu\ynd;
