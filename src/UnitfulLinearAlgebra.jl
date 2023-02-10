@@ -68,8 +68,12 @@ end
 UnitfulMatrix(data::AbstractArray, dims; kw...) = UnitfulMatrix(data, (dims,); kw...)
 function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; 
     refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false
-)
-    UnitfulMatrix(data, format(Units.(dims), data), refdims, name, metadata, exact)
+                       )
+    if eltype(dims) <: Vector
+        return UnitfulMatrix(data, format(Units.(dims), data), refdims, name, metadata, exact)
+    elseif eltype(dims) <: Units
+        return UnitfulMatrix(data, format(dims, data), refdims, name, metadata, exact)
+    end        
 end
 # back consistency with MMatrix
 function UnitfulMatrix(data::AbstractArray, unitrange, unitdomain; 
@@ -1219,7 +1223,9 @@ unitrange(A::Union{AbstractUnitfulMatrix,AbstractUnitfulVector}) = first(dims(A)
 
     Hart, pp. 205.
 """
-transpose(A::AbstractMultipliableMatrix) = BestMultipliableMatrix(transpose(A.numbers),unitdomain(A).^-1, unitrange(A).^-1,exact=exact(A)) 
+transpose(A::AbstractMultipliableMatrix) = BestMultipliableMatrix(transpose(A.numbers),unitdomain(A).^-1, unitrange(A).^-1,exact=exact(A))
+# Had to redefine tranpose or it was incorrect based on AbstractArray interface!
+transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1))) 
 transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unitrange(A).^-1, exact(A)) 
 transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),
                                             Base.convert(Vector{Unitful.FreeUnits},[unitdomain(A)[1]^-1]),
@@ -1706,12 +1712,19 @@ function cholesky(A::AbstractMultipliableMatrix)
     if unit_symmetric(A)
         C = LinearAlgebra.cholesky(A.numbers)
         factors = BestMultipliableMatrix(C.factors,unitdomain(A)./unitdomain(A),unitdomain(A),exact=exact(A))
-
         return Cholesky(factors,C.uplo,C.info)
     else
         error("requires unit symmetric matrix")
     end
-    
+end
+function cholesky(A::AbstractUnitfulMatrix)
+    if unit_symmetric(A)
+        C = LinearAlgebra.cholesky(parent(A))
+        factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)))
+        return Cholesky(factors,C.uplo,C.info)
+    else
+        error("requires unit symmetric matrix")
+    end
 end
 
 function getproperty(C::Cholesky{T,<:AbstractMultipliableMatrix}, d::Symbol) where T 
@@ -1725,7 +1738,25 @@ function getproperty(C::Cholesky{T,<:AbstractMultipliableMatrix}, d::Symbol) whe
         # use transpose to get units right
         return BestMultipliableMatrix(numbers,unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1,exact = Cfactors.exact)
     elseif d === :UL
+        # next line doesn't look right
         return (Cuplo === 'U' ?        BestMultipliableMatrix(UpperTriangular(Cfactors.numbers),unitrange(Cfactors),unitdomain(Cfactors),exact = Cfactors.exact) : BestMultipliableMatrix(LowerTriangular(Cfactors.numbers),unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1,exact = Cfactors.exact))
+    else
+        #println("caution: fallback not tested")
+        return getfield(C, d)
+    end
+end
+function getproperty(C::Cholesky{T,<:AbstractUnitfulMatrix}, d::Symbol) where T 
+    Cfactors = getfield(C, :factors)
+    Cuplo    = getfield(C, :uplo)
+    if d === :U
+        numbers = UpperTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? parent(Cfactors) : copy(transpose(parent(Cfactors))))
+        return rebuild(Cfactors,numbers,(unitrange(Cfactors),unitdomain(Cfactors)))
+    elseif d === :L
+        numbers = LowerTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? parent(Cfactors) : copy(transpose(parent(Cfactors))))
+        # use transpose to get units right
+        return rebuild(Cfactors,numbers,(Units(unitdomain(Cfactors).^-1),Units(unitrange(Cfactors).^-1)))
+    elseif d === :UL
+        (Cuplo === 'U') ? (return rebuild(Cfactors,UpperTriangular(parent(Cfactors)))) : (return rebuild(Cfactors,LowerTriangular(parent(Cfactors)),(unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1)))
     else
         #println("caution: fallback not tested")
         return getfield(C, d)
@@ -1740,7 +1771,8 @@ end
      and dimensional unit domain `d`.
     Like `LinearAlgebra.Diagonal`, this extension is restricted to square matrices.
 """
-Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
+DiagonalUnitSymmetric(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   # return UnitSymmetric Matrix
+Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
 
 """
     function vcat(A,B)
