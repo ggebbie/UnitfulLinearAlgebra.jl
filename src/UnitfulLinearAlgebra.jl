@@ -1585,17 +1585,28 @@ Functions available for DSVD: `size`, `dsvdvals`, `inv`.
 Function available for SVD that would be good to have to DSVD: `ldiv!`, `transpose`. 
 ```
 """
-struct DSVD{T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},MQY<:AbstractMultipliableMatrix{T},MQX<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}} <: Factorization{T}
+struct DSVD{T,Tr,MU<:AbstractUnitfulMatrix{T},MV<:AbstractUnitfulMatrix{T},MQY<:AbstractUnitfulMatrix{T},MQX<:AbstractUnitfulMatrix{T},C<:AbstractVector{Tr}} <: Factorization{T}
     U′::MU
     S::C
     V′⁻¹::MV
     Qy::MQY
     Qx::MQX
-    function DSVD{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx) where {T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},MQY<:AbstractMultipliableMatrix{T},MQX<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}}
+    function DSVD{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx) where {T,Tr,MU<:AbstractUnitfulMatrix{T},MV<:AbstractUnitfulMatrix{T},MQY<:AbstractUnitfulMatrix{T},MQX<:AbstractUnitfulMatrix{T},C<:AbstractVector{Tr}}
         LinearAlgebra.require_one_based_indexing(U′, S, V′⁻¹,Qy,Qx)
         new{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx)
     end
 end
+# struct DSVD{T,Tr,MU<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MV<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MQY<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MQX<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},C<:AbstractVector{Tr}} <: Factorization{T}
+#     U′::MU
+#     S::C
+#     V′⁻¹::MV
+#     Qy::MQY
+#     Qx::MQX
+#     function DSVD{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx) where {T,Tr,MU<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MV<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MQY<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MQX<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},C<:AbstractVector{Tr}}
+#         LinearAlgebra.require_one_based_indexing(U′, S, V′⁻¹,Qy,Qx)
+#         new{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx)
+#     end
+# end
 DSVD(U′::AbstractArray{T}, S::AbstractVector{Tr}, V′⁻¹::AbstractArray{T}, Qy::AbstractArray{T}, Qx::AbstractArray{T}) where {T,Tr} =
     DSVD{T,Tr,typeof(U′),typeof(V′⁻¹),typeof(Qy),typeof(Qx),typeof(S)}(U′, S, V′⁻¹,Qy,Qx)
 DSVD{T}(U′::AbstractArray, S::AbstractVector{Tr}, V′⁻¹::AbstractArray,Qy::AbstractArray, Qx::AbstractArray) where {T,Tr} =
@@ -1614,7 +1625,6 @@ DSVD{T}(F::DSVD) where {T} = DSVD(
     convert(AbstractMatrix{T}, F.V′⁻¹),
     convert(AbstractMatrix{T}, F.Qy),
     convert(AbstractMatrix{T}, F.Qx))
-
 
 Factorization{T}(F::DSVD) where {T} = DSVD{T}(F)
 
@@ -1673,9 +1683,22 @@ function dsvd(A::AbstractMultipliableMatrix,Py::AbstractMultipliableMatrix,Px::A
     println(typeof(MMatrix(F.U)))
     return DSVD(MMatrix(F.U),F.S,MMatrix(F.Vt),Qy,Qx)
 end
+function dsvd(A::AbstractUnitfulMatrix,Py::AbstractUnitfulMatrix,Px::AbstractUnitfulMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(parent(A))) 
+
+    unit_symmetric(Py) ? Qy = getproperty(cholesky(Py),:U) : error("norm matrix for range not unit symmetric")
+    unit_symmetric(Px) ? Qx = getproperty(cholesky(Px),:U) : error("norm matrix for domain not unit symmetric")
+
+    # must be more efficient way
+    #A′ = Qr*(A*inv(Qd))
+    # still inefficient with copy
+    A′ =   copy(transpose(transpose(Qx)\transpose(Qy*A)))
+    ~dimensionless(A′) && error("A′ should be dimensionless to implement `LinearAlgebra.svd`")
+    F = svd(parent(A′), full=full, alg=alg)
+    return DSVD(UnitfulMatrix(F.U),F.S,UnitfulMatrix(F.Vt),Qy,Qx)
+end
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractVector})
-    summary(io, F); println(io)
+    #summary(io, F); println(io)
     println(io, "U (left singular vectors):")
     show(io, mime, F.U)
     println(io, "\nsingular values:")

@@ -486,12 +486,12 @@ using Test
         
             # example: polynomial fitting
             k = 3
-            E = hcat(randn(k),randn(k)u1/u2,randn(k)u1/u3)
-            y = randn(k)u1
-            x = [randn()u1; randn()u2; randn()u3] 
+            #E = UnitfulMatrix(hcat(randn(k),randn(k)u1/u2,randn(k)u1/u3))
+            E = UnitfulMatrix(randn(k,3),fill(m,k),[u1,u2,u3])
+            y = UnitfulMatrix(randn(k)u1)
+            x = UnitfulMatrix([randn()u1; randn()u2; randn()u3])
 
-            F = MMatrix(E)
-            convert_unitdomain!(F,unit.(x))
+            #convert_unitdomain!(E,unit.(x))
 
             # Define norms for this space.
             p1 = [m,m/s,m/s/s]
@@ -508,7 +508,7 @@ using Test
             Pr = inv(Cr)
 
             ##
-            G = dsvd(F,Pr,Pd)
+            G = dsvd(E,Pr,Pd)
 
             # provides inverse of singular vectors in an efficient way.
             # are they correct?
