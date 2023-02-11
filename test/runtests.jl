@@ -432,12 +432,11 @@ using Test
 
         end    
 
-        # NOT TESTED
         @testset "uniform svd" begin
             
 	    E = [1/2 1/2; 1/4 3/4; 3/4 1/4]m
             
-            E2 = MMatrix(E)
+            E2 = UnitfulMatrix(E)
             @test size(E2)==size(E)
             Eᵀ = transpose(E2)
             @test E2[2,1] == Eᵀ[1,2]
@@ -457,15 +456,15 @@ using Test
             # recover using Diagonal dimensional matrix
             # use Full SVD (thin may not work)
  	    Λ = diagm(F2.S,unitrange(E2),unitdomain(E2),exact=true)
-            Ẽ = F2.U*(Λ*F2.Vt)
+            Ẽ = UnitfulMatrix(F2.U)*(Λ*UnitfulMatrix(F2.Vt))
             @test within(Matrix(Ẽ),E,1e-10)
 
             # solve a linear system with SVD
             # could also be solved with ldiv! but not yet implemented.
             x = [1.0, 2.0]
             y = E*x
-            y2 = E2*x
-            x̃ = E2\y 
+            y2 = E2*UnitfulMatrix(x)
+            x̃ = E2\y2 
             x̃2 = inv(F2)*y # find particular solution
             @test within(x̃2,x,1e-10)
 
@@ -643,22 +642,22 @@ using Test
         end
 
         # NOT TESTED
-        @testset "dimarrays" begin
+        # @testset "dimarrays" begin
 
-            using DimensionalData: @dim
-            @dim Units "units"
-            p = unit.([1.0m, 9.0s])
-            q̃ = unit.([-1.0K, 2.0])
-            U = zeros(Units(p),Units(q̃))
-            Unum = [1.0 2.0; 3.0 4.0]
-            V = DimMatrix(Unum,(Units(p),Units(q̃)),exact=true)
+        #     using DimensionalData: @dim
+        #     @dim Units "units"
+        #     p = unit.([1.0m, 9.0s])
+        #     q̃ = unit.([-1.0K, 2.0])
+        #     U = zeros(Units(p),Units(q̃))
+        #     Unum = [1.0 2.0; 3.0 4.0]
+        #     V = DimMatrix(Unum,(Units(p),Units(q̃)),exact=true)
 
-            vctr = DimMatrix(rand(2),(Units(q̃)),exact=true)
+        #     vctr = DimMatrix(rand(2),(Units(q̃)),exact=true)
 
-            Units(p.^-1)
-            inv(Matrix(V.data))
-            Vi = DimMatrix(inv(Unum),(Units(q̃),Units(p)));
-            Vi*V;
+        #     Units(p.^-1)
+        #     inv(Matrix(V.data))
+        #     Vi = DimMatrix(inv(Unum),(Units(q̃),Units(p)));
+        #     Vi*V;
             
             # years = (1990.0:2000.0)
             # ny = length(years)

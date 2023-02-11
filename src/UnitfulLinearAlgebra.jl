@@ -1557,8 +1557,14 @@ function svd(A::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorit
         error("UnitfulLinearAlgebra: SVD doesn't exist for non-uniform matrices")
     end
 end
-
-
+function svd(A::AbstractUnitfulMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(parent(A))) 
+    if uniform(A) 
+        F = svd(parent(A), full=full, alg=alg)
+        return SVD(F.U,F.S * unitrange(A)[1]./unitdomain(A)[1],F.Vt)
+    else
+        error("UnitfulLinearAlgebra: SVD doesn't exist for non-uniform matrices")
+    end
+end
 
 # Dimensional (Unitful) Singular Value Decomposition, following Singular Value Decomposition from Julia LinearAlgebra.jl
 """
@@ -1718,8 +1724,7 @@ size(A::DSVD) = (size(A, 1), size(A, 2))
      and dimensional unit domain `d`. Works for square or non-square matrices.
 """
 diagm(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = BestMultipliableMatrix(spdiagm(length(r),length(d),ustrip.(v)),r,d; exact=exact)    
-#Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false) = MultipliableMatrix(Diagonal(ustrip.(v)),r,d ; exact=exact)    
-#end
+diagm(v::AbstractVector,r::Units,d::Units; exact = false) = UnitfulMatrix(spdiagm(length(r),length(d),ustrip.(v)),(r,d); exact=exact)    
 
 """
     function diag(A::AbstractMultipliableMatrix)
