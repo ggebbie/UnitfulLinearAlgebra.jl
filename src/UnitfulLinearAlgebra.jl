@@ -567,6 +567,7 @@ getindex(A::T,i::Int,j::Union{Colon,Int,UnitRange}) where T <: AbstractMultiplia
 
 #       getindex(::A{T,N}, ::Vararg{Int, N}) where {T,N} # if IndexCartesian()
 getindex(A::T,i::Union{UnitRange,Colon},j::Union{UnitRange,Colon}) where T <: AbstractMultipliableMatrix = MMatrix(A.numbers[i,j],unitrange(A)[i],unitdomain(A)[j],exact=exact(A)) 
+getindexqty(A::AbstractUnitfulMatrix,i::Int,j::Int) = Quantity.(parent(A)[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
 
 #getindex(A::T,i::Colon,j::UnitRange) where T <: AbstractMultipliableMatrix = MMatrix(A.numbers[i,j],unitrange(A)[i],unitdomain(A)[j],exact=exact(A)) 
 
@@ -585,9 +586,14 @@ getindex(A::T,i::Union{UnitRange,Colon},j::Union{UnitRange,Colon}) where T <: Ab
 - `Quantity`: numerical value and units
 """
 function setindex!(A::T,v,i::Int,j::Int) where T <: AbstractMultipliableMatrix
-
     if unit(v) == unitrange(A)[i]./unitdomain(A)[j]
         A.numbers[i,j] = ustrip(v)
+    else error("new value has incompatible units")
+    end
+end
+function setindex!(A::AbstractUnitfulMatrix,v::Quantity,i::Int,j::Int) 
+    if unit(v) == unitrange(A)[i]./unitdomain(A)[j]
+        A[i,j] = ustrip(v)
     else error("new value has incompatible units")
     end
 end
@@ -758,6 +764,8 @@ end
 # special case: MultipliableMatrix * non-multipliable matrix
 *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractMatrix = A*BestMultipliableMatrix(B)
 *(A::T2,B::T1) where T1<:AbstractMultipliableMatrix where T2<:AbstractMatrix = BestMultipliableMatrix(A)*B
+#*(A::AbstractUnitfulMatrix,B::AbstractVector) = A*UnitfulMatrix(B)
+#*(A::AbstractVector,B::AbstractUnitfulMatrix) = UnitfulMatrix(A)*B
 
 """
     function +(A,B)
@@ -766,13 +774,19 @@ end
     A+B requires the two matrices to have dimensional similarity.
 """
 function +(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
-
     bothexact = exact(A) && exact(B)
-
-    #if unitrange(A) ~ unitrange(B) && unitdomain(A) ~ unitdomain(B)
     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
         ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
         return MultipliableMatrix(A.numbers+B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
+    else
+        error("matrices not dimensionally conformable for addition")
+    end
+end
+function +(A::AbstractUnitfulMatrix{T1},B::AbstractUnitfulMatrix{T2}) where T1 where T2
+    bothexact = exact(A) && exact(B)
+    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
+        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
+        return rebuild(A,parent(A)+parent(B),(unitrange(A),unitdomain(A))) 
     else
         error("matrices not dimensionally conformable for addition")
     end
@@ -784,14 +798,19 @@ end
     Matrix-matrix subtraction with units/dimensions.
     A-B requires the two matrices to have dimensional similarity.
 """
-function -(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
-
+function -(A::AbstractUnitfulMatrix{T1},B::AbstractUnitfulMatrix{T2}) where T1 where T2
     bothexact = exact(A) && exact(B)
-
     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
-    #if unitrange(A) ~ unitrange(B) && unitdomain(A) ~ unitdomain(B)
-    #if unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)
+        return rebuild(A,parent(A)-parent(B),(unitrange(A),unitdomain(A))) # takes exact(A) but should be bothexact 
+    else
+        error("matrices not dimensionally conformable for subtraction")
+    end
+end
+function -(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
+    bothexact = exact(A) && exact(B)
+    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
+       ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
         return MMatrix(A.numbers-B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
     else
         error("matrices not dimensionally conformable for subtraction")
@@ -1170,6 +1189,19 @@ function convert_unitrange!(A::AbstractMultipliableMatrix, newrange::Vector)
          error("New range not parallel to range of Multipliable Matrix")
      end
 end
+function convert_unitrange!(A::AbstractUnitfulMatrix, newrange::Vector)
+    if unitrange(A) ∥ newrange
+        shift = newrange[1]./unitrange(A)[1]
+        for (ii,vv) in enumerate(A.dims[2])
+            A.dims[2][ii] *= shift
+        end
+        for (ii,vv) in enumerate(A.dims[1])
+            A.dims[1][ii] *= shift
+        end
+     else
+         error("New range not parallel to range of Unitful Matrix")
+     end
+end
 
 """
     function exact(A)
@@ -1462,10 +1494,17 @@ trace(A::AbstractUnitfulMatrix) = sum(diag(parent(A))).*(unitrange(A)[1]/unitdom
     `eigvals` of Eigen struct also available.
 """
 function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) where T <: AbstractMultipliableMatrix
-
     if squarable(A) 
         F = LinearAlgebra.eigen(A.numbers, permute=permute, scale=scale, sortby=sortby)
         return Eigen(F.values.*(unitrange(A)[1]/unitdomain(A)[1]), BestMultipliableMatrix(F.vectors,unitdomain(A),fill(unit(1.0),size(A,2))))
+    else
+        error("UnitfulLinearAlgebra: Eigenvalue decomposition doesn't exist for for non-squarable matrices")
+    end
+end
+function eigen(A::AbstractUnitfulMatrix;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) 
+    if squarable(A) 
+        F = LinearAlgebra.eigen(parent(A), permute=permute, scale=scale, sortby=sortby)
+        return Eigen(F.values.*(unitrange(A)[1]/unitdomain(A)[1]), rebuild(A,F.vectors,(unitdomain(A),Units(fill(unit(1.0),size(A,2))))))
     else
         error("UnitfulLinearAlgebra: Eigenvalue decomposition doesn't exist for for non-squarable matrices")
     end
@@ -1476,17 +1515,17 @@ end
     Should the units be stripped out of the function?
     Only defined for matrices with uniform units (pp. 101, Hart, 1995). 
 """
-isposdef(A::Eigen{T,V,S,U}) where {U<: AbstractVector, S<:AbstractMultipliableMatrix, V, T <: Number} = (uniform(A.vectors) && isreal(A.values)) && all(x -> x > 0, ustrip.(A.values))
+isposdef(A::Eigen{T,V,S,U}) where {U<: AbstractVector, S<:Union{AbstractMultipliableMatrix,AbstractUnitfulMatrix}, V, T <: Number} = (uniform(A.vectors) && isreal(A.values)) && all(x -> x > 0, ustrip.(A.values))
 
 """
    Extend `inv` for Eigen factorizations of `MultipliableMatrix`s.
     Only defined for matrices with uniform units (pp. 101, Hart, 1995). 
 """
-function inv(A::Eigen{T,V,S,U}) where {U <: AbstractVector, S <: AbstractMultipliableMatrix, V, T <: Number}
+function inv(A::Eigen{T,V,S,U}) where {U <: AbstractVector, S <: Union{AbstractUnitfulMatrix,AbstractMultipliableMatrix}, V, T <: Number}
 
     if (uniform(A.vectors) && isreal(A.values))
         ur = unitrange(A.vectors)
-        ud = unit.(A.values)
+        ud = Units(unit.(A.values))
         Λ⁻¹ = Diagonal(A.values.^-1,ud,ur)
         return A.vectors* transpose(transpose(A.vectors) \ Λ⁻¹)
 
@@ -1773,6 +1812,7 @@ end
 """
 DiagonalUnitSymmetric(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   # return UnitSymmetric Matrix
 Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
+Diagonal(v::AbstractVector,r::Units,d::Units; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
 
 """
     function vcat(A,B)
