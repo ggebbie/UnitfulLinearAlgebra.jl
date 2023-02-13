@@ -1,8 +1,13 @@
 module UnitfulLinearAlgebra
 
-using Unitful, LinearAlgebra, SparseArrays
+using Unitful
+using LinearAlgebra
+using SparseArrays
+using DimensionalData
+#using DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
 
 export AbstractMultipliableMatrix
+export UnitfulMatrix
 export MultipliableMatrix, EndomorphicMatrix
 export SquarableMatrix, UniformMatrix
 export LeftUniformMatrix, RightUniformMatrix
@@ -21,7 +26,8 @@ export unitrange, unitdomain
 export square, squarable, singular, unit_symmetric
 export lu, det, trace, diag, diagm
 export Diagonal, (\), cholesky
-export identitymatrix, show, vcat, hcat
+export identitymatrix, show, vcat, hcat, rebuild
+export describe
 
 import LinearAlgebra: inv, det, lu,
     svd, getproperty, eigen, isposdef,
@@ -29,7 +35,119 @@ import LinearAlgebra: inv, det, lu,
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
     size, range, transpose, similar, show, vcat, hcat
 
+import DimensionalData: rebuild, @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
+
+@dim Units "units"
+
 abstract type AbstractMultipliableMatrix{T<:Number} <: AbstractMatrix{T} end
+
+abstract type AbstractUnitfulArray{T,N,D<:Tuple,A} <: AbstractDimArray{T,N,D,A} end
+
+# should be a subtype, not an actual type
+const AbstractUnitfulVector{T<:Number} = AbstractUnitfulArray{T,1} where T
+const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulArray{T,2} where T
+
+# Concrete implementation ######################################################
+
+
+"""
+    struct UnitfulMatrix
+
+    Take DimArray and use dimensions for units
+"""
+struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractUnitfulArray{T,N,D,A}
+    data::A
+    dims::D
+    refdims::R
+    name::Na
+    metadata::Me
+    exact::Bool
+end
+
+# 2 arg version
+UnitfulMatrix(data::AbstractArray, dims; kw...) = UnitfulMatrix(data, (dims,); kw...)
+function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; 
+    refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false
+                       )
+    if eltype(dims) <: Vector
+        return UnitfulMatrix(data, format(Units.(dims), data), refdims, name, metadata, exact)
+    elseif eltype(dims) <: Units
+        return UnitfulMatrix(data, format(dims, data), refdims, name, metadata, exact)
+    end        
+end
+# back consistency with MMatrix
+function UnitfulMatrix(data::AbstractArray, unitrange, unitdomain; 
+    refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false)
+    return UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), refdims, name, metadata, exact)
+end
+
+#function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVector,unitdomain::AbstractVector;exact=false)::AbstractMultipliableMatrix
+#                V = UnitfulMatrix(Unum,(Units(p),Units(q̃)))
+
+"""
+    rebuild(A::UnitfulMatrix, data, [dims, refdims, name, metadata]) => UnitfulMatrix
+    rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix
+
+Rebuild a `UnitfulMatrix` with some field changes. All types
+that inherit from `UnitfulMatrix` must define this method if they
+have any additional fields or alternate field order.
+
+Implementations can discard arguments like `refdims`, `name` and `metadata`.
+
+This method can also be used with keyword arguments in place of regular arguments.
+"""
+@inline function rebuild(
+    A::UnitfulMatrix, data, dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
+    rebuild(A, data, dims, refdims, name, metadata(A), exact(A))
+end
+
+@inline function rebuild(
+    A::UnitfulMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, metadata, exactflag
+)
+    UnitfulMatrix(data, dims, refdims, name, metadata,exactflag)
+end
+
+#@inline function rebuild(
+#     A::UnitfulMatrix, data; dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
+#     DimensionalData.rebuild(A, data, dims, refdims, name, metadata(A),exact(A))
+# end
+
+"""
+    rebuild(A::UnitfulMatrix, data, dims, refdims, name, metadata,exactflag) => UnitfulMatrix
+    rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix
+
+Rebuild a `UnitfulMatrix` with new fields. Handling partial field
+update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
+"""
+#@inline function rebuild(
+#    A::UnitfulMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, metadata, exactflag
+#)
+#    UnitfulMatrix(data, dims, refdims, name, metadata, exactflag)
+#end
+
+function Base.show(io::IO, mime::MIME"text/plain", A::UnitfulMatrix{T,N}) where {T,N}
+    lines = 0
+    summary(io, A)
+    print_name(io, name(A))
+    #lines += Dimensions.print_dims(io, mime, dims(A))
+    !(isempty(dims(A)) || isempty(refdims(A))) && println(io)
+    lines += Dimensions.print_refdims(io, mime, refdims(A))
+    println(io)
+
+    # DELETED THIS OPTIONAL PART HERE
+    # Printing the array data is optional, subtypes can 
+    # show other things here instead.
+    ds = displaysize(io)
+    ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
+    #println("show after")
+    #DimensionalData.show_after(ioctx, mime, Matrix(A))
+
+    #function print_array(io::IO, mime, A::AbstractDimArray{T,2}) where T
+    T2 = eltype(A)
+    Base.print_matrix(DimensionalData._print_array_ctx(ioctx, T2), Matrix(A))
+
+    return nothing
+end
 
 """
     struct MultipliableMatrix
@@ -224,6 +342,42 @@ function BestMultipliableMatrix(A::Matrix)::AbstractMultipliableMatrix
         return nothing
     end
 end
+function UnitfulMatrix(A::AbstractMatrix)
+    numbers = ustrip.(A)
+    M,N = size(numbers)
+    unitdomain = Vector{Unitful.FreeUnits}(undef,N)
+    unitrange = Vector{Unitful.FreeUnits}(undef,M)
+
+    for i = 1:M
+        unitrange[i] = unit(A[i,1])
+    end
+    
+    for j = 1:N
+        unitdomain[j] = unit(A[1,1])/unit(A[1,j])
+    end
+
+    B = UnitfulMatrix(numbers,unitrange,unitdomain)
+    # if the array is not multipliable, return nothing
+    if Matrix(B) == A
+        return B
+    else
+        return nothing
+    end
+end
+function UnitfulMatrix(A::AbstractVector) # should be called UnitfulVector?
+    numbers = ustrip.(A)
+    M = size(numbers)
+    unitrange = Vector{Unitful.FreeUnits}(undef,M)
+
+    unitrange = unit.(A)
+    B = UnitfulMatrix(numbers,unitrange)
+    # if the array is not multipliable, return nothing
+    if Matrix(B) == A
+        return B
+    else
+        return nothing
+    end
+end
 
 """
     function BestMultipliableMatrix(numbers,unitrange,unitdomain;exact=false)
@@ -260,6 +414,52 @@ end
 MMatrix = BestMultipliableMatrix
 
 """
+    function BestMultipliableMatrix(numbers,unitrange,unitdomain;exact=false)
+
+    What kind of Multipliable Matrix is the best representation?
+"""
+function describe(A::UnitfulMatrix)
+    matrixtype = ""
+    
+    dimensionless(A) && ( matrixtype *= "Dimensionless ")
+
+    # check degree of uniformity
+    #if uniform(unitrange) && uniform(unitdomain)
+    if uniform(A)
+        matrixtype *= "Uniform "
+    #elseif uniform(unitrange)
+    elseif left_uniform(A)
+        matrixtype *= "Left Uniform "
+    #elseif uniform(unitdomain)
+    elseif right_uniform(A)
+        matrixtype *= "Right Uniform "
+    end
+
+    if square(A)
+        #if unitrange == unitdomain
+        if endomorphic(A)
+            matrixtype *= "Endomorphic "
+        end
+        
+        #if unitrange ∥ unitdomain
+        if squarable(A)
+            matrixtype *= "Squarable "
+        end
+        
+        #if unitrange ∥ 1 ./unitdomain
+        if unit_symmetric(A)
+            matrixtype *= "Unit Symmetric "
+        end
+
+        if ~endomorphic(A) && ~squarable(A) && ~unit_symmetric(A)
+            matrixtype *= "Square " # a fallback description
+        end
+    end
+
+    return matrixtype*"Matrix"
+end
+
+"""
     function multipliable(A)::Bool
 
     Is an array multipliable?
@@ -267,7 +467,8 @@ MMatrix = BestMultipliableMatrix
 """
 multipliable(A::Matrix) = ~isnothing(BestMultipliableMatrix(A))
 multipliable(A::T) where T <: AbstractMultipliableMatrix = true
-
+multipliable(A::UnitfulMatrix) = true
+    
 """
     function EndomorphicMatrix
 
@@ -333,7 +534,7 @@ end
 """
 endomorphic(A::Matrix) = ~isnothing(EndomorphicMatrix(A))
 endomorphic(A::EndomorphicMatrix) = true
-endomorphic(A::T) where T <: AbstractMultipliableMatrix = isequal(unitdomain(A),unitrange(A))
+endomorphic(A::T) where T <: Union{AbstractMultipliableMatrix,UnitfulMatrix} = isequal(unitdomain(A),unitrange(A))
 endomorphic(A::T) where T <: Number = dimensionless(A) # scalars must be dimensionless to be endomorphic
 
 """
@@ -366,6 +567,7 @@ getindex(A::T,i::Int,j::Union{Colon,Int,UnitRange}) where T <: AbstractMultiplia
 
 #       getindex(::A{T,N}, ::Vararg{Int, N}) where {T,N} # if IndexCartesian()
 getindex(A::T,i::Union{UnitRange,Colon},j::Union{UnitRange,Colon}) where T <: AbstractMultipliableMatrix = MMatrix(A.numbers[i,j],unitrange(A)[i],unitdomain(A)[j],exact=exact(A)) 
+getindexqty(A::AbstractUnitfulMatrix,i::Int,j::Int) = Quantity.(parent(A)[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
 
 #getindex(A::T,i::Colon,j::UnitRange) where T <: AbstractMultipliableMatrix = MMatrix(A.numbers[i,j],unitrange(A)[i],unitdomain(A)[j],exact=exact(A)) 
 
@@ -384,9 +586,14 @@ getindex(A::T,i::Union{UnitRange,Colon},j::Union{UnitRange,Colon}) where T <: Ab
 - `Quantity`: numerical value and units
 """
 function setindex!(A::T,v,i::Int,j::Int) where T <: AbstractMultipliableMatrix
-
     if unit(v) == unitrange(A)[i]./unitdomain(A)[j]
         A.numbers[i,j] = ustrip(v)
+    else error("new value has incompatible units")
+    end
+end
+function setindex!(A::AbstractUnitfulMatrix,v::Quantity,i::Int,j::Int) 
+    if unit(v) == unitrange(A)[i]./unitdomain(A)[j]
+        A[i,j] = ustrip(v)
     else error("new value has incompatible units")
     end
 end
@@ -418,6 +625,28 @@ function Matrix(A::T) where T<: AbstractMultipliableMatrix
         end
         return B
     end
+end
+function Matrix(A::T) where T<: AbstractUnitfulMatrix
+
+    M,N = size(A)
+    T2 = eltype(parent(A))
+    B = Matrix{Quantity{T2}}(undef,M,N)
+    for m = 1:M
+        for n = 1:N
+            B[m,n] = Quantity.(getindex(A,m,n),unitrange(A)[m]./unitdomain(A)[n])
+        end
+    end
+    return B
+end
+function Matrix(a::T) where T<: AbstractUnitfulVector
+
+    M, = size(a)
+    T2 = eltype(parent(a))
+    b = Vector{Quantity{T2}}(undef,M)
+    for m = 1:M
+        b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
+    end
+    return b
 end
 
 # """
@@ -483,6 +712,27 @@ end
 *(A::T1,b::T2) where T1 <: AbstractMultipliableMatrix where T2 <: Number = (exact(A) && dimensionless(b)) ?  BestMultipliableMatrix(A.numbers*ustrip(b),unitrange(A).*unit(b),unitdomain(A),exact = true) : BestMultipliableMatrix(A.numbers*ustrip(b),unitrange(A).*unit(b),unitdomain(A))
 *(b::T2,A::T1) where T1 <: AbstractMultipliableMatrix where T2 <: Number = A*b
 
+# already works for dimensionless scalars
+*(A::T1,b::Quantity) where T1 <: AbstractUnitfulMatrix = rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
+*(A::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulMatrix = rebuild(A,parent(A),(Units(unitrange(A).*b),unitdomain(A)))
+*(b::Union{Quantity,Unitful.FreeUnits},A::T1) where T1 <: AbstractUnitfulMatrix = A*b
+
+# vector-scalar multiplication
+*(a::T1,b::Quantity) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a)*ustrip(b),(Units(unitrange(a).*unit(b)),))
+*(a::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a),(Units(unitrange(a).*b),))
+*(b::Union{Quantity,Unitful.FreeUnits},a::T1) where T1 <: AbstractUnitfulVector = a*b
+
+# (matrix/vector)-(matrix/vector) multiplication when inexact handled here
+function *(A::AbstractUnitfulArray,B::AbstractUnitfulArray)
+    if exact(A)
+        return DimensionalData._rebuildmul(A,B)
+    elseif unitdomain(A) ∥ unitrange(B)
+        return DimensionalData._rebuildmul(convert_unitdomain(A,unitrange(B)),B)
+    else
+        error("unitdomain(A) and unitrange(B) not parallel")
+    end
+end
+
 """
     function *(A,B)
 
@@ -513,6 +763,8 @@ end
 # special case: MultipliableMatrix * non-multipliable matrix
 *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractMatrix = A*BestMultipliableMatrix(B)
 *(A::T2,B::T1) where T1<:AbstractMultipliableMatrix where T2<:AbstractMatrix = BestMultipliableMatrix(A)*B
+#*(A::AbstractUnitfulMatrix,B::AbstractVector) = A*UnitfulMatrix(B)
+#*(A::AbstractVector,B::AbstractUnitfulMatrix) = UnitfulMatrix(A)*B
 
 """
     function +(A,B)
@@ -521,13 +773,19 @@ end
     A+B requires the two matrices to have dimensional similarity.
 """
 function +(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
-
     bothexact = exact(A) && exact(B)
-
-    #if unitrange(A) ~ unitrange(B) && unitdomain(A) ~ unitdomain(B)
     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
         ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
         return MultipliableMatrix(A.numbers+B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
+    else
+        error("matrices not dimensionally conformable for addition")
+    end
+end
+function +(A::AbstractUnitfulMatrix{T1},B::AbstractUnitfulMatrix{T2}) where T1 where T2
+    bothexact = exact(A) && exact(B)
+    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
+        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
+        return rebuild(A,parent(A)+parent(B),(unitrange(A),unitdomain(A))) 
     else
         error("matrices not dimensionally conformable for addition")
     end
@@ -539,14 +797,19 @@ end
     Matrix-matrix subtraction with units/dimensions.
     A-B requires the two matrices to have dimensional similarity.
 """
-function -(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
-
+function -(A::AbstractUnitfulMatrix{T1},B::AbstractUnitfulMatrix{T2}) where T1 where T2
     bothexact = exact(A) && exact(B)
-
     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
-    #if unitrange(A) ~ unitrange(B) && unitdomain(A) ~ unitdomain(B)
-    #if unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)
+        return rebuild(A,parent(A)-parent(B),(unitrange(A),unitdomain(A))) # takes exact(A) but should be bothexact 
+    else
+        error("matrices not dimensionally conformable for subtraction")
+    end
+end
+function -(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
+    bothexact = exact(A) && exact(B)
+    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
+       ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
         return MMatrix(A.numbers-B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
     else
         error("matrices not dimensionally conformable for subtraction")
@@ -571,6 +834,14 @@ function lu(A::AbstractMultipliableMatrix{T}) where T <: Number
     F = LU(factors,F̂.ipiv,F̂.info)
     return F
 end
+function lu(A::AbstractUnitfulMatrix)
+    F̂ = lu(parent(A))
+    factors = rebuild(A,parent(F̂.factors),(unitrange(A),unitdomain(A)))
+    #factors = MMatrix(F̂.factors, unitrange(A), unitdomain(A), exact=exact(A))
+    F = LU(factors,F̂.ipiv,F̂.info)
+    return F
+end
+
 
 """
     function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Symbol) where T
@@ -598,6 +869,29 @@ function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Sym
         Unum = triu!(numbers[1:min(m,n), 1:n])
         U = BestMultipliableMatrix(Unum, unitrange(mmatrix), unitdomain(mmatrix), exact=exact(mmatrix))
         return U
+    elseif d === :p
+        return LinearAlgebra.ipiv2perm(getfield(F, :ipiv), m)
+    elseif d === :P
+        return Matrix{T}(I, m, m)[:,LinearAlgebra.invperm(F.p)]
+    else
+        getfield(F, d)
+    end
+end
+function getproperty(F::LU{T,<:AbstractUnitfulMatrix,Vector{Int64}}, d::Symbol) where T
+    m, n = size(F)
+    if d === :L
+        mmatrix = getfield(F, :factors)
+        numbers = parent(mmatrix)
+        #numbers = getfield(mmatrix,:numbers)
+        # add ustrip to get numerical values
+        Lnum = tril!(numbers[1:m, 1:min(m,n)])
+        for i = 1:min(m,n); Lnum[i,i] = one(T); end
+        return rebuild(mmatrix,Lnum,(unitrange(mmatrix),unitrange(mmatrix)))
+    elseif d === :U
+        mmatrix = getfield(F, :factors)
+        numbers = parent(mmatrix)
+        Unum = triu!(numbers[1:min(m,n), 1:n])
+        return rebuild(mmatrix,Unum,(unitrange(mmatrix),unitdomain(mmatrix)))
     elseif d === :p
         return LinearAlgebra.ipiv2perm(getfield(F, :ipiv), m)
     elseif d === :P
@@ -648,7 +942,24 @@ function parallel(a,b)::Bool
         if length(a) == 1
             return true
         else
-            Δdim = dimension(a)./dimension(b)
+            Δdim = dimension.(a)./dimension.(b)
+            for i = 2:length(a)
+                if Δdim[i] ≠ Δdim[1]
+                    return false
+                end
+            end
+            return true
+        end
+    else
+        return false
+    end
+end
+function parallel(a::AbstractUnitfulVector,b::AbstractUnitfulVector)::Bool
+    if isequal(length(a),length(b))
+        if length(a) == 1
+            return true
+        else
+            Δdim = dimension(a)./dimension(b) # inconsistent function call
             for i = 2:length(a)
                 if Δdim[i] ≠ Δdim[1]
                     return false
@@ -662,6 +973,9 @@ function parallel(a,b)::Bool
 end
 ∥(a,b)  = parallel(a,b)
 
+# not consistent in that it should be an element-wise function
+Unitful.dimension(a::AbstractUnitfulVector) = dimension.(unitrange(a)) 
+
 """
     function uniform(a)
 
@@ -670,7 +984,7 @@ end
     There must be a way to inspect the Unitful type to answer this.
 """
 uniform(a::T) where T <: Number = true # all scalars by default
-function uniform(a::Vector) 
+function uniform(a::Union{Vector,<:DimensionalData.Dimension}) 
     dima = dimension.(a)
     for dd = 2:length(dima)
         if dima[dd] ≠ dima[1]
@@ -680,10 +994,10 @@ function uniform(a::Vector)
     return true
 end
 function uniform(A::Matrix)
-    B = BestMultipliableMatrix(A)
+    B = MMatrix(A)
     isnothing(B) ? false : uniform(B)
 end
-uniform(A::T) where T <: AbstractMultipliableMatrix = left_uniform(A) && right_uniform(A)
+uniform(A::Union{UnitfulMatrix,<: AbstractMultipliableMatrix}) = left_uniform(A) && right_uniform(A)
 uniform(A::UniformMatrix) = true
 
 """
@@ -693,6 +1007,7 @@ uniform(A::UniformMatrix) = true
 """
 left_uniform(A::Union{LeftUniformMatrix,UniformMatrix}) = true
 left_uniform(A::T) where T<: AbstractMultipliableMatrix = uniform(unitrange(A)) ? true : false
+left_uniform(A::UnitfulMatrix) = uniform(unitrange(A)) ? true : false
 function left_uniform(A::Matrix)
     B = BestMultipliableMatrix(A)
     isnothing(B) ? false : left_uniform(B)
@@ -705,8 +1020,9 @@ end
 """
 right_uniform(A::Union{UniformMatrix,RightUniformMatrix}) = true
 right_uniform(A::T) where T<:AbstractMultipliableMatrix = uniform(unitdomain(A)) ? true : false
+right_uniform(A::UnitfulMatrix) = uniform(unitdomain(A)) ? true : false
 function right_uniform(A::Matrix)
-    B = BestMultipliableMatrix(A)
+    B = MMatrix(A)
     isnothing(B) ? false : right_uniform(B)
 end
 
@@ -717,19 +1033,32 @@ end
      dimensionless domain and range.
 """
 dimensionless(A::T) where T <: AbstractMultipliableMatrix = uniform(A) && unitrange(A)[1] == unitdomain(A)[1]
-dimensionless(A::Matrix) = uniform(A) && dimension(A[1,1]) == NoDims
+dimensionless(A::Union{Matrix,UnitfulMatrix}) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
+function dimensionless(A::AbstractMatrix)
+    B = MMatrix(A)
+    isnothing(B) ? false : dimensionless(B) # fallback
+end
 
-square(A::T) where T <: AbstractMultipliableMatrix = (domainlength(A) == rangelength(A))
+#square(A::T) where T <: AbstractMultipliableMatrix = (domainlength(A) == rangelength(A))
+square(A::T) where T <: AbstractMatrix = isequal(size(A)[1],size(A)[2]) 
 square(A::SquarableMatrix) = true
 square(A::EndomorphicMatrix) = true
 
-squarable(A::T) where T <: AbstractMultipliableMatrix = (unitdomain(A) ∥ unitrange(A))
+squarable(A::Union{UnitfulMatrix,<:AbstractMultipliableMatrix}) = (unitdomain(A) ∥ unitrange(A))
 squarable(A::SquarableMatrix) = true
 squarable(A::EndomorphicMatrix) = true
+function squarable(A::AbstractMatrix)
+    B = MMatrix(A)
+    isnothing(B) ? false : squarable(B) # fallback
+end
 
-unit_symmetric(A::AbstractMultipliableMatrix) = (unitrange(A) ∥ 1 ./unitdomain(A))
+unit_symmetric(A::Union{UnitfulMatrix,AbstractMultipliableMatrix}) = (unitrange(A) ∥ unitdomain(A).^-1)
 unit_symmetric(A::UnitSymmetricMatrix) = true
+function unit_symmetric(A::AbstractMatrix)
+    B = MMatrix(A)
+    isnothing(B) ? false : unit_symmetric(B) # fallback
+end
 
 """
     function invdimension
@@ -759,13 +1088,21 @@ dottable(a,b) = parallel(a, 1 ./ b)
 """
 function convert_unitdomain(A::AbstractMultipliableMatrix, newdomain::Vector) 
     if unitdomain(A) ∥ newdomain
-        #shift = newdomain./unitdomain(A)
-        #newrange = unitrange(A).*shift
         newrange = unitrange(A).*(newdomain[1]/unitdomain(A)[1])
-
-        B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
+        B = MMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New unitdomain not parallel to unitdomain of Multipliable Matrix")
+    end
+end
+function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Units) 
+    if unitdomain(A) ∥ newdomain
+        #shift = newdomain./unitdomain(A)
+        #newrange = unitrange(A).*shift
+        newrange = Units(unitrange(A).*(newdomain[1]/unitdomain(A)[1]))
+        return rebuild(A, parent(A), (newrange, newdomain))
+        #B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
+    else
+        error("New unit domain not parallel to unit domain of Multipliable Matrix")
     end
 end
 
@@ -815,6 +1152,16 @@ function convert_unitrange(A::AbstractMultipliableMatrix, newrange::Vector)
         error("New unitrange not parallel to unitrange of Multipliable Matrix")
     end
 end
+function convert_unitrange(A::AbstractUnitfulMatrix, newrange::Units) 
+    if unitrange(A) ∥ newrange
+        #shift = newdomain./unitdomain(A)
+        #newrange = unitrange(A).*shift
+        newdomain = Units(unitdomain(A).*(newrange[1]/unitrange(A)[1]))
+        B = rebuild(A, parent(A), (newrange, newdomain))
+    else
+        error("New unit domain not parallel to unit domain of Multipliable Matrix")
+    end
+end
 
 """
     function convert_unitrange!(A, newrange)
@@ -841,6 +1188,19 @@ function convert_unitrange!(A::AbstractMultipliableMatrix, newrange::Vector)
          error("New range not parallel to range of Multipliable Matrix")
      end
 end
+function convert_unitrange!(A::AbstractUnitfulMatrix, newrange::Vector)
+    if unitrange(A) ∥ newrange
+        shift = newrange[1]./unitrange(A)[1]
+        for (ii,vv) in enumerate(A.dims[2])
+            A.dims[2][ii] *= shift
+        end
+        for (ii,vv) in enumerate(A.dims[1])
+            A.dims[1][ii] *= shift
+        end
+     else
+         error("New range not parallel to range of Unitful Matrix")
+     end
+end
 
 """
     function exact(A)
@@ -849,7 +1209,7 @@ end
 -    `exact=false`: algebraic interpretation
 """
 exact(A::T) where T <: AbstractMultipliableMatrix = A.exact
-
+exact(A::UnitfulMatrix) = A.exact
 """
     function rangelength(A::MultipliableMatrix)
 
@@ -867,7 +1227,7 @@ rangelength(A::T) where T <: AbstractMultipliableMatrix = size(A)[1]
 domainlength(A::T) where T <: AbstractMultipliableMatrix = size(A)[2]
 
 #size(A::AbstractMultipliableMatrix) = (rangelength(A), domainlength(A))
-size(A::AbstractMultipliableMatrix) = size(A.numbers)
+size(A::AbstractMultipliableMatrix) = size(A.numbers) # necessary?
 
 convert(::Type{AbstractMatrix{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
 convert(::Type{AbstractArray{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
@@ -879,9 +1239,12 @@ unitdomain(A::SquarableMatrix) = A.unitrange.*A.Δunitdomain
 unitdomain(A::UnitSymmetricMatrix) =  A.Δunitdomain./A.unitrange
 unitdomain(A::EndomorphicMatrix) = A.unitrange # unitdomain not saved and must be reconstructed
 unitdomain(A::Union{UniformMatrix,RightUniformMatrix}) = fill(A.unitdomain[1],size(A.numbers)[2])
+unitdomain(A::AbstractUnitfulMatrix) = last(dims(A))
+unitdomain(A::AbstractUnitfulVector) = Unitful.FreeUnits{(), NoDims, nothing}() # nondimensional scalar 
 
 unitrange(A::T) where T <: AbstractMultipliableMatrix = A.unitrange
 unitrange(A::Union{UniformMatrix,LeftUniformMatrix}) = fill(A.unitrange[1],size(A.numbers)[1])
+unitrange(A::Union{AbstractUnitfulMatrix,AbstractUnitfulVector}) = first(dims(A))
 
 """
     function transpose
@@ -891,7 +1254,10 @@ unitrange(A::Union{UniformMatrix,LeftUniformMatrix}) = fill(A.unitrange[1],size(
 
     Hart, pp. 205.
 """
-transpose(A::AbstractMultipliableMatrix) = BestMultipliableMatrix(transpose(A.numbers),unitdomain(A).^-1, unitrange(A).^-1,exact=exact(A)) 
+transpose(A::AbstractMultipliableMatrix) = BestMultipliableMatrix(transpose(A.numbers),unitdomain(A).^-1, unitrange(A).^-1,exact=exact(A))
+# Had to redefine tranpose or it was incorrect based on AbstractArray interface!
+transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1))) 
+transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
 transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unitrange(A).^-1, exact(A)) 
 transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),
                                             Base.convert(Vector{Unitful.FreeUnits},[unitdomain(A)[1]^-1]),
@@ -908,7 +1274,8 @@ transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),
     defined by its dimensional range.
     Hart, pp. 200.                             
 """
-identitymatrix(dimrange) = EndomorphicMatrix(I(length(dimrange)),dimrange;exact=false)
+#identitymatrix(dimrange) = EndomorphicMatrix(I(length(dimrange)),dimrange;exact=false)
+identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),(dimrange,dimrange),exact=true)
 
 """
      function inv
@@ -921,6 +1288,7 @@ identitymatrix(dimrange) = EndomorphicMatrix(I(length(dimrange)),dimrange;exact=
     Hart, pp. 205. 
 """
 inv(A::T) where T <: AbstractMultipliableMatrix = ~singular(A) ? BestMultipliableMatrix(inv(A.numbers),unitdomain(A),unitrange(A),exact=exact(A)) : error("matrix is singular")
+inv(A::AbstractUnitfulMatrix) = ~singular(A) ? rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A))) : error("matrix is singular")
 
 """
      function left divide
@@ -951,6 +1319,30 @@ function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
         return BestMultipliableMatrix(A.numbers\B.numbers,unitdomain(A),unitdomain(B),exact = (exact(A)&&exact(B)))
     else
         error("UnitfulLinearAlgebra.mldivide: Dimensions of Multipliable Matrices A and B not compatible")
+    end
+end
+
+function (\)(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
+    if exact(A)
+        DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
+
+        return rebuild(A,parent(A)\parent(b),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
+    elseif ~exact(A) && (unitrange(A) ∥ unitrange(b))
+        Anew = convert_unitrange(A,unitrange(b)) 
+        return rebuild(Anew,parent(Anew)\parent(b),(last(dims(Anew)),))
+    else
+        error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
+    end
+end
+function (\)(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
+    if exact(A)
+        DimensionalData.comparedims(first(dims(A)), first(dims(B)); val=true)
+        return rebuild(A,parent(A)\parent(B),(last(dims(A)),last(dims(B)))) #,exact = (exact(A) && exact(B)))
+    elseif ~exact(A) && (unitrange(A) ∥ unitrange(B))
+        Anew = convert_unitrange(A,unitrange(B)) 
+        return rebuild(Anew,parent(Anew)\parent(B),(last(dims(Anew)),last(dims(B))))
+    else
+        error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
     end
 end
 
@@ -1009,6 +1401,29 @@ function (\)(F::LU{T,<: AbstractMultipliableMatrix{T},Vector{Int64}}, B::Abstrac
     # UnitfulLinearAlgebra: add units
     return LinearAlgebra._cut_B(BB, 1:n).*unitdomain(F.factors)
 end
+function (\)(F::LU{T,<: AbstractUnitfulMatrix,Vector{Int64}}, B::AbstractUnitfulVector) where T<:Number
+    if unitrange(F.factors) == unitrange(B)
+         # pass without any issues
+    elseif unitrange(F.factors) ∥ unitrange(B)
+        # convert_range of F.factors
+        # is allocating, will affect performance
+        convert_unitrange(F.factors,unitrange(B))
+    else
+        error("LU left divide: units of F, B, are not conformable")
+    end
+    LinearAlgebra.require_one_based_indexing(B)
+    m, n = size(F)
+    TFB = typeof(oneunit(eltype(parent(B))) / oneunit(eltype(parent(F.factors))))
+    FF = LinearAlgebra.Factorization{TFB}(LU(parent(F.factors),F.ipiv,F.info))
+    BB = LinearAlgebra._zeros(TFB, B, n)
+    if n > size(B, 1)
+        LinearAlgebra.copyto!(view(BB, 1:m, :), parent(B))
+    else
+        LinearAlgebra.copyto!(BB, parent(B))
+    end
+    LinearAlgebra.ldiv!(FF, BB)
+    return rebuild(B,LinearAlgebra._cut_B(BB, 1:n),(unitdomain(F.factors),))
+end
 
 """
      function ldiv!
@@ -1061,10 +1476,20 @@ function det(A::T) where T<: AbstractMultipliableMatrix
         error("Determinant requires square matrix")
     end
 end
+function det(A::AbstractUnitfulMatrix) 
+    if square(A)
+        detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
+        return Quantity(det(parent(A)),detunit)
+    else
+        error("Determinant requires square matrix")
+    end
+end
 
-singular(A::T) where T <: AbstractMultipliableMatrix = iszero(ustrip(det(A)))
+#singular(A::T) where T <: AbstractMultipliableMatrix = iszero(ustrip(det(A)))
+singular(A::Union{AbstractMultipliableMatrix,AbstractUnitfulMatrix}) = iszero(ustrip(det(A)))
 
 trace(A::T) where T<: AbstractMultipliableMatrix = sum(diag(A.numbers)).*(unitrange(A)[1]/unitdomain(A)[1])
+trace(A::AbstractUnitfulMatrix) = sum(diag(parent(A))).*(unitrange(A)[1]/unitdomain(A)[1])
 
 """
     function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=eigsortby) where T <: AbstractMultipliableMatrix
@@ -1080,10 +1505,17 @@ trace(A::T) where T<: AbstractMultipliableMatrix = sum(diag(A.numbers)).*(unitra
     `eigvals` of Eigen struct also available.
 """
 function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) where T <: AbstractMultipliableMatrix
-
     if squarable(A) 
         F = LinearAlgebra.eigen(A.numbers, permute=permute, scale=scale, sortby=sortby)
         return Eigen(F.values.*(unitrange(A)[1]/unitdomain(A)[1]), BestMultipliableMatrix(F.vectors,unitdomain(A),fill(unit(1.0),size(A,2))))
+    else
+        error("UnitfulLinearAlgebra: Eigenvalue decomposition doesn't exist for for non-squarable matrices")
+    end
+end
+function eigen(A::AbstractUnitfulMatrix;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) 
+    if squarable(A) 
+        F = LinearAlgebra.eigen(parent(A), permute=permute, scale=scale, sortby=sortby)
+        return Eigen(F.values.*(unitrange(A)[1]/unitdomain(A)[1]), rebuild(A,F.vectors,(unitdomain(A),Units(fill(unit(1.0),size(A,2))))))
     else
         error("UnitfulLinearAlgebra: Eigenvalue decomposition doesn't exist for for non-squarable matrices")
     end
@@ -1094,17 +1526,17 @@ end
     Should the units be stripped out of the function?
     Only defined for matrices with uniform units (pp. 101, Hart, 1995). 
 """
-isposdef(A::Eigen{T,V,S,U}) where {U<: AbstractVector, S<:AbstractMultipliableMatrix, V, T <: Number} = (uniform(A.vectors) && isreal(A.values)) && all(x -> x > 0, ustrip.(A.values))
+isposdef(A::Eigen{T,V,S,U}) where {U<: AbstractVector, S<:Union{AbstractMultipliableMatrix,AbstractUnitfulMatrix}, V, T <: Number} = (uniform(A.vectors) && isreal(A.values)) && all(x -> x > 0, ustrip.(A.values))
 
 """
    Extend `inv` for Eigen factorizations of `MultipliableMatrix`s.
     Only defined for matrices with uniform units (pp. 101, Hart, 1995). 
 """
-function inv(A::Eigen{T,V,S,U}) where {U <: AbstractVector, S <: AbstractMultipliableMatrix, V, T <: Number}
+function inv(A::Eigen{T,V,S,U}) where {U <: AbstractVector, S <: Union{AbstractUnitfulMatrix,AbstractMultipliableMatrix}, V, T <: Number}
 
     if (uniform(A.vectors) && isreal(A.values))
         ur = unitrange(A.vectors)
-        ud = unit.(A.values)
+        ud = Units(unit.(A.values))
         Λ⁻¹ = Diagonal(A.values.^-1,ud,ur)
         return A.vectors* transpose(transpose(A.vectors) \ Λ⁻¹)
 
@@ -1136,8 +1568,14 @@ function svd(A::AbstractMultipliableMatrix;full=false,alg::LinearAlgebra.Algorit
         error("UnitfulLinearAlgebra: SVD doesn't exist for non-uniform matrices")
     end
 end
-
-
+function svd(A::AbstractUnitfulMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(parent(A))) 
+    if uniform(A) 
+        F = svd(parent(A), full=full, alg=alg)
+        return SVD(F.U,F.S * unitrange(A)[1]./unitdomain(A)[1],F.Vt)
+    else
+        error("UnitfulLinearAlgebra: SVD doesn't exist for non-uniform matrices")
+    end
+end
 
 # Dimensional (Unitful) Singular Value Decomposition, following Singular Value Decomposition from Julia LinearAlgebra.jl
 """
@@ -1158,17 +1596,28 @@ Functions available for DSVD: `size`, `dsvdvals`, `inv`.
 Function available for SVD that would be good to have to DSVD: `ldiv!`, `transpose`. 
 ```
 """
-struct DSVD{T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},MQY<:AbstractMultipliableMatrix{T},MQX<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}} <: Factorization{T}
+struct DSVD{T,Tr,MU<:AbstractUnitfulMatrix{T},MV<:AbstractUnitfulMatrix{T},MQY<:AbstractUnitfulMatrix{T},MQX<:AbstractUnitfulMatrix{T},C<:AbstractVector{Tr}} <: Factorization{T}
     U′::MU
     S::C
     V′⁻¹::MV
     Qy::MQY
     Qx::MQX
-    function DSVD{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx) where {T,Tr,MU<:AbstractMultipliableMatrix{T},MV<:AbstractMultipliableMatrix{T},MQY<:AbstractMultipliableMatrix{T},MQX<:AbstractMultipliableMatrix{T},C<:AbstractVector{Tr}}
+    function DSVD{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx) where {T,Tr,MU<:AbstractUnitfulMatrix{T},MV<:AbstractUnitfulMatrix{T},MQY<:AbstractUnitfulMatrix{T},MQX<:AbstractUnitfulMatrix{T},C<:AbstractVector{Tr}}
         LinearAlgebra.require_one_based_indexing(U′, S, V′⁻¹,Qy,Qx)
         new{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx)
     end
 end
+# struct DSVD{T,Tr,MU<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MV<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MQY<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MQX<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},C<:AbstractVector{Tr}} <: Factorization{T}
+#     U′::MU
+#     S::C
+#     V′⁻¹::MV
+#     Qy::MQY
+#     Qx::MQX
+#     function DSVD{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx) where {T,Tr,MU<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MV<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MQY<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},MQX<:Union{AbstractMultipliableMatrix{T},AbstractUnitfulMatrix{T}},C<:AbstractVector{Tr}}
+#         LinearAlgebra.require_one_based_indexing(U′, S, V′⁻¹,Qy,Qx)
+#         new{T,Tr,MU,MV,MQY,MQX,C}(U′, S, V′⁻¹,Qy,Qx)
+#     end
+# end
 DSVD(U′::AbstractArray{T}, S::AbstractVector{Tr}, V′⁻¹::AbstractArray{T}, Qy::AbstractArray{T}, Qx::AbstractArray{T}) where {T,Tr} =
     DSVD{T,Tr,typeof(U′),typeof(V′⁻¹),typeof(Qy),typeof(Qx),typeof(S)}(U′, S, V′⁻¹,Qy,Qx)
 DSVD{T}(U′::AbstractArray, S::AbstractVector{Tr}, V′⁻¹::AbstractArray,Qy::AbstractArray, Qx::AbstractArray) where {T,Tr} =
@@ -1187,7 +1636,6 @@ DSVD{T}(F::DSVD) where {T} = DSVD(
     convert(AbstractMatrix{T}, F.V′⁻¹),
     convert(AbstractMatrix{T}, F.Qy),
     convert(AbstractMatrix{T}, F.Qx))
-
 
 Factorization{T}(F::DSVD) where {T} = DSVD{T}(F)
 
@@ -1246,9 +1694,22 @@ function dsvd(A::AbstractMultipliableMatrix,Py::AbstractMultipliableMatrix,Px::A
     println(typeof(MMatrix(F.U)))
     return DSVD(MMatrix(F.U),F.S,MMatrix(F.Vt),Qy,Qx)
 end
+function dsvd(A::AbstractUnitfulMatrix,Py::AbstractUnitfulMatrix,Px::AbstractUnitfulMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(parent(A))) 
+
+    unit_symmetric(Py) ? Qy = getproperty(cholesky(Py),:U) : error("norm matrix for range not unit symmetric")
+    unit_symmetric(Px) ? Qx = getproperty(cholesky(Px),:U) : error("norm matrix for domain not unit symmetric")
+
+    # must be more efficient way
+    #A′ = Qr*(A*inv(Qd))
+    # still inefficient with copy
+    A′ =   copy(transpose(transpose(Qx)\transpose(Qy*A)))
+    ~dimensionless(A′) && error("A′ should be dimensionless to implement `LinearAlgebra.svd`")
+    F = svd(parent(A′), full=full, alg=alg)
+    return DSVD(UnitfulMatrix(F.U),F.S,UnitfulMatrix(F.Vt),Qy,Qx)
+end
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractVector})
-    summary(io, F); println(io)
+    #summary(io, F); println(io)
     println(io, "U (left singular vectors):")
     show(io, mime, F.U)
     println(io, "\nsingular values:")
@@ -1297,8 +1758,7 @@ size(A::DSVD) = (size(A, 1), size(A, 2))
      and dimensional unit domain `d`. Works for square or non-square matrices.
 """
 diagm(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = BestMultipliableMatrix(spdiagm(length(r),length(d),ustrip.(v)),r,d; exact=exact)    
-#Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false) = MultipliableMatrix(Diagonal(ustrip.(v)),r,d ; exact=exact)    
-#end
+diagm(v::AbstractVector,r::Units,d::Units; exact = false) = UnitfulMatrix(spdiagm(length(r),length(d),ustrip.(v)),(r,d); exact=exact)    
 
 """
     function diag(A::AbstractMultipliableMatrix)
@@ -1330,12 +1790,19 @@ function cholesky(A::AbstractMultipliableMatrix)
     if unit_symmetric(A)
         C = LinearAlgebra.cholesky(A.numbers)
         factors = BestMultipliableMatrix(C.factors,unitdomain(A)./unitdomain(A),unitdomain(A),exact=exact(A))
-
         return Cholesky(factors,C.uplo,C.info)
     else
         error("requires unit symmetric matrix")
     end
-    
+end
+function cholesky(A::AbstractUnitfulMatrix)
+    if unit_symmetric(A)
+        C = LinearAlgebra.cholesky(parent(A))
+        factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)))
+        return Cholesky(factors,C.uplo,C.info)
+    else
+        error("requires unit symmetric matrix")
+    end
 end
 
 function getproperty(C::Cholesky{T,<:AbstractMultipliableMatrix}, d::Symbol) where T 
@@ -1349,7 +1816,25 @@ function getproperty(C::Cholesky{T,<:AbstractMultipliableMatrix}, d::Symbol) whe
         # use transpose to get units right
         return BestMultipliableMatrix(numbers,unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1,exact = Cfactors.exact)
     elseif d === :UL
+        # next line doesn't look right
         return (Cuplo === 'U' ?        BestMultipliableMatrix(UpperTriangular(Cfactors.numbers),unitrange(Cfactors),unitdomain(Cfactors),exact = Cfactors.exact) : BestMultipliableMatrix(LowerTriangular(Cfactors.numbers),unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1,exact = Cfactors.exact))
+    else
+        #println("caution: fallback not tested")
+        return getfield(C, d)
+    end
+end
+function getproperty(C::Cholesky{T,<:AbstractUnitfulMatrix}, d::Symbol) where T 
+    Cfactors = getfield(C, :factors)
+    Cuplo    = getfield(C, :uplo)
+    if d === :U
+        numbers = UpperTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? parent(Cfactors) : copy(transpose(parent(Cfactors))))
+        return rebuild(Cfactors,numbers,(unitrange(Cfactors),unitdomain(Cfactors)))
+    elseif d === :L
+        numbers = LowerTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? parent(Cfactors) : copy(transpose(parent(Cfactors))))
+        # use transpose to get units right
+        return rebuild(Cfactors,numbers,(Units(unitdomain(Cfactors).^-1),Units(unitrange(Cfactors).^-1)))
+    elseif d === :UL
+        (Cuplo === 'U') ? (return rebuild(Cfactors,UpperTriangular(parent(Cfactors)))) : (return rebuild(Cfactors,LowerTriangular(parent(Cfactors)),(unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1)))
     else
         #println("caution: fallback not tested")
         return getfield(C, d)
@@ -1364,7 +1849,9 @@ end
      and dimensional unit domain `d`.
     Like `LinearAlgebra.Diagonal`, this extension is restricted to square matrices.
 """
-Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
+DiagonalUnitSymmetric(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   # return UnitSymmetric Matrix
+Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
+Diagonal(v::AbstractVector,r::Units,d::Units; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
 
 """
     function vcat(A,B)
