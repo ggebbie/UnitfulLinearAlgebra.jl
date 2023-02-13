@@ -733,7 +733,6 @@ function *(A::AbstractUnitfulArray,B::AbstractUnitfulArray)
     end
 end
 
-
 """
     function *(A,B)
 
@@ -1258,6 +1257,7 @@ unitrange(A::Union{AbstractUnitfulMatrix,AbstractUnitfulVector}) = first(dims(A)
 transpose(A::AbstractMultipliableMatrix) = BestMultipliableMatrix(transpose(A.numbers),unitdomain(A).^-1, unitrange(A).^-1,exact=exact(A))
 # Had to redefine tranpose or it was incorrect based on AbstractArray interface!
 transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1))) 
+transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
 transpose(A::EndomorphicMatrix{T}) where T = EndomorphicMatrix(transpose(A.numbers),unitrange(A).^-1, exact(A)) 
 transpose(A::UniformMatrix) = UniformMatrix(transpose(A.numbers),
                                             Base.convert(Vector{Unitful.FreeUnits},[unitdomain(A)[1]^-1]),
@@ -1322,7 +1322,7 @@ function (\)(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
     end
 end
 
-function (\)(A::AbstractUnitfulArray,b::AbstractUnitfulArray)
+function (\)(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
     if exact(A)
         DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
 
@@ -1330,6 +1330,17 @@ function (\)(A::AbstractUnitfulArray,b::AbstractUnitfulArray)
     elseif ~exact(A) && (unitrange(A) ∥ unitrange(b))
         Anew = convert_unitrange(A,unitrange(b)) 
         return rebuild(Anew,parent(Anew)\parent(b),(last(dims(Anew)),))
+    else
+        error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
+    end
+end
+function (\)(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
+    if exact(A)
+        DimensionalData.comparedims(first(dims(A)), first(dims(B)); val=true)
+        return rebuild(A,parent(A)\parent(B),(last(dims(A)),last(dims(B)))) #,exact = (exact(A) && exact(B)))
+    elseif ~exact(A) && (unitrange(A) ∥ unitrange(B))
+        Anew = convert_unitrange(A,unitrange(B)) 
+        return rebuild(Anew,parent(Anew)\parent(B),(last(dims(Anew)),last(dims(B))))
     else
         error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
     end
