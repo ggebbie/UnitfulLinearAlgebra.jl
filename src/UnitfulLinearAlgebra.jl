@@ -33,11 +33,11 @@ import DimensionalData: rebuild, @dim, dims, DimArray, AbstractDimArray, NoName,
 
 @dim Units "units"
 
-abstract type AbstractUnitfulArray{T,N,D<:Tuple,A} <: AbstractDimArray{T,N,D,A} end
+abstract type AbstractUnitfulVecOrMat{T,N,D<:Tuple,A} <: AbstractDimArray{T,N,D,A} end
 
 # should be a subtype, not an actual type
-const AbstractUnitfulVector{T<:Number} = AbstractUnitfulArray{T,1} where T
-const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulArray{T,2} where T
+const AbstractUnitfulVector{T<:Number} = AbstractUnitfulVecOrMat{T,1} where T
+const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulVecOrMat{T,2} where T
 
 # Concrete implementation ######################################################
 
@@ -47,7 +47,7 @@ const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulArray{T,2} where T
 
     Take DimArray and use dimensions for units
 """
-struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractUnitfulArray{T,N,D,A}
+struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractUnitfulVecOrMat{T,N,D,A}
     data::A
     dims::D
     refdims::R
@@ -362,7 +362,7 @@ end
 *(b::Union{Quantity,Unitful.FreeUnits},a::T1) where T1 <: AbstractUnitfulVector = a*b
 
 # (matrix/vector)-(matrix/vector) multiplication when inexact handled here
-function *(A::AbstractUnitfulArray,B::AbstractUnitfulArray)
+function *(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
     if exact(A)
         return DimensionalData._rebuildmul(A,B)
     elseif unitdomain(A) ∥ unitrange(B)
@@ -775,7 +775,7 @@ unitdomain(A::AbstractUnitfulVector) = Units([unit(1.0)]) # kludge for a nondime
 
     Find the dimensional (unit) range of a matrix
 """
-unitrange(A::AbstractUnitfulArray) = first(dims(A))
+unitrange(A::AbstractUnitfulVecOrMat) = first(dims(A))
 #unitrange(A::AbstractUnitfulMatrix) = first(dims(A))
 
 """
