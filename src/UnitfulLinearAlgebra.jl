@@ -376,51 +376,11 @@ function *(A::AbstractUnitfulArray,B::AbstractUnitfulArray)
 end
 
 """
-    function *(A,B)
-
-    Matrix-matrix multiplication with units/dimensions.
-    A*B represents two successive transformations.
-    Unitrange of B should equal domain of A in geometric interpretation.
-    Unitrange of B should be parallel to unitdomain of A in algebraic interpretation.
-"""
-function *(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractMultipliableMatrix
-    #if unitrange(B) ~ unitdomain(A) # should this be similarity()?
- 
-    bothexact = exact(A) && exact(B)
-    if unitrange(B) == unitdomain(A) # should this be similarity()?
-        return MMatrix(A.numbers*B.numbers,unitrange(A),unitdomain(B),exact=bothexact) 
-    elseif unitrange(B) ∥ unitdomain(A) && ~bothexact
-        #A2 = convert_unitdomain(A,unitrange(B)) 
-        #convert_unitdomain!(A,unitrange(B))
-        newrange = unitrange(A).*(unitrange(B)[1]/unitdomain(A)[1])
-
-        return MMatrix(A.numbers*B.numbers,newrange,unitdomain(B),exact=bothexact)
-    else
-        error("matrix dimensional domain/unitrange not conformable")
-    end
-end
-
-# special case: MultipliableMatrix * non-multipliable matrix
-*(A::T1,B::T2) where T1<:AbstractMultipliableMatrix where T2<:AbstractMatrix = A*BestMultipliableMatrix(B)
-*(A::T2,B::T1) where T1<:AbstractMultipliableMatrix where T2<:AbstractMatrix = BestMultipliableMatrix(A)*B
-#*(A::AbstractUnitfulMatrix,B::AbstractVector) = A*UnitfulMatrix(B)
-#*(A::AbstractVector,B::AbstractUnitfulMatrix) = UnitfulMatrix(A)*B
-
-"""
     function +(A,B)
 
     Matrix-matrix addition with units/dimensions.
     A+B requires the two matrices to have dimensional similarity.
 """
-function +(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
-    bothexact = exact(A) && exact(B)
-    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
-        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
-        return MultipliableMatrix(A.numbers+B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
-    else
-        error("matrices not dimensionally conformable for addition")
-    end
-end
 function +(A::AbstractUnitfulMatrix{T1},B::AbstractUnitfulMatrix{T2}) where T1 where T2
     bothexact = exact(A) && exact(B)
     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
@@ -446,20 +406,9 @@ function -(A::AbstractUnitfulMatrix{T1},B::AbstractUnitfulMatrix{T2}) where T1 w
         error("matrices not dimensionally conformable for subtraction")
     end
 end
-function -(A::AbstractMultipliableMatrix{T1},B::AbstractMultipliableMatrix{T2}) where T1 where T2
-    bothexact = exact(A) && exact(B)
-    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
-       ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
-        return MMatrix(A.numbers-B.numbers,unitrange(A),unitdomain(A),exact=bothexact) 
-    else
-        error("matrices not dimensionally conformable for subtraction")
-    end
-end
--(A::AbstractMultipliableMatrix{T}) where T <: Number = 
-MMatrix(-A.numbers,unitrange(A),unitdomain(A),exact=exact(A)) 
 
 """
-    function lu(A::AbstractMultipliableMatrix{T})
+    function lu(A::AbstractUnitfulMatrix{T})
 
     Extend `lu` factorization to AbstractMultipliableMatrix.
     Related to Gaussian elimination.
@@ -468,12 +417,6 @@ MMatrix(-A.numbers,unitrange(A),unitdomain(A),exact=exact(A))
     Returns `LU` type in analogy with `lu` for unitless matrices.
     Based on LDU factorization, Hart, pp. 204.
 """
-function lu(A::AbstractMultipliableMatrix{T}) where T <: Number
-    F̂ = lu(A.numbers)
-    factors = MMatrix(F̂.factors, unitrange(A), unitdomain(A), exact=exact(A))
-    F = LU(factors,F̂.ipiv,F̂.info)
-    return F
-end
 function lu(A::AbstractUnitfulMatrix)
     F̂ = lu(parent(A))
     factors = rebuild(A,parent(F̂.factors),(unitrange(A),unitdomain(A)))
@@ -482,41 +425,15 @@ function lu(A::AbstractUnitfulMatrix)
     return F
 end
 
-
 """
     function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Symbol) where T
 
-    Extend LinearAlgebra.getproperty for AbstractMultipliableMatrix.
+    Extend LinearAlgebra.getproperty for AbstractUnitfulMatrix.
 
     LU factorization stores L and U together.
     Extract L and U while keeping consistent
     with dimensional domain and range.
 """
-function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Symbol) where T
-    m, n = size(F)
-    if d === :L
-        mmatrix = getfield(F, :factors)
-        numbers = getfield(mmatrix,:numbers)
-        # add ustrip to get numerical values
-        Lnum = tril!(numbers[1:m, 1:min(m,n)])
-        for i = 1:min(m,n); Lnum[i,i] = one(T); end
-        #L = EndomorphicMatrix(Lnum,unitrange(mmatrix),exact(mmatrix))
-        L = BestMultipliableMatrix(Lnum,unitrange(mmatrix),unitrange(mmatrix),exact=exact(mmatrix))
-        return L
-    elseif d === :U
-        mmatrix = getfield(F, :factors)
-        numbers = getfield(mmatrix,:numbers)
-        Unum = triu!(numbers[1:min(m,n), 1:n])
-        U = BestMultipliableMatrix(Unum, unitrange(mmatrix), unitdomain(mmatrix), exact=exact(mmatrix))
-        return U
-    elseif d === :p
-        return LinearAlgebra.ipiv2perm(getfield(F, :ipiv), m)
-    elseif d === :P
-        return Matrix{T}(I, m, m)[:,LinearAlgebra.invperm(F.p)]
-    else
-        getfield(F, d)
-    end
-end
 function getproperty(F::LU{T,<:AbstractUnitfulMatrix,Vector{Int64}}, d::Symbol) where T
     m, n = size(F)
     if d === :L
@@ -562,7 +479,6 @@ end
 """
  similarity(a,b)::Bool = isequal(dimension.(a),dimension.(b))
  ~(a,b) = similarity(a,b)
-#similarity(a,b) = isequal(dimension
 
 """
     function parallel
@@ -635,11 +551,10 @@ function uniform(a::Union{Vector,<:DimensionalData.Dimension})
     return true
 end
 function uniform(A::Matrix)
-    B = MMatrix(A)
+    B = UnitfulMatrix(A)
     isnothing(B) ? false : uniform(B)
 end
-uniform(A::Union{UnitfulMatrix,<: AbstractMultipliableMatrix}) = left_uniform(A) && right_uniform(A)
-uniform(A::UniformMatrix) = true
+uniform(A::UnitfulMatrix) = left_uniform(A) && right_uniform(A)
 
 """
     function left_uniform(A)
@@ -647,11 +562,9 @@ uniform(A::UniformMatrix) = true
     Definition: uniform unitrange of A
     Left uniform matrix: output of matrix has uniform units
 """
-left_uniform(A::Union{LeftUniformMatrix,UniformMatrix}) = true
-left_uniform(A::T) where T<: AbstractMultipliableMatrix = uniform(unitrange(A)) ? true : false
 left_uniform(A::UnitfulMatrix) = uniform(unitrange(A)) ? true : false
 function left_uniform(A::Matrix)
-    B = BestMultipliableMatrix(A)
+    B = UnitfulMatrix(A)
     isnothing(B) ? false : left_uniform(B)
 end
 
@@ -661,11 +574,9 @@ end
     Does the unitdomain of A have uniform dimensions?
     Right uniform matrix: input of matrix must have uniform units
 """
-right_uniform(A::Union{UniformMatrix,RightUniformMatrix}) = true
-right_uniform(A::T) where T<:AbstractMultipliableMatrix = uniform(unitdomain(A)) ? true : false
 right_uniform(A::UnitfulMatrix) = uniform(unitdomain(A)) ? true : false
 function right_uniform(A::Matrix)
-    B = MMatrix(A)
+    B = UnitfulMatrix(A)
     isnothing(B) ? false : right_uniform(B)
 end
 
@@ -675,18 +586,19 @@ end
      Not all dimensionless matrices have
      dimensionless domain and range.
 """
-dimensionless(A::T) where T <: AbstractMultipliableMatrix = uniform(A) && unitrange(A)[1] == unitdomain(A)[1]
 dimensionless(A::Union{Matrix,UnitfulMatrix}) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
 function dimensionless(A::AbstractMatrix)
-    B = MMatrix(A)
+    B = UniformMatrix(A)
     isnothing(B) ? false : dimensionless(B) # fallback
 end
 
-#square(A::T) where T <: AbstractMultipliableMatrix = (domainlength(A) == rangelength(A))
+"""
+    function square(A)
+
+    size(A)[1] == size(A)[2]
+"""
 square(A::T) where T <: AbstractMatrix = isequal(size(A)[1],size(A)[2]) 
-square(A::SquarableMatrix) = true
-square(A::EndomorphicMatrix) = true
 
 """
     function squarable(A::Matrix)
@@ -696,11 +608,9 @@ square(A::EndomorphicMatrix) = true
     Key for solving difference and differential equations.
     Have eigenstructure. 
 """
-squarable(A::Union{UnitfulMatrix,<:AbstractMultipliableMatrix}) = (unitdomain(A) ∥ unitrange(A))
-squarable(A::SquarableMatrix) = true
-squarable(A::EndomorphicMatrix) = true
+squarable(A::UnitfulMatrix}) = (unitdomain(A) ∥ unitrange(A))
 function squarable(A::AbstractMatrix)
-    B = MMatrix(A)
+    B = UnitfulMatrix(A)
     isnothing(B) ? false : squarable(B) # fallback
 end
 
@@ -711,10 +621,9 @@ end
     Definition: inverse dimensional range and dimensional domain are parallel.
     Called "dimensionally symmetric" by Hart, 1995.
 """
-unit_symmetric(A::Union{UnitfulMatrix,AbstractMultipliableMatrix}) = (unitrange(A) ∥ unitdomain(A).^-1)
-unit_symmetric(A::UnitSymmetricMatrix) = true
+unit_symmetric(A::UnitfulMatrix) = (unitrange(A) ∥ unitdomain(A).^-1)
 function unit_symmetric(A::AbstractMatrix)
-    B = MMatrix(A)
+    B = UnitfulMatrix(A)
     isnothing(B) ? false : unit_symmetric(B) # fallback
 end
 
