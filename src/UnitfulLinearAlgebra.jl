@@ -73,9 +73,6 @@ function UnitfulMatrix(data::AbstractArray, unitrange, unitdomain;
     return UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), refdims, name, metadata, exact)
 end
 
-#function BestMultipliableMatrix(numbers::AbstractMatrix,unitrange::AbstractVector,unitdomain::AbstractVector;exact=false)::AbstractMultipliableMatrix
-#                V = UnitfulMatrix(Unum,(Units(p),Units(q̃)))
-
 """
     rebuild(A::UnitfulMatrix, data, [dims, refdims, name, metadata]) => UnitfulMatrix
     rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix
@@ -608,7 +605,7 @@ square(A::T) where T <: AbstractMatrix = isequal(size(A)[1],size(A)[2])
     Key for solving difference and differential equations.
     Have eigenstructure. 
 """
-squarable(A::UnitfulMatrix}) = (unitdomain(A) ∥ unitrange(A))
+squarable(A::UnitfulMatrix) = (unitdomain(A) ∥ unitrange(A))
 function squarable(A::AbstractMatrix)
     B = UnitfulMatrix(A)
     isnothing(B) ? false : squarable(B) # fallback
@@ -770,6 +767,7 @@ exact(A::UnitfulMatrix) = A.exact
 """
 unitdomain(A::AbstractUnitfulMatrix) = last(dims(A))
 # this line may affect matrix multiplication
+unitdomain(A::AbstractUnitfulVector) = Units([unit(1.0)]) # kludge for a nondimensional scalar 
 #unitdomain(A::AbstractUnitfulVector) = Unitful.FreeUnits{(), NoDims, nothing}() # nondimensional scalar 
 
 """
@@ -777,8 +775,8 @@ unitdomain(A::AbstractUnitfulMatrix) = last(dims(A))
 
     Find the dimensional (unit) range of a matrix
 """
-unitrange(A::AbstractUnitfulMatrix) = first(dims(A))
-#unitrange(A::Union{AbstractUnitfulMatrix,AbstractUnitfulVector}) = first(dims(A))
+unitrange(A::AbstractUnitfulArray) = first(dims(A))
+#unitrange(A::AbstractUnitfulMatrix) = first(dims(A))
 
 """
     function transpose
@@ -969,7 +967,7 @@ end
     Should the units be stripped out of the function?
     Only defined for matrices with uniform units (pp. 101, Hart, 1995). 
 """
-isposdef(A::Eigen{T,V,S,U}) where {U<: AbstractVector, S<:Union{AbstractMultipliableMatrix,AbstractUnitfulMatrix}, V, T <: Number} = (uniform(A.vectors) && isreal(A.values)) && all(x -> x > 0, ustrip.(A.values))
+isposdef(A::Eigen{T,V,S,U}) where {U<: AbstractVector, S<:AbstractUnitfulMatrix, V, T <: Number} = (uniform(A.vectors) && isreal(A.values)) && all(x -> x > 0, ustrip.(A.values))
 
 """
    Extend `inv` for Eigen factorizations of `MultipliableMatrix`s.
@@ -1190,15 +1188,6 @@ diagm(v::AbstractVector,r::Units,d::Units; exact = false) = UnitfulMatrix(spdiag
     Functions available for LinearAlgebra.Cholesky objects: `size`, `\`, `inv`, `det`, `logdet` and `isposdef`.
     Functions available for UnitfulLinearAlgebra.Cholesky objects: `size`, `det`, and `isposdef`.
 """
-function cholesky(A::AbstractMultipliableMatrix)
-    if unit_symmetric(A)
-        C = LinearAlgebra.cholesky(A.numbers)
-        factors = BestMultipliableMatrix(C.factors,unitdomain(A)./unitdomain(A),unitdomain(A),exact=exact(A))
-        return Cholesky(factors,C.uplo,C.info)
-    else
-        error("requires unit symmetric matrix")
-    end
-end
 function cholesky(A::AbstractUnitfulMatrix)
     if unit_symmetric(A)
         C = LinearAlgebra.cholesky(parent(A))
@@ -1209,24 +1198,6 @@ function cholesky(A::AbstractUnitfulMatrix)
     end
 end
 
-function getproperty(C::Cholesky{T,<:AbstractMultipliableMatrix}, d::Symbol) where T 
-    Cfactors = getfield(C, :factors)
-    Cuplo    = getfield(C, :uplo)
-    if d === :U
-        numbers = UpperTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? Cfactors.numbers : copy(Cfactors.numbers'))
-        return BestMultipliableMatrix(numbers,unitrange(Cfactors),unitdomain(Cfactors),exact = Cfactors.exact)
-    elseif d === :L
-        numbers = LowerTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? Cfactors.numbers : copy(Cfactors.numbers'))
-        # use transpose to get units right
-        return BestMultipliableMatrix(numbers,unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1,exact = Cfactors.exact)
-    elseif d === :UL
-        # next line doesn't look right
-        return (Cuplo === 'U' ?        BestMultipliableMatrix(UpperTriangular(Cfactors.numbers),unitrange(Cfactors),unitdomain(Cfactors),exact = Cfactors.exact) : BestMultipliableMatrix(LowerTriangular(Cfactors.numbers),unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1,exact = Cfactors.exact))
-    else
-        #println("caution: fallback not tested")
-        return getfield(C, d)
-    end
-end
 function getproperty(C::Cholesky{T,<:AbstractUnitfulMatrix}, d::Symbol) where T 
     Cfactors = getfield(C, :factors)
     Cuplo    = getfield(C, :uplo)
@@ -1253,36 +1224,35 @@ end
      and dimensional unit domain `d`.
     Like `LinearAlgebra.Diagonal`, this extension is restricted to square matrices.
 """
-DiagonalUnitSymmetric(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? BestMultipliableMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   # return UnitSymmetric Matrix
 Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
 Diagonal(v::AbstractVector,r::Units,d::Units; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
 
-"""
-    function vcat(A,B)
+# """
+#     function vcat(A,B)
 
-    Modeled after function `VERTICAL` (pp. 203, Hart, 1995).
-"""
-function vcat(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
+#     Modeled after function `VERTICAL` (pp. 203, Hart, 1995).
+# """
+# function vcat(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
 
-    numbers = vcat(A.numbers,B.numbers)
-    shift = unitdomain(A)[1]./unitdomain(B)[1]
-    ur = vcat(unitrange(A),unitrange(B).*shift)
-    bothexact = (exact(A) && exact(B))
-    return BestMultipliableMatrix(numbers,ur,unitdomain(A),exact=bothexact)
-end
+#     numbers = vcat(A.numbers,B.numbers)
+#     shift = unitdomain(A)[1]./unitdomain(B)[1]
+#     ur = vcat(unitrange(A),unitrange(B).*shift)
+#     bothexact = (exact(A) && exact(B))
+#     return BestMultipliableMatrix(numbers,ur,unitdomain(A),exact=bothexact)
+# end
 
-"""
-    function hcat(A,B)
+# """
+#     function hcat(A,B)
 
-    Modeled after function `HORIZONTAL` (pp. 202, Hart, 1995).
-"""
-function hcat(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
+#     Modeled after function `HORIZONTAL` (pp. 202, Hart, 1995).
+# """
+# function hcat(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
 
-    numbers = hcat(A.numbers,B.numbers)
-    shift = unitrange(A)[1]./unitrange(B)[1]
-    ud = vcat(unitdomain(A),unitdomain(B).*shift)
-    bothexact = (exact(A) && exact(B))
-    return BestMultipliableMatrix(numbers,unitrange(A),ud,exact=bothexact)
-end
+#     numbers = hcat(A.numbers,B.numbers)
+#     shift = unitrange(A)[1]./unitrange(B)[1]
+#     ud = vcat(unitdomain(A),unitdomain(B).*shift)
+#     bothexact = (exact(A) && exact(B))
+#     return BestMultipliableMatrix(numbers,unitrange(A),ud,exact=bothexact)
+# end
 
 end
