@@ -5,7 +5,7 @@ using LinearAlgebra
 using SparseArrays
 using DimensionalData
 
-export UnitfulMatrix
+export UnitfulMatrix, UnitfulDimMatrix
 export DSVD
 export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
@@ -39,7 +39,7 @@ abstract type AbstractUnitfulVecOrMat{T,N,D<:Tuple,A} <: AbstractDimArray{T,N,D,
 const AbstractUnitfulVector{T<:Number} = AbstractUnitfulVecOrMat{T,1} where T
 const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulVecOrMat{T,2} where T
 
-#include("UnitfulDimMatrix.jl")
+include("UnitfulDimMatrix.jl")
 
 # Concrete implementation ######################################################
 """

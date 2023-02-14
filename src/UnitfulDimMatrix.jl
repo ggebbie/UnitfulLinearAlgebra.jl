@@ -23,8 +23,7 @@ end
 # 2 arg version: required input: numerical values and unitdims
 UnitfulDimMatrix(data::AbstractArray, unitdims; kw...) = UnitfulMatrix(data, (unitdims,); kw...)
 function UnitfulDimMatrix(data::AbstractArray, unitdims::Union{Tuple,NamedTuple}; 
-    dims=(), refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true
-                       )
+    dims=(), refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true)
     if eltype(unitdims) <: Vector
         return UnitfulDimMatrix(data, format(Units.(unitdims), data), format(dims,data), refdims, name, metadata, exact)
     elseif eltype(unitdims) <: Units
@@ -33,7 +32,7 @@ function UnitfulDimMatrix(data::AbstractArray, unitdims::Union{Tuple,NamedTuple}
 end
 # back consistency with MMatrix
 function UnitfulDimMatrix(data::AbstractArray, unitrange, unitdomain; 
-    dims=(), refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false)
+    dims=(), refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true)
     return UnitfulDimMatrix(data, format((Units(unitrange),Units(unitdomain)), data), format(dims, data), refdims, name, metadata, exact)
 end
 
