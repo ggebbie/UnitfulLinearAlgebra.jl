@@ -39,9 +39,9 @@ abstract type AbstractUnitfulVecOrMat{T,N,D<:Tuple,A} <: AbstractDimArray{T,N,D,
 const AbstractUnitfulVector{T<:Number} = AbstractUnitfulVecOrMat{T,1} where T
 const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulVecOrMat{T,2} where T
 
+#include("UnitfulDimMatrix.jl")
+
 # Concrete implementation ######################################################
-
-
 """
     struct UnitfulMatrix
 
