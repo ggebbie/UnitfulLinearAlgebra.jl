@@ -5,11 +5,11 @@
 [![Build Status](https://github.com/ggebbie/UnitfulLinearAlgebra.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ggebbie/UnitfulLinearAlgebra.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/ggebbie/UnitfulLinearAlgebra.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ggebbie/UnitfulLinearAlgebra.jl)
 
-More linear algebra functions for matrices with units
+Low-cost linear algebra functions for matrices with units
 
-## Usage
+## Usage: Algebraic interpretation of unitful matrices
 
-1. Define a concrete type of an `AbstractMultipliableMatrix` using the constructor or convert a matrix of quantities.
+1. Convert a matrix of quantities to a UnitfulMatrix using the `UnitfulMatrix` constructor.
 2. Do linear algebra operations like `inv`, `svd`, `cholesky`, `\`, `eigen`, and more.
 
 ```
@@ -68,6 +68,11 @@ julia> x̆ = inv(F)*y̆
  1.0 m s⁻¹
  0.0 m s⁻²
 ```
+
+## Usage: Geometric interpretation of unitful matrices
+
+1. Define a concrete type of an `UnitfulMatrix` by using the `UnitfulMatrix` constructor that requires information about the matrix's numerical values, unit range, and unit domain. This matrix is defined to have `exact=true`, it only operates on vectors with units that are identical the unit domain, and it produces output with units according to the unit range.
+2. Do linear algebra operations like `inv`, `svd`, `cholesky`, `\`, `eigen`, and more.
 
 ## Motivation
 
