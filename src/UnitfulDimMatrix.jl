@@ -10,7 +10,7 @@ const AbstractUnitfulDimMatrix{T<:Number} = AbstractUnitfulDimVecOrMat{T,2} wher
     Add `unitdims` for unit dimensions (range and domain).
     Add `exact::Bool` which is true for geometric interpretation.
 """
-struct UnitfulDimMatrix{T,N,UD<:Tuple,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractUnitfulVecOrMat{T,N,D,A}
+struct UnitfulDimMatrix{T,N,UD<:Tuple,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractUnitfulDimVecOrMat{T,N,UD,D,A}
     data::A
     unitdims::UD
     dims::D
@@ -151,5 +151,25 @@ function UnitfulDimMatrix(A::AbstractVector) # should be called UnitfulVector?
     else
         return nothing
     end
+end
+
+function _rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix)
+    # compare unitdims
+    DimensionalData.comparedims(last(unitdims(A)), first(unitdims(B)); val=true)
+
+    # compare regular (axis) dims
+    DimensionalData.comparedims(last(dims(A)), first(dims(B)); val=true)
+    
+    rebuild(A, parent(A) * parent(B), (first(unitdims(A)),last(unitdims(B))), (first(dims(A)),last(dims(B))))
+end
+
+function _rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector)
+    # compare unitdims
+    DimensionalData.comparedims(last(unitdims(A)), first(unitdims(B)); val=true)
+
+    # compare regular (axis) dims
+    DimensionalData.comparedims(last(dims(A)), first(dims(B)); val=true)
+    
+    rebuild(A, parent(A) * parent(B), (first(unitdims(A)),), (first(dims(A)),))
 end
 

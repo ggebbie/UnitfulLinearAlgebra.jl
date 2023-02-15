@@ -17,7 +17,7 @@ export convert_unitrange, convert_unitdomain
 export exact, multipliable, dimensionless, endomorphic
 export svd, dsvd
 export eigen, isposdef, inv, transpose
-export unitrange, unitdomain
+export unitrange, unitdomain, unitdims
 export lu, det, trace, diag, diagm
 export Diagonal, (\), cholesky
 export identitymatrix, show, vcat, hcat, rebuild
@@ -289,11 +289,11 @@ end
     Useful for tests, display
     pp. 193, Hart
 """
-function Matrix(A::T) where T<: AbstractUnitfulMatrix
+function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
 
     M,N = size(A)
-    T2 = eltype(parent(A))
-    B = Matrix{Quantity{T2}}(undef,M,N)
+    T = eltype(parent(A))
+    B = Matrix{Quantity{T}}(undef,M,N)
     for m = 1:M
         for n = 1:N
             B[m,n] = Quantity.(getindex(A,m,n),unitrange(A)[m]./unitdomain(A)[n])
@@ -769,6 +769,10 @@ unitdomain(A::AbstractUnitfulMatrix) = last(dims(A))
 # this line may affect matrix multiplication
 unitdomain(A::AbstractUnitfulVector) = Units([unit(1.0)]) # kludge for a nondimensional scalar 
 #unitdomain(A::AbstractUnitfulVector) = Unitful.FreeUnits{(), NoDims, nothing}() # nondimensional scalar 
+unitdomain(A::AbstractUnitfulDimMatrix) = last(unitdims(A))
+# this line may affect matrix multiplication
+unitdomain(A::AbstractUnitfulDimVector) = Units([unit(1.0)]) # kludge for a nondimensional scalar 
+
 
 """
     function unitrange(A)
@@ -777,6 +781,7 @@ unitdomain(A::AbstractUnitfulVector) = Units([unit(1.0)]) # kludge for a nondime
 """
 unitrange(A::AbstractUnitfulVecOrMat) = first(dims(A))
 #unitrange(A::AbstractUnitfulMatrix) = first(dims(A))
+unitrange(A::AbstractUnitfulDimVecOrMat) = first(unitdims(A))
 
 """
     function transpose
