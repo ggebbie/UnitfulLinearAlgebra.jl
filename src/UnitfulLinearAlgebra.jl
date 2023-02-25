@@ -47,30 +47,30 @@ const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulVecOrMat{T,2} where T
 
     Take DimArray and use dimensions for units
 """
-struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na,Me} <: AbstractUnitfulVecOrMat{T,N,D,A}
+struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na} <: AbstractUnitfulVecOrMat{T,N,D,A}
     data::A
     dims::D
     refdims::R
     name::Na
-    metadata::Me
+    #metadata::Me
     exact::Bool
 end
 
 # 2 arg version
 UnitfulMatrix(data::AbstractArray, dims; kw...) = UnitfulMatrix(data, (dims,); kw...)
 function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; 
-    refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false
+    refdims=(), name=DimensionalData.NoName(), exact = false
                        )
     if eltype(dims) <: Vector
-        return UnitfulMatrix(data, format(Units.(dims), data), refdims, name, metadata, exact)
+        return UnitfulMatrix(data, format(Units.(dims), data), refdims, name, exact)
     elseif eltype(dims) <: Units
-        return UnitfulMatrix(data, format(dims, data), refdims, name, metadata, exact)
+        return UnitfulMatrix(data, format(dims, data), refdims, name,  exact)
     end        
 end
 # back consistency with MMatrix
 function UnitfulMatrix(data::AbstractArray, unitrange, unitdomain; 
-    refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = false)
-    return UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), refdims, name, metadata, exact)
+    refdims=(), name=DimensionalData.NoName(), exact = true)
+    return UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), refdims, name, exact)
 end
 
 """
@@ -87,19 +87,19 @@ This method can also be used with keyword arguments in place of regular argument
 """
 @inline function rebuild(
     A::UnitfulMatrix, data, dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
-    rebuild(A, data, dims, refdims, name, metadata(A), exact(A))
+    rebuild(A, data, dims, refdims, name, exact(A))
 end
 
 @inline function rebuild(
-    A::UnitfulMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, metadata, exactflag
+    A::UnitfulMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, exactflag
 )
-    UnitfulMatrix(data, dims, refdims, name, metadata,exactflag)
+    UnitfulMatrix(data, dims, refdims, name, exactflag)
 end
 
-#@inline function rebuild(
-#     A::UnitfulMatrix, data; dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
-#     DimensionalData.rebuild(A, data, dims, refdims, name, metadata(A),exact(A))
-# end
+# @inline function rebuild(
+#      A::UnitfulMatrix, data; dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
+#      DimensionalData.rebuild(A, data, dims, refdims, name, exact(A))
+#  end
 
 """
     rebuild(A::UnitfulMatrix, data, dims, refdims, name, metadata,exactflag) => UnitfulMatrix
@@ -159,7 +159,7 @@ function UnitfulMatrix(A::AbstractMatrix)
         unitdomain[j] = unit(A[1,1])/unit(A[1,j])
     end
 
-    B = UnitfulMatrix(numbers,unitrange,unitdomain)
+    B = UnitfulMatrix(numbers,unitrange,unitdomain,exact=false)
     # if the array is not multipliable, return nothing
     if Matrix(B) == A
         return B
@@ -173,7 +173,7 @@ function UnitfulMatrix(A::AbstractVector) # should be called UnitfulVector?
     unitrange = Vector{Unitful.FreeUnits}(undef,M)
 
     unitrange = unit.(A)
-    B = UnitfulMatrix(numbers,unitrange)
+    B = UnitfulMatrix(numbers,unitrange,exact=false)
     # if the array is not multipliable, return nothing
     if Matrix(B) == A
         return B
