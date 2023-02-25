@@ -20,7 +20,7 @@ export eigen, isposdef, inv, transpose
 export unitrange, unitdomain
 export lu, det, trace, diag, diagm
 export Diagonal, (\), cholesky
-export identitymatrix, show, vcat, hcat, rebuild
+export identitymatrix, show, vcat, hcat #, rebuild #, rebuildsliced
 export describe
 
 import LinearAlgebra: inv, det, lu,
@@ -29,7 +29,7 @@ import LinearAlgebra: inv, det, lu,
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
     size, range, transpose, similar, show, vcat, hcat
 
-import DimensionalData: rebuild, @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
+import DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
 
 @dim Units "units"
 
@@ -47,30 +47,28 @@ const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulVecOrMat{T,2} where T
 
     Take DimArray and use dimensions for units
 """
-struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na} <: AbstractUnitfulVecOrMat{T,N,D,A}
+struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N}} <: AbstractUnitfulVecOrMat{T,N,D,A}
     data::A
     dims::D
     refdims::R
-    name::Na
-    #metadata::Me
     exact::Bool
 end
 
 # 2 arg version
 UnitfulMatrix(data::AbstractArray, dims; kw...) = UnitfulMatrix(data, (dims,); kw...)
 function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; 
-    refdims=(), name=DimensionalData.NoName(), exact = false
+    refdims=(), exact = false
                        )
     if eltype(dims) <: Vector
-        return UnitfulMatrix(data, format(Units.(dims), data), refdims, name, exact)
+        return UnitfulMatrix(data, format(Units.(dims), data), refdims, exact)
     elseif eltype(dims) <: Units
-        return UnitfulMatrix(data, format(dims, data), refdims, name,  exact)
+        return UnitfulMatrix(data, format(dims, data), refdims,  exact)
     end        
 end
 # back consistency with MMatrix
 function UnitfulMatrix(data::AbstractArray, unitrange, unitdomain; 
-    refdims=(), name=DimensionalData.NoName(), exact = true)
-    return UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), refdims, name, exact)
+    refdims=(), exact = true)
+    return UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), refdims, exact)
 end
 
 """
@@ -85,15 +83,15 @@ Implementations can discard arguments like `refdims`, `name` and `metadata`.
 
 This method can also be used with keyword arguments in place of regular arguments.
 """
-@inline function rebuild(
-    A::UnitfulMatrix, data, dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
-    rebuild(A, data, dims, refdims, name, exact(A))
+@inline function DimensionalData.rebuild(
+    A::UnitfulMatrix, data, dims::Tuple=dims(A), refdims=refdims(A))
+    DimensionalData.rebuild(A, data, dims, refdims, exact(A))
 end
 
-@inline function rebuild(
-    A::UnitfulMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, exactflag
+@inline function DimensionalData.rebuild(
+    A::UnitfulMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, exact::Bool
 )
-    UnitfulMatrix(data, dims, refdims, name, exactflag)
+    UnitfulMatrix(data, dims, refdims, exact)
 end
 
 # @inline function rebuild(
@@ -114,10 +112,17 @@ update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
 #    UnitfulMatrix(data, dims, refdims, name, metadata, exactflag)
 #end
 
+# @inline rebuildsliced(A::AbstractUnitfulVecOrMat, args...) = rebuildsliced(getindex, A, args...)
+# @inline rebuildsliced(f::Function, A::AbstractUnitfulVecOrMat, data::AbstractArray, I::Tuple, name=()) =
+#     rebuild(A, data, slicedims(f, A, I)..., name)
+@inline DimensionalData.rebuildsliced(A::UnitfulMatrix, args...) = rebuildsliced(getindex, A, args...)
+@inline DimensionalData.rebuildsliced(f::Function, A::UnitfulMatrix, data::AbstractArray, I::Tuple) =
+    DimensionalData.rebuild(A, data, DimensionalData.slicedims(f, A, I)...)
+
 function Base.show(io::IO, mime::MIME"text/plain", A::UnitfulMatrix{T,N}) where {T,N}
     lines = 0
     summary(io, A)
-    print_name(io, name(A))
+    #print_name(io, name(A))
     #lines += Dimensions.print_dims(io, mime, dims(A))
     !(isempty(dims(A)) || isempty(refdims(A))) && println(io)
     lines += Dimensions.print_refdims(io, mime, refdims(A))
@@ -251,8 +256,8 @@ endomorphic(A::UnitfulMatrix) = isequal(unitdomain(A),unitrange(A))
 endomorphic(A::Number) = dimensionless(A) # scalars must be dimensionless to be endomorphic
 
 # Need to test this
-similar(A::AbstractUnitfulMatrix{T}) where T <: Number =
-       rebuild(A, zeros(A))
+similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
+       DimensionalData.rebuild(A, zeros(A))
     #UnitfulMatrix(Matrix{T}(undef,size(A)),unitrange(A),unitdomain(A);exact=exact(A))
 
 """
@@ -352,14 +357,20 @@ end
     Unitrange of B should equal domain of A in geometric interpretation.
     Unitrange of B should be parallel to unitdomain of A in algebraic interpretation.
 """
-*(A::T1,b::Quantity) where T1 <: AbstractUnitfulMatrix = rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
-*(A::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulMatrix = rebuild(A,parent(A),(Units(unitrange(A).*b),unitdomain(A)))
-*(b::Union{Quantity,Unitful.FreeUnits},A::T1) where T1 <: AbstractUnitfulMatrix = A*b
+*(A::AbstractUnitfulMatrix,b::Quantity) = DimensionalData.rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
+*(A::AbstractUnitfulMatrix,b::Unitful.FreeUnits) = DimensionalData.rebuild(A,parent(A),(Units(unitrange(A).*b),unitdomain(A)))
+*(b::Union{Quantity,Unitful.FreeUnits},A::AbstractUnitfulMatrix) = A*b
+*(A::AbstractUnitfulMatrix,b::Number) = DimensionalData.rebuild(A,parent(A)*b)
+*(b::Number,A::AbstractUnitfulMatrix) = A*b
 
 # vector-scalar multiplication
-*(a::T1,b::Quantity) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a)*ustrip(b),(Units(unitrange(a).*unit(b)),))
-*(a::T1,b::Unitful.FreeUnits) where T1 <: AbstractUnitfulVector = rebuild(a,parent(a),(Units(unitrange(a).*b),))
-*(b::Union{Quantity,Unitful.FreeUnits},a::T1) where T1 <: AbstractUnitfulVector = a*b
+*(a::AbstractUnitfulVector,b::Quantity) = DimensionalData.rebuild(a,parent(a)*ustrip(b),(Units(unitrange(a).*unit(b)),))
+*(a::AbstractUnitfulVector,b::Unitful.FreeUnits) = DimensionalData.rebuild(a,parent(a),(Units(unitrange(a).*b),))
+*(b::Union{Quantity,Unitful.FreeUnits},a::AbstractUnitfulVector) = a*b
+# Need to test next line
+#*(a::AbstractUnitfulVector,b::Number) = a*Quantity(b,unit(1.0))
+*(a::AbstractUnitfulVector,b::Number) = DimensionalData.rebuild(a,parent(a)*b)
+*(b::Number,a::AbstractUnitfulVector) = a*b
 
 # (matrix/vector)-(matrix/vector) multiplication when inexact handled here
 function *(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
@@ -378,11 +389,11 @@ end
     Matrix-matrix addition with units/dimensions.
     A+B requires the two matrices to have dimensional similarity.
 """
-function +(A::AbstractUnitfulMatrix{T1},B::AbstractUnitfulMatrix{T2}) where T1 where T2
+function +(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat) #where T1 where T2
     bothexact = exact(A) && exact(B)
     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
         ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
-        return rebuild(A,parent(A)+parent(B),(unitrange(A),unitdomain(A))) 
+        return DimensionalData.rebuild(A,parent(A)+parent(B),(unitrange(A),unitdomain(A))) 
     else
         error("matrices not dimensionally conformable for addition")
     end
@@ -394,18 +405,18 @@ end
     Matrix-matrix subtraction with units/dimensions.
     A-B requires the two matrices to have dimensional similarity.
 """
-function -(A::AbstractUnitfulMatrix{T1},B::AbstractUnitfulMatrix{T2}) where T1 where T2
+function -(A::AbstractUnitfulVecOrMat{T1},B::AbstractUnitfulVecOrMat{T2}) where T1 where T2
     bothexact = exact(A) && exact(B)
     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
-        return rebuild(A,parent(A)-parent(B),(unitrange(A),unitdomain(A))) # takes exact(A) but should be bothexact 
+        return DimensionalData.rebuild(A,parent(A)-parent(B),(unitrange(A),unitdomain(A))) # takes exact(A) but should be bothexact 
     else
         error("matrices not dimensionally conformable for subtraction")
     end
 end
 
 """
-    function lu(A::AbstractUnitfulMatrix{T})
+    function lu(A::AbstractUnitfulVecOrMat{T})
 
     Extend `lu` factorization to AbstractMultipliableMatrix.
     Related to Gaussian elimination.
@@ -414,7 +425,7 @@ end
     Returns `LU` type in analogy with `lu` for unitless matrices.
     Based on LDU factorization, Hart, pp. 204.
 """
-function lu(A::AbstractUnitfulMatrix)
+function lu(A::AbstractUnitfulVecOrMat)
     F̂ = lu(parent(A))
     factors = rebuild(A,parent(F̂.factors),(unitrange(A),unitdomain(A)))
     #factors = MMatrix(F̂.factors, unitrange(A), unitdomain(A), exact=exact(A))
@@ -425,13 +436,13 @@ end
 """
     function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Symbol) where T
 
-    Extend LinearAlgebra.getproperty for AbstractUnitfulMatrix.
+    Extend LinearAlgebra.getproperty for AbstractUnitfulVecOrMat.
 
     LU factorization stores L and U together.
     Extract L and U while keeping consistent
     with dimensional domain and range.
 """
-function getproperty(F::LU{T,<:AbstractUnitfulMatrix,Vector{Int64}}, d::Symbol) where T
+function getproperty(F::LU{T,<:AbstractUnitfulVecOrMat,Vector{Int64}}, d::Symbol) where T
     m, n = size(F)
     if d === :L
         mmatrix = getfield(F, :factors)
@@ -650,7 +661,7 @@ dottable(a,b) = parallel(a, 1 ./ b)
     matrix to match the expected vectors during multiplication.
     Here we set the matrix to `exact=true` after this step.
 """
-function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Units) 
+function convert_unitdomain(A::AbstractUnitfulVecOrMat, newdomain::Units) 
     if unitdomain(A) ∥ newdomain
         #shift = newdomain./unitdomain(A)
         #newrange = unitrange(A).*shift
@@ -755,6 +766,9 @@ end
 -    `exact=false`: algebraic interpretation
 """
 exact(A::UnitfulMatrix) = A.exact
+
+#DimensionalData.name(A::AbstractUnitfulVecOrMat) = ()
+#DimensionalData.metadata(A::AbstractUnitfulVecOrMat) = NoMetadata()
 
 # convert(::Type{AbstractMatrix{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
 # convert(::Type{AbstractArray{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
