@@ -11,7 +11,9 @@ export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
 export square, squarable, singular, unit_symmetric
 export invdimension, dottable
-export getindex, setindex!, size, similar
+export getindexqty
+#export getindex, setindex!,
+export size, similar
 export convert_unitrange, convert_unitdomain
 #export convert_unitrange!, convert_unitdomain!
 export exact, multipliable, dimensionless, endomorphic
@@ -999,7 +1001,8 @@ function inv(F::DSVD{T}) where T
 
     # a less efficient matrix way to do it.
 #    Σ⁻¹ = Diagonal(F.S[1:k].^-1,fill(unit(1.0),k),fill(unit(1.0),k))
-    Σ⁻¹ = Diagonal(F.S[1:k].^-1,unitdomain(F.V[:,1:k]),unitrange(F.U⁻¹[1:k,:]))
+#   Σ⁻¹ = Diagonal(F.S[1:k].^-1,unitdomain(F.V[:,1:k]),unitrange(F.U⁻¹[1:k,:]))
+    Σ⁻¹ = Diagonal(F.S[1:k].^-1,unitdomain(F.V)[1:k],unitrange(F.U⁻¹)[1:k])
     return F.V[:,1:k]*Σ⁻¹*F.U⁻¹[1:k,:]
 end
 

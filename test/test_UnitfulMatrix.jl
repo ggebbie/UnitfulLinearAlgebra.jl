@@ -203,20 +203,13 @@ end
         
         # outer product to make a multipliable matrix
         A = p*q̃'
-        B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q),exact=false)
+        B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
         B2 = UnitfulMatrix(A)
         @test square(B)
         @test squarable(B)
-        B*B == B^2
+        B2*B2 == B2^2
 
-        # in-place CONVERSION NOT WORKING
-        # convert_unitrange!(B,K*[m,s])
-        # @test unitrange(B) == K*[m,s]
-
-        # convert_unitdomain!(B,K*[m,s])
-        # @test unitdomain(B) == K*[m,s]
-
-        # try to get eigenstructure
+        # get eigenstructure
         F = eigen(B)
 
         # Hart, 1995, pp. 97
@@ -446,8 +439,6 @@ end
         E = UnitfulMatrix(randn(k,3),fill(m,k),[u1,u2,u3],exact=true)
         y = UnitfulMatrix(randn(k)u1)
         x = UnitfulMatrix([randn()u1; randn()u2; randn()u3])
-
-        #convert_unitdomain!(E,unit.(x))
 
         # Define norms for this space.
         p1 = [m,m/s,m/s/s]

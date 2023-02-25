@@ -59,10 +59,38 @@ end
 Rebuild a `UnitfulMatrix` with new fields. Handling partial field
 update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
 """
-@inline DimensionalData.rebuildsliced(A::AbstractUnitfulVecOrMat, args...) = rebuildsliced(getindex, A, args...)
+@inline DimensionalData.rebuildsliced(A::AbstractUnitfulVecOrMat, args...) = DimensionalData.rebuildsliced(getindex, A, args...)
 # WARNING: kludge here, slicedims returns Tuple(Tuple())) which causes problems, Insert [1], needs a fix
-@inline DimensionalData.rebuildsliced(f::Function, A::AbstractUnitfulVecOrMat, data::AbstractArray, I::Tuple; exact= exact(A)) =
-    DimensionalData.rebuild(A, data, DimensionalData.slicedims(f, A, I)[1],exact) 
+@inline function DimensionalData.rebuildsliced(f::Function, A::AbstractUnitfulVecOrMat, data::AbstractArray, I::Tuple; exact= exact(A))
+
+    urange = unitrange(A)[I[1]]
+    udomain = unitdomain(A)[I[2]]
+
+    if (udomain isa Unitful.FreeUnits || urange isa Unitful.FreeUnits )
+        # case of column vector, row vector, scalar
+        # scalar appears to be overridden by getindex
+        newunitrange = slicedvector(urange,udomain)
+        return UnitfulMatrix(data, newunitrange)
+        #return UnitfulMatrix(data, newunitrange, newunitdomain)
+    else
+        newunitrange, newunitdomain = slicedmatrix(urange,udomain)
+        return UnitfulMatrix(data, newunitrange, newunitdomain)
+    end
+end
+
+slicedvector(urange,udomain) = urange./udomain
+function slicedmatrix(urange,udomain) 
+    unt = Array{Unitful.FreeUnits}(undef,length(urange),length(udomain))
+    for m in 1:length(urange)
+        for n in 1:length(udomain)
+            unt[m,n] = urange[m]./udomain[n]
+        end
+    end
+    # determine new range/domain
+    newunitrange = unt[:,1]
+    newunitdomain = unt[1,1]./unt[1,:]
+    return newunitrange,newunitdomain
+end
 
 function Base.show(io::IO, mime::MIME"text/plain", A::UnitfulMatrix{T,N}) where {T,N}
     lines = 0
