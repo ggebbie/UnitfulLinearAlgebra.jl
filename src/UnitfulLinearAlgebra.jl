@@ -5,7 +5,7 @@ using LinearAlgebra
 using SparseArrays
 using DimensionalData
 
-export UnitfulMatrix
+export UnitfulMatrix, AbstractUnitfulVecOrMat
 export DSVD
 export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
