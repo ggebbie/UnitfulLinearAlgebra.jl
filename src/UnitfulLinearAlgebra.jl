@@ -33,159 +33,7 @@ import DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetada
 
 @dim Units "units"
 
-abstract type AbstractUnitfulVecOrMat{T,N,D<:Tuple,A} <: AbstractDimArray{T,N,D,A} end
-
-# should be a subtype, not an actual type
-const AbstractUnitfulVector{T<:Number} = AbstractUnitfulVecOrMat{T,1} where T
-const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulVecOrMat{T,2} where T
-
-# Concrete implementation ######################################################
-
-
-"""
-    struct UnitfulMatrix
-
-    Take DimArray and use dimensions for units
-"""
-struct UnitfulMatrix{T,N,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N}} <: AbstractUnitfulVecOrMat{T,N,D,A}
-    data::A
-    dims::D
-    refdims::R
-    exact::Bool
-end
-
-# 2 arg version
-UnitfulMatrix(data::AbstractArray, dims; kw...) = UnitfulMatrix(data, (dims,); kw...)
-function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; 
-    refdims=(), exact = false
-                       )
-    if eltype(dims) <: Vector
-        return UnitfulMatrix(data, format(Units.(dims), data), refdims, exact)
-    elseif eltype(dims) <: Units
-        return UnitfulMatrix(data, format(dims, data), refdims,  exact)
-    end        
-end
-# back consistency with MMatrix
-function UnitfulMatrix(data::AbstractArray, unitrange, unitdomain; 
-    refdims=(), exact = true)
-    return UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), refdims, exact)
-end
-
-"""
-    rebuild(A::UnitfulMatrix, data, [dims, refdims, name, metadata]) => UnitfulMatrix
-    rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix
-
-Rebuild a `UnitfulMatrix` with some field changes. All types
-that inherit from `UnitfulMatrix` must define this method if they
-have any additional fields or alternate field order.
-
-Implementations can discard arguments like `refdims`, `name` and `metadata`.
-
-This method can also be used with keyword arguments in place of regular arguments.
-"""
-@inline function DimensionalData.rebuild(
-    A::UnitfulMatrix, data, dims::Tuple=dims(A), refdims=refdims(A))
-    DimensionalData.rebuild(A, data, dims, refdims, exact(A))
-end
-
-@inline function DimensionalData.rebuild(
-    A::UnitfulMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, exact::Bool
-)
-    UnitfulMatrix(data, dims, refdims, exact)
-end
-
-# @inline function rebuild(
-#      A::UnitfulMatrix, data; dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
-#      DimensionalData.rebuild(A, data, dims, refdims, name, exact(A))
-#  end
-
-"""
-    rebuild(A::UnitfulMatrix, data, dims, refdims, name, metadata,exactflag) => UnitfulMatrix
-    rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix
-
-Rebuild a `UnitfulMatrix` with new fields. Handling partial field
-update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
-"""
-#@inline function rebuild(
-#    A::UnitfulMatrix, data::AbstractArray, dims::Tuple, refdims::Tuple, name, metadata, exactflag
-#)
-#    UnitfulMatrix(data, dims, refdims, name, metadata, exactflag)
-#end
-
-# @inline rebuildsliced(A::AbstractUnitfulVecOrMat, args...) = rebuildsliced(getindex, A, args...)
-# @inline rebuildsliced(f::Function, A::AbstractUnitfulVecOrMat, data::AbstractArray, I::Tuple, name=()) =
-#     rebuild(A, data, slicedims(f, A, I)..., name)
-@inline DimensionalData.rebuildsliced(A::UnitfulMatrix, args...) = rebuildsliced(getindex, A, args...)
-@inline DimensionalData.rebuildsliced(f::Function, A::UnitfulMatrix, data::AbstractArray, I::Tuple) =
-    DimensionalData.rebuild(A, data, DimensionalData.slicedims(f, A, I)...)
-
-function Base.show(io::IO, mime::MIME"text/plain", A::UnitfulMatrix{T,N}) where {T,N}
-    lines = 0
-    summary(io, A)
-    #print_name(io, name(A))
-    #lines += Dimensions.print_dims(io, mime, dims(A))
-    !(isempty(dims(A)) || isempty(refdims(A))) && println(io)
-    lines += Dimensions.print_refdims(io, mime, refdims(A))
-    println(io)
-
-    # DELETED THIS OPTIONAL PART HERE
-    # Printing the array data is optional, subtypes can 
-    # show other things here instead.
-    ds = displaysize(io)
-    ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
-    #println("show after")
-    #DimensionalData.show_after(ioctx, mime, Matrix(A))
-
-    #function print_array(io::IO, mime, A::AbstractDimArray{T,2}) where T
-    T2 = eltype(A)
-    Base.print_matrix(DimensionalData._print_array_ctx(ioctx, T2), Matrix(A))
-
-    return nothing
-end
-
-"""
-    function UnitfulMatrix(A::AbstractMatrix)
-
-    Constructor to make inexact UnitfulMatrix.
-    Satisfies algebraic interpretation of multipliable
-    matrices.
-"""
-function UnitfulMatrix(A::AbstractMatrix)
-    numbers = ustrip.(A)
-    M,N = size(numbers)
-    unitdomain = Vector{Unitful.FreeUnits}(undef,N)
-    unitrange = Vector{Unitful.FreeUnits}(undef,M)
-
-    for i = 1:M
-        unitrange[i] = unit(A[i,1])
-    end
-    
-    for j = 1:N
-        unitdomain[j] = unit(A[1,1])/unit(A[1,j])
-    end
-
-    B = UnitfulMatrix(numbers,unitrange,unitdomain,exact=false)
-    # if the array is not multipliable, return nothing
-    if Matrix(B) == A
-        return B
-    else
-        return nothing
-    end
-end
-function UnitfulMatrix(A::AbstractVector) # should be called UnitfulVector?
-    numbers = ustrip.(A)
-    M = size(numbers)
-    unitrange = Vector{Unitful.FreeUnits}(undef,M)
-
-    unitrange = unit.(A)
-    B = UnitfulMatrix(numbers,unitrange,exact=false)
-    # if the array is not multipliable, return nothing
-    if Matrix(B) == A
-        return B
-    else
-        return nothing
-    end
-end
+include("UnitfulMatrix.jl")
 
 """
     function describe(A::UnitfulMatrix)
@@ -306,14 +154,16 @@ function Matrix(A::T) where T<: AbstractUnitfulMatrix
     end
     return B
 end
-function Matrix(a::T) where T<: AbstractUnitfulVector
+function Matrix(a::AbstractUnitfulVector) 
 
     M, = size(a)
     T2 = eltype(parent(a))
     b = Vector{Quantity{T2}}(undef,M)
     for m = 1:M
         b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
+    #    b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
     end
+    #b= Quantity.(parent(a),unitrange(a)[1][:])
     return b
 end
 
@@ -767,8 +617,10 @@ end
 """
 exact(A::UnitfulMatrix) = A.exact
 
-#DimensionalData.name(A::AbstractUnitfulVecOrMat) = ()
-#DimensionalData.metadata(A::AbstractUnitfulVecOrMat) = NoMetadata()
+# these dummy functions are needed for the interface for DimensionalData. They are important for matrix slices. Would be nice if they were not needed.
+DimensionalData.name(A::AbstractUnitfulVecOrMat) = ()
+DimensionalData.metadata(A::AbstractUnitfulVecOrMat) = NoMetadata()
+DimensionalData.refdims(A::AbstractUnitfulVecOrMat) = ()
 
 # convert(::Type{AbstractMatrix{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
 # convert(::Type{AbstractArray{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)

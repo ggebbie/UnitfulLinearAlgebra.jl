@@ -58,25 +58,3 @@ Alu = lu(A);
 println("LU left divide")
 @btime numlu\ynd;
 @btime Alu\y;
-
-# does it help to make y vector a multipliable matrix?
-y2 = BestMultipliableMatrix(y[:,:]);
-@btime Alu\y2 #fails
-
-# very slow, just as a check
-function longmultiply(A::T,b::AbstractVector) where T<: AbstractMultipliableMatrix
-
-    if dimension.(unitdomain(A)) == dimension.(b)
-        #if unitdomain(A) ~ b
-        #Amat = Matrix(A);
-        return Matrix(A)*b
-        #return (A.numbers*ustrip.(b)).*unitrange(A)
-        #return Quantity.((A.numbers*ustrip.(b)),unitrange(A)) # slower
-    elseif ~exact(A) && (unitdomain(A) ∥ b)
-        #Anew = convert_unitdomain(A,unit.(b)) # inefficient?
-        convert_unitdomain!(A,unit.(b)) # inefficient?
-        return (A.numbers*ustrip.(b)).*unitrange(A)
-    else
-        error("Dimensions of MultipliableMatrix and vector not compatible")
-    end
-end

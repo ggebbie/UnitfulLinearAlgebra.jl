@@ -21,7 +21,6 @@ m² = u"m^2"
 within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
 within(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat,tol) =  maximum(abs.(parent(A - B))) < tol
 
-
 @testset "UnitfulLinearAlgebra.jl" begin
 
     @testset "Unitful" begin
