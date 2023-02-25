@@ -617,6 +617,7 @@ end
 """
 exact(A::UnitfulMatrix) = A.exact
 
+# these dummy functions are needed for the interface for DimensionalData. They are important for matrix slices. Would be nice if they were not needed.
 DimensionalData.name(A::AbstractUnitfulVecOrMat) = ()
 DimensionalData.metadata(A::AbstractUnitfulVecOrMat) = NoMetadata()
 DimensionalData.refdims(A::AbstractUnitfulVecOrMat) = ()
