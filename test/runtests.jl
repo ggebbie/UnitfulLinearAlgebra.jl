@@ -17,7 +17,9 @@ m² = u"m^2"
     Are two matrices within a certain tolerance?
     Use to simplify tests.
     """
+#within(A::Union{Matrix{Quantity},Vector{Quantity}},B::Union{Matrix{Quantity},Vector{Quantity}},tol) =  maximum(abs.(ustrip.(A - B))) < tol
 within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
+within(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat,tol) =  maximum(abs.(parent(A - B))) < tol
 
 
 @testset "UnitfulLinearAlgebra.jl" begin

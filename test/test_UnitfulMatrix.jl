@@ -12,10 +12,10 @@ function test_interface(x::AbstractUnitfulVecOrMat)
 
     @testset "rebuild" begin
         # argument version
-        x1 = rebuild(x, parent(x), dims(x), refdims(x), name(x), exact(x))
+        x1 = rebuild(x, parent(x), dims(x), refdims(x), exact(x))
         # keyword version, will work magically using ConstructionBase.jl if you use the same fieldnames.
         # If not, define it and remap these names to your fields.
-        x2 = rebuild(x; data=parent(x), dims=dims(x), refdims=refdims(x), name=name(x))
+        x2 = rebuild(x; data=parent(x), dims=dims(x), refdims=refdims(x))
         # all should be identical. If any fields are not used, they will always be `nothing` or `()` for `refdims`
         @test parent(x) === parent(x1) === parent(x2)
         @test dims(x) === dims(x1) === dims(x2)
