@@ -1,4 +1,4 @@
-using Revise
+#using Revise
 using UnitfulLinearAlgebra
 using Unitful
 using LinearAlgebra
@@ -20,7 +20,6 @@ m² = u"m^2"
 #within(A::Union{Matrix{Quantity},Vector{Quantity}},B::Union{Matrix{Quantity},Vector{Quantity}},tol) =  maximum(abs.(ustrip.(A - B))) < tol
 within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
 within(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat,tol) =  maximum(abs.(parent(A - B))) < tol
-
 
 @testset "UnitfulLinearAlgebra.jl" begin
 

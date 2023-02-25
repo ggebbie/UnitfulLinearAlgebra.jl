@@ -154,14 +154,16 @@ function Matrix(A::T) where T<: AbstractUnitfulMatrix
     end
     return B
 end
-function Matrix(a::T) where T<: AbstractUnitfulVector
+function Matrix(a::AbstractUnitfulVector) 
 
     M, = size(a)
     T2 = eltype(parent(a))
     b = Vector{Quantity{T2}}(undef,M)
     for m = 1:M
         b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
+    #    b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
     end
+    #b= Quantity.(parent(a),unitrange(a)[1][:])
     return b
 end
 
@@ -615,8 +617,9 @@ end
 """
 exact(A::UnitfulMatrix) = A.exact
 
-#DimensionalData.name(A::AbstractUnitfulVecOrMat) = ()
-#DimensionalData.metadata(A::AbstractUnitfulVecOrMat) = NoMetadata()
+DimensionalData.name(A::AbstractUnitfulVecOrMat) = ()
+DimensionalData.metadata(A::AbstractUnitfulVecOrMat) = NoMetadata()
+DimensionalData.refdims(A::AbstractUnitfulVecOrMat) = ()
 
 # convert(::Type{AbstractMatrix{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
 # convert(::Type{AbstractArray{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)

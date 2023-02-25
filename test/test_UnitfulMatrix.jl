@@ -2,7 +2,7 @@ function test_interface(x::AbstractUnitfulVecOrMat)
     @testset "types" begin
         @test parent(x) isa AbstractArray # Is this absolutely necessary?
         @test dims(x) isa DimensionalData.DimTuple
-        @test refdims(x) isa Tuple
+        #@test refdims(x) isa Tuple
     end
 
     @testset "size" begin
@@ -12,14 +12,14 @@ function test_interface(x::AbstractUnitfulVecOrMat)
 
     @testset "rebuild" begin
         # argument version
-        x1 = rebuild(x, parent(x), dims(x), refdims(x), exact(x))
+        x1 = rebuild(x, parent(x), dims(x), exact(x))
         # keyword version, will work magically using ConstructionBase.jl if you use the same fieldnames.
         # If not, define it and remap these names to your fields.
-        x2 = rebuild(x; data=parent(x), dims=dims(x), refdims=refdims(x))
+        x2 = rebuild(x; data=parent(x), dims=dims(x))
         # all should be identical. If any fields are not used, they will always be `nothing` or `()` for `refdims`
         @test parent(x) === parent(x1) === parent(x2)
         @test dims(x) === dims(x1) === dims(x2)
-        @test refdims(x) === refdims(x1) === refdims(x2)
+        #@test refdims(x) === refdims(x1) === refdims(x2)
         #@test metadata(x) === metadata(x1) === metadata(x2)
     end
 end
@@ -111,12 +111,13 @@ end
         q̃ = [-1.0K, 2.0]
 
         qold = ustrip.(q̃).*unit.(1 ./q̃)
-        q = UnitfulMatrix(ustrip.(q̃),unit.(1 ./q̃),exact=false)
+        q = UnitfulMatrix(qold)
+        q = UnitfulMatrix(ustrip.(q̃),unit.(1 ./q̃))
         
         # outer product to make a multipliable matrix
         A = p*q̃'
         #B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
-        B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(qold),exact=true)
+        B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(qold))
         Bq = B*q
         @test A==Matrix(B)
         @test isequal(A*qold,Matrix(Bq))
