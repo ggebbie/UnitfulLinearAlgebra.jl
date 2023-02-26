@@ -12,7 +12,6 @@ begin
 	using Pluto, LinearAlgebra, Statistics, Plots, PlotThemes, Latexify, UnitfulLatexify, Unitful, Statistics, StatsBase, DelimitedFiles, UnitfulLinearAlgebra, Measurements
 	set_default(fmt=FancyNumberFormatter(4),convert_unicode=false,cdot=false)
 	ENV["UNITFUL_FANCY_EXPONENTS"] = true
-	MMatrix = BestMultipliableMatrix
 end
 
 # ╔═╡ b35d0cd8-f20a-4e7c-9c21-5b1792a5e610
@@ -126,7 +125,10 @@ Sv(1000.0m³/s) # a test conversion
 ρ*1Sv |> Tg/s  # convert Sv to Tg/s
 
 # ╔═╡ b7d5434d-b962-427e-a78f-2ca5d97c69ff
-Ψ = readdlm("moc24N_monavg.txt")Sv
+Ψ = UnitfulMatrix(readdlm("moc24N_monavg.txt")Sv)
+
+# ╔═╡ 440e4e2f-9760-4fcb-9e66-4126cd51cb3e
+Matrix(Ψ)
 
 # ╔═╡ b76a3f03-7015-4e01-9f4a-2a47253f14fa
 nΨ = length(Ψ)
@@ -135,7 +137,7 @@ nΨ = length(Ψ)
 t = range(2004+4.5/12,step=1/12,length=nΨ)u"yr" # start= Apr. 2004
 
 # ╔═╡ d8e0f433-3581-4527-a08b-8a63b08398a6
-plot(t,Ψ,xlabel="Calendar years",ylabel="AMOC",label="RAPID-MOCHA array")
+plot(t,Matrix(Ψ),xlabel="Calendar years",ylabel="AMOC",label="RAPID-MOCHA array")
 
 # ╔═╡ a40c9260-6cfe-431f-85a7-e1883aa6e44b
 ### Calculate a mean value through a least-squares problem
@@ -147,7 +149,7 @@ plot(t,Ψ,xlabel="Calendar years",ylabel="AMOC",label="RAPID-MOCHA array")
 urange = fill(Sv,nΨ); udomain = fill(Sv,1)
 
 # ╔═╡ edc47ee4-0ed0-4208-94c4-d38419e3b321
-𝐄 = MMatrix(fill(1,nΨ,1),urange,udomain,exact=true)
+𝐄 = UnitfulMatrix(fill(1,nΨ,1),urange,udomain,exact=true)
 
 # ╔═╡ a06b8afd-bc1c-41e9-b473-5ac3adc0f63d
 md""" make covariance matrix """
@@ -157,20 +159,35 @@ begin
 	# part a: assume obs are independent
 	σₙ = 0.1Sv
 	σₓ = 10Sv
-	σ̃ₓ = var(Ψ) # estimated variance
+	σ̃ₓ = var(Matrix(Ψ)) # estimated variance
 	σq = √(σₓ^2+σₙ^2)
 	Cqq = Diagonal(fill(ustrip.(σq.^2),nΨ),fill(Sv,nΨ),fill(Sv^-1,nΨ),exact=true)
     iCqq = inv(Cqq);
 end
 
 # ╔═╡ 0d8b5360-a24d-4c62-b703-4c22ad6f51af
-Ψ̄̃ = (transpose(𝐄)*iCqq*𝐄)\(transpose(𝐄)*iCqq*Ψ); @latexdefine Ψ̄̃
+Ψ̄̃ = Matrix((transpose(𝐄)*iCqq*𝐄)\(transpose(𝐄)*iCqq*Ψ))[1]
+
+# ╔═╡ 1992e720-6841-4687-b216-56696ea2238b
+@latexdefine Ψ̄̃
+
+# ╔═╡ d7977002-47a0-4a92-b9fb-75c31bd3d5dc
+md""" Each piece of the calculation carries its own units"""
+
+# ╔═╡ 2867dd51-9989-4f6b-a56c-38a3c0523960
+transpose(𝐄)*iCqq*Ψ
+
+# ╔═╡ a82ca194-60a0-469d-bf6d-e0e388b2d18b
+transpose(𝐄)*iCqq*𝐄
 
 # ╔═╡ 10c298f3-94ef-4ec2-9088-49f442956eb2
 σΨ̃ = .√(diag(inv(transpose(𝐄)*iCqq*𝐄)))[1]; @latexdefine σΨ̃
 
+# ╔═╡ 29d0ac48-3da5-46fa-b253-55386b3ced1a
+diag(inv(transpose(𝐄)*iCqq*𝐄))
+
 # ╔═╡ 640917cb-e3d2-45c1-b2c0-8223f8ed6adc
-solution = Ψ̄̃[1] ± σΨ̃
+solution = Ψ̄̃ ± σΨ̃
 
 # ╔═╡ 7e34cce6-df00-4b58-8f3e-adf77b618485
 # use Measurements.jl to get the significant digits right
@@ -195,16 +212,23 @@ M = 12; # obs
 udomain1 = [K,K/s,K/s/s]; urange1 = fill(Sv,M)
 
 # ╔═╡ 2b9d6d5e-3a88-44fa-a606-206ce0417b56
-H = MMatrix(randn(3,3),urange1,udomain1,exact=true)
+H = UnitfulMatrix(randn(M,3),urange1,udomain1)
 
 # ╔═╡ 5766a40a-2039-4192-8b20-66bd53daf964
-k̃ = rand(3).*udomain1
+k̃ = UnitfulMatrix(rand(3).*udomain1)
+
+# ╔═╡ bea3fca6-85e3-476b-9706-23d38950e086
+unitrange(k̃)
 
 # ╔═╡ 825876d2-4e3e-4e33-be7e-c859a2bb6328
-H*k̃ # now you can do multiplication
+# now you can do multiplication
+H*k̃ 
 
-# ╔═╡ 43d3823f-1b9b-4a6c-b4ba-8bc7cd508265
-exact(H)
+# ╔═╡ a4804310-60be-470d-b22b-b2c73a1c391f
+# the bespoke "show" method is not rendering correctly in Pluto
+# this error is not reproduced in the REPL
+# Here's one way to see the output
+Matrix(H*k̃)
 
 # ╔═╡ d053dd52-f862-49ff-86c6-9748440802a1
 md""" to do matrix-vector multiplication, the unit domain of the matrix must match the units of the vector (or be parallel to those units) """
@@ -265,6 +289,7 @@ md""" Try SVD of Vandermond matrix"""
 # ╠═b47a39e5-1f88-4c70-97cf-38840cee6da4
 # ╠═60bacb4e-6b5e-428e-8e90-be8dff980dca
 # ╠═b7d5434d-b962-427e-a78f-2ca5d97c69ff
+# ╠═440e4e2f-9760-4fcb-9e66-4126cd51cb3e
 # ╠═b76a3f03-7015-4e01-9f4a-2a47253f14fa
 # ╠═bcf18441-869b-4b79-9d6d-845404232ec0
 # ╠═d8e0f433-3581-4527-a08b-8a63b08398a6
@@ -275,7 +300,12 @@ md""" Try SVD of Vandermond matrix"""
 # ╟─a06b8afd-bc1c-41e9-b473-5ac3adc0f63d
 # ╠═a1e9f7ad-defa-4028-bda4-d30445591455
 # ╠═0d8b5360-a24d-4c62-b703-4c22ad6f51af
+# ╠═1992e720-6841-4687-b216-56696ea2238b
+# ╠═d7977002-47a0-4a92-b9fb-75c31bd3d5dc
+# ╠═2867dd51-9989-4f6b-a56c-38a3c0523960
+# ╠═a82ca194-60a0-469d-bf6d-e0e388b2d18b
 # ╠═10c298f3-94ef-4ec2-9088-49f442956eb2
+# ╠═29d0ac48-3da5-46fa-b253-55386b3ced1a
 # ╠═640917cb-e3d2-45c1-b2c0-8223f8ed6adc
 # ╟─7e34cce6-df00-4b58-8f3e-adf77b618485
 # ╠═5fa09e7c-f190-4308-a39e-51a5507da344
@@ -286,8 +316,9 @@ md""" Try SVD of Vandermond matrix"""
 # ╠═0ebf2a2c-88af-4b4f-b3be-1b38a1609538
 # ╠═2b9d6d5e-3a88-44fa-a606-206ce0417b56
 # ╠═5766a40a-2039-4192-8b20-66bd53daf964
+# ╠═bea3fca6-85e3-476b-9706-23d38950e086
 # ╠═825876d2-4e3e-4e33-be7e-c859a2bb6328
-# ╠═43d3823f-1b9b-4a6c-b4ba-8bc7cd508265
+# ╠═a4804310-60be-470d-b22b-b2c73a1c391f
 # ╟─d053dd52-f862-49ff-86c6-9748440802a1
 # ╟─83b06502-f0bc-43bf-a142-313c1909ddca
 # ╟─f86dbe64-0a65-45fc-81e7-9b333373708a

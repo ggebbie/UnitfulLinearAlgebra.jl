@@ -22,14 +22,17 @@ export eigen, isposdef, inv, transpose
 export unitrange, unitdomain
 export lu, det, trace, diag, diagm
 export Diagonal, (\), cholesky
-export identitymatrix, show, vcat, hcat #, rebuild #, rebuildsliced
+export identitymatrix, vcat, hcat #, rebuild #, rebuildsliced
 export describe
+#export show
 
 import LinearAlgebra: inv, det, lu,
     svd, getproperty, eigen, isposdef,
-    diag, diagm, Diagonal, cholesky
+    diagm, Diagonal, cholesky
+    #diag, diagm, Diagonal, cholesky
 import Base:(~), (*), (+), (-), (\), getindex, setindex!,
-    size, range, transpose, similar, show, vcat, hcat
+    size, range, transpose, similar, vcat, hcat,
+    show
 
 import DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
 
@@ -42,7 +45,7 @@ include("UnitfulMatrix.jl")
 
      Information regarding the type of multipliable matrix.
 """
-function describe(A::UnitfulMatrix)
+function describe(A::AbstractUnitfulMatrix)
     matrixtype = ""
     
     dimensionless(A) && ( matrixtype *= "Dimensionless ")
@@ -116,6 +119,7 @@ similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
     Get entry value of matrix including units.
 """
 getindexqty(A::AbstractUnitfulMatrix,i::Int,j::Int) = Quantity.(parent(A)[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+getindexqty(A::AbstractUnitfulVector,i::Int) = Quantity.(parent(A)[i],unitrange(A)[i]) 
 
 """
     function setindex!(A::MultipliableMatrix,v,i,j)
@@ -147,8 +151,15 @@ end
 function Matrix(A::T) where T<: AbstractUnitfulMatrix
 
     M,N = size(A)
-    T2 = eltype(parent(A))
-    B = Matrix{Quantity{T2}}(undef,M,N)
+    if uniform(A)
+        B = Matrix{typeof(getindexqty(A,1,1))}(undef,M,N)
+    else
+        # don't understand why two lines are necessary here
+        T2 = eltype(parent(A))
+        B = Matrix{Quantity{T2}}(undef,M,N)
+    end
+    #T2 = eltype(parent(A))
+    #B = Matrix{Quantity{T2}}(undef,M,N)
     for m = 1:M
         for n = 1:N
             B[m,n] = Quantity.(getindex(A,m,n),unitrange(A)[m]./unitdomain(A)[n])
@@ -159,8 +170,11 @@ end
 function Matrix(a::AbstractUnitfulVector) 
 
     M, = size(a)
-    T2 = eltype(parent(a))
-    b = Vector{Quantity{T2}}(undef,M)
+    if uniform(a)
+        b = Vector{typeof(getindexqty(a,1))}(undef,M)
+    else
+        b = Vector{Quantity{eltype(parent(a))}}(undef,M)
+    end
     for m = 1:M
         b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
     #    b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
@@ -446,12 +460,13 @@ end
      Not all dimensionless matrices have
      dimensionless domain and range.
 """
-dimensionless(A::Union{Matrix,UnitfulMatrix}) = uniform(A) && dimension(A[1,1]) == NoDims
+dimensionless(A::AbstractUnitfulMatrix) = uniform(A) && dimension(getindexqty(A,1,1)) == NoDims
+dimensionless(A::AbstractUnitfulVector) = uniform(A) && dimension(getindexqty(A,1)) == NoDims
+dimensionless(A::AbstractArray) = dimensionless(UnitfulMatrix(A))
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
-function dimensionless(A::AbstractMatrix)
-    B = UniformMatrix(A)
-    isnothing(B) ? false : dimensionless(B) # fallback
-end
+#     B = UniformMatrix(A)
+#     isnothing(B) ? false : dimensionless(B) # fallback
+# end
 
 """
     function square(A)
@@ -988,14 +1003,14 @@ function dsvd(A::AbstractUnitfulMatrix,Py::AbstractUnitfulMatrix,Px::AbstractUni
     #end
 end
 
-function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractVector})
+function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractVector})
     #summary(io, F); println(io)
     println(io, "U (left singular vectors):")
-    show(io, mime, F.U)
+    Base.show(io, mime, F.U)
     println(io, "\nsingular values:")
-    show(io, mime, F.S)
+    Base.show(io, mime, F.S)
     println(io, "\nV (right singular vectors):")
-    show(io, mime, F.V)
+    Base.show(io, mime, F.V)
 end
 
 dsvdvals(S::DSVD{<:Any,T}) where {T} = (S.S)::Vector{T}
@@ -1043,23 +1058,28 @@ size(A::DSVD) = (size(A, 1), size(A, 2))
 """
 diagm(v::AbstractVector,r::Units,d::Units; exact = false) = UnitfulMatrix(spdiagm(length(r),length(d),ustrip.(v)),(r,d); exact=exact)    
 
-# """
-#     function diag(A::AbstractMultipliableMatrix)
+"""
+    function diag(A::AbstractUnitfulMatrix)
 
-#     Diagonal elements of matrix with units.
+    Diagonal elements of matrix with units.
 
-#     Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
-#  """
-# function diag(A::AbstractMultipliableMatrix{T}) where T <: Number
-
-#     m,n = size(A)
-#     ndiag = max(m,n)
-#     dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
-#     for nd in 1:ndiag
-#         vdiag[nd] = getindex(A,nd,nd)
-#     end
-#     return vdiag
-# end
+    Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
+ """
+function LinearAlgebra.diag(A::AbstractUnitfulMatrix{T}) where T <: Number
+    m,n = size(A)
+    ndiag = max(m,n)
+    if dimensionless(A)
+        vdiag = Vector{T}(undef,ndiag)
+    elseif uniform(A) || unit_symmetric(A)
+        vdiag = Vector{typeof(getindexqty(A,1,1))}(undef,ndiag)
+    else
+        vdiag = Vector{Quantity}(undef,ndiag)
+    end
+    for nd in 1:ndiag
+        vdiag[nd] = getindexqty(A,nd,nd)
+    end
+    return vdiag
+end
 
 """
     function cholesky(A::AbstractMultipliableMatrix)
