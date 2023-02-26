@@ -94,13 +94,15 @@ function slicedmatrix(urange,udomain)
     return newunitrange,newunitdomain
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", A::UnitfulMatrix{T,N}) where {T,N}
+#function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat{T,N}) where {T,N}
+function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat) 
     lines = 0
     summary(io, A)
     #print_name(io, name(A))
     #lines += Dimensions.print_dims(io, mime, dims(A))
     #!(isempty(dims(A)) || isempty(refdims(A))) && println(io)
     #lines += Dimensions.print_refdims(io, mime, refdims(A))
+    println("in the right place")
     println(io)
 
     # DELETED THIS OPTIONAL PART HERE

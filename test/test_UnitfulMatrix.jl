@@ -84,7 +84,7 @@ end
         # dimensionless domain and range
         for i = 1:2
             if i == 1
-                p = [1.0m²	, 3.0m²]
+                p = [1.0m², 3.0m²]
             elseif i ==2
                 p = [1.0m², 3.0u"m^3"]
             end
