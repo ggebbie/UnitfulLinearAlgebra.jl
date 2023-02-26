@@ -1,6 +1,8 @@
+using Revise, UnitfulLinearAlgebra, Unitful, LinearAlgebra, DimensionalData
 @testset "dimarrays" begin
-
+    
     @testset "time-average" begin
+        m = u"m"
         # create matrix for mean value problem
         n = 10 # 10 observations
 
@@ -19,14 +21,16 @@
         E = UnitfulDimMatrix(Eparent,urange,udomain,dims=(YearCE(years),Region(regions)))
 
         # add UnitfulDimVector constructor
-        x = UnitfulDimMatrix(randn(1,1),[unit(1.0)],[unit(1.0)],dims=(Region(regions),:mean))
+        x = UnitfulDimMatrix(randn(1,1),[m],[unit(1.0)],dims=(Region(regions),:mean))
 
         # matrix multiplication with UnitfulDimMatrix
-        y = E*x
+        y = UnitfulLinearAlgebra._rebuildmul(E,x)
+        
     end
 
     @testset "polynomial fit" begin
-
+        m = u"m"
+        s = u"s"
         u1 = m
         u2 = m/s
         u3 = m/s/s
@@ -42,6 +46,55 @@
         y = UnitfulLinearAlgebra._rebuildmul(E,x);
         
     end
+
+    @testset "PEMDAS" begin
+        m = u"m"
+        s = u"s"
+        K = u"K"
+        stup = (1,5)
+
+        #can we add two matrices with same dimensions and units? 
+        a1 = UnitfulDimMatrix(randn(stup), fill(K, stup[1]), fill(unit(1.0), stup[2]), dims = (X = [5m], Ti = (1:stup[2])s))
+        a2_add = UnitfulDimMatrix(randn(stup), fill(K, stup[1]), fill(unit(1.0), stup[2]), dims = (X = [5m], Ti = (1:stup[2])s))
+        @test parent(a1 + a2_add) == parent(a1) .+ parent(a2_add)
+        #subtraction 
+        @test parent(a1 - a2_add) == parent(a1) .- parent(a2_add)
+        
+        #do we throw an error when the two matrices use the same dimensions, but are
+        #sampled at different points 
+        a2_add_wrongdims = UnitfulDimMatrix(randn(stup), fill(K, stup[1]), fill(unit(1.0), stup[2]), dims = (X = [5m], Ti = (6:stup[2]+5)s))
+        @test_throws DimensionMismatch a1 + a2_add_wrongdims
+        
+
+        #multiply by scalar
+        @test parent(5K * a1) == 5 * parent(a1)
+        @test parent(5 * a1) == 5 * parent(a1)        
+
+        #inner product
+        a2_multiply_inner = UnitfulDimMatrix(randn(stup[2], stup[1]), fill(unit(1.0), stup[2]), fill(K, stup[1]), dims = (Ti = (1:stup[2])s, X = [5m]))
+        @test parent(a1 * a2_multiply_inner) == parent(a1) * parent(a2_multiply_inner)
+        #a2_multiply_outer = copy(a1)
+        #a1 * a2_multiply_outer
+
+    end
+
+
+    @testset "functions!" begin
+        m = u"m"
+        s = u"s"
+        u1 = m
+        u2 = m/s
+        u3 = m/s/s
+
+        k = 3
+        Eparent = hcat(randn(k),randn(k),randn(k))
+        #y = randn(k)u1
+        E = UnitfulDimMatrix(Eparent,fill(m,k),[u1,u2,u3],dims=(:sealevel,:coefficients))
+        @test parent(inv(E)) == inv(parent(E))
+        det(E)
+        singular(E) #??? this is wrong... hm 
+end
+
 end
 
 #  useful config for DimArrays
@@ -62,7 +115,7 @@ end
 #     ny = length(years)
     
 #     # estimate defined for locations/regions
-#     regions = [:NATL,:ANT]
+#     regions = [:NATL,:ANT]#
 #     nr = length(regions)
 
 #     units1 = [u"m",u"s"]
