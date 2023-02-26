@@ -203,20 +203,13 @@ end
         
         # outer product to make a multipliable matrix
         A = p*q̃'
-        B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q),exact=false)
+        B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
         B2 = UnitfulMatrix(A)
         @test square(B)
         @test squarable(B)
-        B*B == B^2
+        B2*B2 == B2^2
 
-        # in-place CONVERSION NOT WORKING
-        # convert_unitrange!(B,K*[m,s])
-        # @test unitrange(B) == K*[m,s]
-
-        # convert_unitdomain!(B,K*[m,s])
-        # @test unitdomain(B) == K*[m,s]
-
-        # try to get eigenstructure
+        # get eigenstructure
         F = eigen(B)
 
         # Hart, 1995, pp. 97
@@ -447,8 +440,6 @@ end
         y = UnitfulMatrix(randn(k)u1)
         x = UnitfulMatrix([randn()u1; randn()u2; randn()u3])
 
-        #convert_unitdomain!(E,unit.(x))
-
         # Define norms for this space.
         p1 = [m,m/s,m/s/s]
         q1= p1.^-1
@@ -472,7 +463,7 @@ end
         @test within(G.U,inv(G.U⁻¹), 1e-10)
         
         # Diagonal makes dimensionless S matrix
-        Ẽ = G.U * Diagonal(G.S,unitdomain(G.U),unitrange(G.V⁻¹)) * G.V⁻¹
+        Ẽ = G.U * UnitfulMatrix(Diagonal(G.S)) * G.V⁻¹
 
         # even longer method to make S
         #F̃ = G.U * MMatrix(Matrix(Diagonal(G.S))) * G.V⁻¹
@@ -538,13 +529,13 @@ end
 
         # solve for particular solution.
         x = UnitfulMatrix(randn(size(E,2)),unitdomain(E))
-        y = E*x
+        y = UnitfulMatrix(Matrix(E*x)) # need y to be inexact
         xₚ1 = E\y # find particular solution
         xₚ2 = inv(G)*y # find particular solution
         @test within(xₚ1,xₚ2,1e-10)
 
         # inverse of DSVD object
-        @test within(inv(E),inv(G),1e-10)
+        @test within(Matrix(inv(E)),Matrix(inv(G)),1e-10)
         
     end    
 

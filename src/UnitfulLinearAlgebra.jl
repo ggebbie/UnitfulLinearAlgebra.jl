@@ -11,7 +11,9 @@ export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
 export square, squarable, singular, unit_symmetric
 export invdimension, dottable
-export getindex, setindex!, size, similar
+export getindexqty
+#export getindex, setindex!,
+export size, similar
 export convert_unitrange, convert_unitdomain
 #export convert_unitrange!, convert_unitdomain!
 export exact, multipliable, dimensionless, endomorphic
@@ -224,7 +226,7 @@ end
 
 # (matrix/vector)-(matrix/vector) multiplication when inexact handled here
 function *(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
-    if exact(A)
+    if exact(A) && exact(B)
         return DimensionalData._rebuildmul(A,B)
     elseif unitdomain(A) ∥ unitrange(B)
         return DimensionalData._rebuildmul(convert_unitdomain(A,unitrange(B)),B)
@@ -516,7 +518,7 @@ function convert_unitdomain(A::AbstractUnitfulVecOrMat, newdomain::Units)
         #shift = newdomain./unitdomain(A)
         #newrange = unitrange(A).*shift
         newrange = Units(unitrange(A).*(newdomain[1]/unitdomain(A)[1]))
-        return rebuild(A, parent(A), (newrange, newdomain))
+        return rebuild(A, parent(A), (newrange, newdomain), true)
         #B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
         error("New unit domain not parallel to unit domain of Multipliable Matrix")
@@ -974,7 +976,16 @@ function dsvd(A::AbstractUnitfulMatrix,Py::AbstractUnitfulMatrix,Px::AbstractUni
     A′ =   copy(transpose(transpose(Qx)\transpose(Qy*A)))
     ~dimensionless(A′) && error("A′ should be dimensionless to implement `LinearAlgebra.svd`")
     F = svd(parent(A′), full=full, alg=alg)
-    return DSVD(UnitfulMatrix(F.U),F.S,UnitfulMatrix(F.Vt),Qy,Qx)
+
+    # matrix slices cause unit domain and range to become ambiguous.
+    # output of DSVD cannot be exact.
+    # if exact(A)
+    #     U = convert_unitdomain(UnitfulMatrix(F.U),Units(fill(unit(1.0),size(F.U,2))))
+    #     Vt = convert_unitrange(UnitfulMatrix(F.Vt),Units(fill(unit(1.0),size(F.Vt,1))))
+    #     return DSVD(U,F.S,Vt,Qy,Qx)
+    # else
+        return DSVD(UnitfulMatrix(F.U),F.S,UnitfulMatrix(F.Vt),Qy,Qx)
+    #end
 end
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractVector})
@@ -994,12 +1005,16 @@ function inv(F::DSVD{T}) where T
         iszero(F.S[i]) && throw(SingularException(i))
     end
     k = searchsortedlast(F.S, eps(real(T))*F.S[1], rev=true)
-    # from `svd.jl`
-    #@views (F.S[1:k] .\ F.Vt[1:k, :])' * F.U[:,1:k]'
+    # adapted from `svd.jl`
+    #@views (F.S[1:k] .\ F.V[:,1:k, :]) #* F.U⁻¹[1:k,:]
 
+    # make sure it is inexact
+    Σ⁻¹ = UnitfulMatrix(Diagonal(F.S[1:k].^-1))
     # a less efficient matrix way to do it.
-#    Σ⁻¹ = Diagonal(F.S[1:k].^-1,fill(unit(1.0),k),fill(unit(1.0),k))
-    Σ⁻¹ = Diagonal(F.S[1:k].^-1,unitdomain(F.V[:,1:k]),unitrange(F.U⁻¹[1:k,:]))
+    #Σ⁻¹ = Diagonal(F.S[1:k].^-1,fill(unit(1.0),k),fill(unit(1.0),k))
+    # Σ⁻¹ = Diagonal(F.S[1:k].^-1,unitdomain(F.V[:,1:k]),unitrange(F.U⁻¹[1:k,:]))
+    #    Σ⁻¹ = Diagonal(F.S[1:k].^-1,unitdomain(F.V)[1:k],unitrange(F.U⁻¹)[1:k])
+    #println(exact(F.V[:,1:k]))
     return F.V[:,1:k]*Σ⁻¹*F.U⁻¹[1:k,:]
 end
 
