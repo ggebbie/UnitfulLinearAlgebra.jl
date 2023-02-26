@@ -74,7 +74,9 @@ update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
         #return UnitfulMatrix(data, newunitrange, newunitdomain)
     else
         newunitrange, newunitdomain = slicedmatrix(urange,udomain)
-        return UnitfulMatrix(data, newunitrange, newunitdomain)
+        # unit range and domain of a sliced matrix are ambiguous.
+        # It must be exact=false
+        return UnitfulMatrix(data, newunitrange, newunitdomain, exact=false)
     end
 end
 

@@ -463,7 +463,7 @@ end
         @test within(G.U,inv(G.U⁻¹), 1e-10)
         
         # Diagonal makes dimensionless S matrix
-        Ẽ = G.U * Diagonal(G.S,unitdomain(G.U),unitrange(G.V⁻¹)) * G.V⁻¹
+        Ẽ = G.U * UnitfulMatrix(Diagonal(G.S)) * G.V⁻¹
 
         # even longer method to make S
         #F̃ = G.U * MMatrix(Matrix(Diagonal(G.S))) * G.V⁻¹
@@ -529,13 +529,13 @@ end
 
         # solve for particular solution.
         x = UnitfulMatrix(randn(size(E,2)),unitdomain(E))
-        y = E*x
+        y = UnitfulMatrix(Matrix(E*x)) # need y to be inexact
         xₚ1 = E\y # find particular solution
         xₚ2 = inv(G)*y # find particular solution
         @test within(xₚ1,xₚ2,1e-10)
 
         # inverse of DSVD object
-        @test within(inv(E),inv(G),1e-10)
+        @test within(Matrix(inv(E)),Matrix(inv(G)),1e-10)
         
     end    
 
