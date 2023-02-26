@@ -175,3 +175,50 @@ end
 # end
 
 Base.:~(a,b) = similarity(a,b)
+
+"""
+    function transpose
+
+    Defined by condition `A[i,j] = transpose(A)[j,i]`.
+    Not analogous to function for dimensionless matrices.
+
+    Hart, pp. 205.
+"""
+# Had to redefine tranpose or it was incorrect based on AbstractArray interface!
+Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)))
+Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
+
+# Currently untested
+Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
+       DimensionalData.rebuild(A, zeros(A))
+    #UnitfulMatrix(Matrix{T}(undef,size(A)),unitrange(A),unitdomain(A);exact=exact(A))
+
+# NOTE: Base.getproperty is also expanded but stored next to relevant linear algebra functions.
+
+# """
+#     function vcat(A,B)
+
+#     Modeled after function `VERTICAL` (pp. 203, Hart, 1995).
+# """
+# function Base.vcat(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
+
+#     numbers = vcat(A.numbers,B.numbers)
+#     shift = unitdomain(A)[1]./unitdomain(B)[1]
+#     ur = vcat(unitrange(A),unitrange(B).*shift)
+#     bothexact = (exact(A) && exact(B))
+#     return BestMultipliableMatrix(numbers,ur,unitdomain(A),exact=bothexact)
+# end
+
+# """
+#     function hcat(A,B)
+
+#     Modeled after function `HORIZONTAL` (pp. 202, Hart, 1995).
+# """
+# function Base.hcat(A::AbstractMultipliableMatrix,B::AbstractMultipliableMatrix)
+
+#     numbers = hcat(A.numbers,B.numbers)
+#     shift = unitrange(A)[1]./unitrange(B)[1]
+#     ud = vcat(unitdomain(A),unitdomain(B).*shift)
+#     bothexact = (exact(A) && exact(B))
+#     return BestMultipliableMatrix(numbers,unitrange(A),ud,exact=bothexact)
+# end
