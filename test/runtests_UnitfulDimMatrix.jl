@@ -1,4 +1,4 @@
-using Revise, UnitfulLinearAlgebra, Unitful, LinearAlgebra, DimensionalData
+#using Revise, UnitfulLinearAlgebra, Unitful, LinearAlgebra, DimensionalData
 @testset "dimarrays" begin
     
     @testset "time-average" begin
@@ -24,7 +24,8 @@ using Revise, UnitfulLinearAlgebra, Unitful, LinearAlgebra, DimensionalData
         x = UnitfulDimMatrix(randn(1,1),[m],[unit(1.0)],dims=(Region(regions),:mean))
 
         # matrix multiplication with UnitfulDimMatrix
-        y = UnitfulLinearAlgebra._rebuildmul(E,x)
+        #y = UnitfulLinearAlgebra._rebuildmul(E,x)
+        y = E*x
         
     end
 
@@ -43,8 +44,8 @@ using Revise, UnitfulLinearAlgebra, Unitful, LinearAlgebra, DimensionalData
         # UnitfulDimVector so that fewer dims
         x = UnitfulDimMatrix(randn(k,1),[u1,u2,u3],[unit(1.0)],dims=(:coefficients,:nothing))
 
-        y = UnitfulLinearAlgebra._rebuildmul(E,x);
-        
+        #y = UnitfulLinearAlgebra._rebuildmul(E,x);
+        y = E*x
     end
 
     @testset "PEMDAS" begin
