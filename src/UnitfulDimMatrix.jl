@@ -1,4 +1,4 @@
-import Base: (*), (+), (-)
+#import Base: (*), (+), (-)
 abstract type AbstractUnitfulDimVecOrMat{T,N,UD<:Tuple,D<:Tuple,A} <: AbstractDimArray{T,N,D,A} end
 
 const AbstractUnitfulDimVector{T<:Number} = AbstractUnitfulDimVecOrMat{T,1} where T
@@ -57,12 +57,12 @@ Implementations can discard arguments like `refdims`, `name` and `metadata`.
 
 This method can also be used with keyword arguments in place of regular arguments.
 """
-@inline function rebuild(
+@inline function DimensionalData.rebuild(
     A::UnitfulDimMatrix, data, unitdims::Tuple=unitdims(A), dims::Tuple=dims(A), refdims=refdims(A), name=name(A))
-    rebuild(A, data, unitdims, dims, refdims, name, metadata(A), exact(A))
+    DimensionalData.rebuild(A, data, unitdims, dims, refdims, name, metadata(A), exact(A))
 end
 
-@inline function rebuild(
+@inline function DimensionalData.rebuild(
     A::UnitfulDimMatrix, data::AbstractArray, unitdims::Tuple, dims::Tuple, refdims::Tuple, name, metadata, exactflag
 )
     UnitfulDimMatrix(data, unitdims, dims, refdims, name, metadata,exactflag)
@@ -155,7 +155,7 @@ function UnitfulDimMatrix(A::AbstractVector) # should be called UnitfulVector?
 end
 
 
-function _rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix)
+function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix)
     # compare unitdims
     DimensionalData.comparedims(last(unitdims(A)), first(unitdims(B)); val=true)
 
@@ -164,32 +164,32 @@ function _rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix)
     
     rebuild(A, parent(A) * parent(B), (first(unitdims(A)),last(unitdims(B))), (first(dims(A)),last(dims(B))))
 end
-*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix) = _rebuildmul(A,B)
+Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix) = _rebuildmul(A,B)
 
-function _rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector)
+function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector)
     # compare unitdims
     DimensionalData.comparedims(last(unitdims(A)), first(unitdims(B)); val=true)
 
     # compare regular (axis) dims
     DimensionalData.comparedims(last(dims(A)), first(dims(B)); val=true)
     
-    rebuild(A, parent(A) * parent(B), (first(unitdims(A)),), (first(dims(A)),))
+    DimensionalData.rebuild(A, parent(A) * parent(B), (first(unitdims(A)),), (first(dims(A)),))
 end
-*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector) = _rebuildmul(A,B)
+Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector) = _rebuildmul(A,B)
 
 #copied from ULA.* 
-_rebuildmul(A::AbstractUnitfulDimMatrix, b::Quantity) = rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
-*(A::AbstractUnitfulDimMatrix, b::Quantity) = _rebuildmul(A,b)
-*(b::Quantity, A::AbstractUnitfulDimMatrix) = _rebuildmul(A,b)
+DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, b::Quantity) = rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
+Base.:*(A::AbstractUnitfulDimMatrix, b::Quantity) = _rebuildmul(A,b)
+Base.:*(b::Quantity, A::AbstractUnitfulDimMatrix) = _rebuildmul(A,b)
 
-_rebuildmul(A::AbstractUnitfulDimMatrix, b::Number) = rebuild(A, parent(A).*b, (unitrange(A), unitdomain(A)))
-*(A::AbstractUnitfulDimMatrix, b::Number) = _rebuildmul(A,b)
-*(b::Number, A::AbstractUnitfulDimMatrix) = _rebuildmul(A,b)
+DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, b::Number) = rebuild(A, parent(A).*b, (unitrange(A), unitdomain(A)))
+Base.:*(A::AbstractUnitfulDimMatrix, b::Number) = _rebuildmul(A,b)
+Base.:*(b::Number, A::AbstractUnitfulDimMatrix) = _rebuildmul(A,b)
 
 
 
 #from ULA.+ 
-function +(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
+function Base.:+(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
     
     # compare unitdims
     DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
@@ -206,7 +206,7 @@ function +(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) wher
     end
 end
 
-function -(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
+function Base.:-(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
     
     # compare unitdims
     DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
@@ -225,7 +225,7 @@ end
 
 #this is probably bad - automatically broadcasts because I don't know how to override
 #the dot syntax
-function +(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
+function Base.:+(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
     if unitrange(A)[1] == unit(b)
         println("broadcasting!")
         return rebuild(A, parent(A) .+ ustrip(b), (unitrange(A), unitdomain(A)))
@@ -236,7 +236,7 @@ function +(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
     
 end
 
-function -(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
+function Base.:-(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
     if unitrange(A)[1] == unit(b)
         println("broadcasting!")
         return rebuild(A, parent(A) .- ustrip(b), (unitrange(A), unitdomain(A)))
@@ -257,7 +257,7 @@ LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unit
     Unitful matrix determinant.
     same as ULA.det
 """
-function det(A::AbstractUnitfulDimMatrix)
+function LinearAlgebra.det(A::AbstractUnitfulDimMatrix)
     if square(A)
         detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
         return Quantity(det(parent(A)),detunit)

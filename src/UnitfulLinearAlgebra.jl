@@ -45,9 +45,10 @@ import DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetada
 include("UnitfulMatrix.jl")
 
 # constructor for expanded struct based on DimensionalData.DimArray
-#include("UnitfulDimMatrix.jl")
+include("UnitfulDimMatrix.jl")
 
-include("multipliablematrices.jl") # new methods
+# new methods
+include("multipliablematrices.jl")
 
 # Extend Base methods
 include("base.jl")
