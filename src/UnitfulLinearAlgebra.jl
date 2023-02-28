@@ -5,7 +5,8 @@ using LinearAlgebra
 using SparseArrays
 using DimensionalData
 
-export UnitfulMatrix, AbstractUnitfulVecOrMat
+export UnitfulMatrix, UnitfulDimMatrix
+export AbstractUnitfulVecOrMat
 export DSVD
 export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
@@ -18,7 +19,7 @@ export convert_unitrange, convert_unitdomain
 #export convert_unitrange!, convert_unitdomain!
 export exact, multipliable, dimensionless, endomorphic
 export svd, dsvd
-    export transpose
+export transpose
 export unitrange, unitdomain
 export identitymatrix
 export describe, trace
@@ -40,13 +41,14 @@ import DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetada
 
 @dim Units "units"
 
- # constructor for streamlined struct based on DimensionalData.DimArray
+# constructor for streamlined struct based on DimensionalData.DimArray
 include("UnitfulMatrix.jl")
 
- # constructor for expanded struct based on DimensionalData.DimArray
-#include("UnitfulDimMatrix.jl")
+# constructor for expanded struct based on DimensionalData.DimArray
+include("UnitfulDimMatrix.jl")
 
-include("multipliablematrices.jl") # new methods
+# new methods
+include("multipliablematrices.jl")
 
 # Extend Base methods
 include("base.jl")
