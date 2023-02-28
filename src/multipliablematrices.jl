@@ -492,3 +492,12 @@ identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),(dimrange,dimrange)
 #     end
 #     return B
 # end
+
+## start of UnitfulDimMatrix methods
+
+"""
+    function singular
+    was same as ULA.singular, but I was getting singular on matrices that aren't actually
+"""
+#singular(A::AbstractUnitfulDimMatrix) = iszero(ustrip(det(A)))
+singular(A::AbstractUnitfulDimMatrix) = rank(parent(A)) == max(size(parent(A))...)
