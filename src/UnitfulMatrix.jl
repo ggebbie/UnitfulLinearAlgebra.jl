@@ -93,32 +93,6 @@ function slicedmatrix(urange,udomain)
     return newunitrange,newunitdomain
 end
 
-#function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat{T,N}) where {T,N}
-function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat) 
-    lines = 0
-    summary(io, A)
-    #print_name(io, name(A))
-    #lines += Dimensions.print_dims(io, mime, dims(A))
-    #!(isempty(dims(A)) || isempty(refdims(A))) && println(io)
-    #lines += Dimensions.print_refdims(io, mime, refdims(A))
-    println("in the right place")
-    println(io)
-
-    # DELETED THIS OPTIONAL PART HERE
-    # Printing the array data is optional, subtypes can 
-    # show other things here instead.
-    ds = displaysize(io)
-    ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
-    #println("show after")
-    #DimensionalData.show_after(ioctx, mime, Matrix(A))
-
-    #function print_array(io::IO, mime, A::AbstractDimArray{T,2}) where T
-    T2 = eltype(A)
-    Base.print_matrix(DimensionalData._print_array_ctx(ioctx, T2), Matrix(A))
-
-    return nothing
-end
-
 """
     function UnitfulMatrix(A::AbstractMatrix)
 

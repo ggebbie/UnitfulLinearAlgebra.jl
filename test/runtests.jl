@@ -33,8 +33,7 @@ within(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat,tol) =  maximum(abs
     end
 
     @testset "UnitfulDimMatrix" begin
-        #include("test_UnitfulDimMatrix.jl")
-        include("runtests_UnitfulDimMatrix.jl")
+        include("test_UnitfulDimMatrix.jl")
     end
     
 end

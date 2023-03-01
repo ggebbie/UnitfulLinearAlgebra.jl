@@ -84,7 +84,7 @@ function uniform(A::Matrix)
     B = UnitfulMatrix(A)
     isnothing(B) ? false : uniform(B)
 end
-uniform(A::UnitfulMatrix) = left_uniform(A) && right_uniform(A)
+uniform(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = left_uniform(A) && right_uniform(A)
 
 """
     function left_uniform(A)
@@ -92,7 +92,7 @@ uniform(A::UnitfulMatrix) = left_uniform(A) && right_uniform(A)
     Definition: uniform unitrange of A
     Left uniform matrix: output of matrix has uniform units
 """
-left_uniform(A::UnitfulMatrix) = uniform(unitrange(A)) ? true : false
+left_uniform(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(unitrange(A)) ? true : false
 function left_uniform(A::Matrix)
     B = UnitfulMatrix(A)
     isnothing(B) ? false : left_uniform(B)
@@ -104,7 +104,7 @@ end
     Does the unitdomain of A have uniform dimensions?
     Right uniform matrix: input of matrix must have uniform units
 """
-right_uniform(A::UnitfulMatrix) = uniform(unitdomain(A)) ? true : false
+right_uniform(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(unitdomain(A)) ? true : false
 function right_uniform(A::Matrix)
     B = UnitfulMatrix(A)
     isnothing(B) ? false : right_uniform(B)
@@ -116,12 +116,13 @@ end
      Not all dimensionless matrices have
      dimensionless domain and range.
 """
-dimensionless(A::Union{Matrix,UnitfulMatrix}) = uniform(A) && dimension(A[1,1]) == NoDims
+dimensionless(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(A) && dimension(getindexqty(A,1,1)) == NoDims
+dimensionless(A::AbstractMatrix) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
-function dimensionless(A::AbstractMatrix)
-    B = UniformMatrix(A)
-    isnothing(B) ? false : dimensionless(B) # fallback
-end
+# function dimensionless(A::AbstractMatrix)
+#     B = UniformMatrix(A)
+#     isnothing(B) ? false : dimensionless(B) # fallback
+# end
 
 """
     function square(A)
@@ -399,7 +400,7 @@ endomorphic(A::Number) = dimensionless(A) # scalars must be dimensionless to be 
     Get entry value of matrix including units.
     Note: Calling B::UnitfulMatrix[i,j] doesn't currently return the units.
 """
-getindexqty(A::AbstractUnitfulMatrix,i::Int,j::Int) = Quantity.(parent(A)[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+getindexqty(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix},i::Int,j::Int) = Quantity.(parent(A)[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
 
 """
     function setindex!(A::MultipliableMatrix,v,i,j)
