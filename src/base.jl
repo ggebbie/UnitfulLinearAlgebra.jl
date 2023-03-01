@@ -222,3 +222,84 @@ Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
 #     bothexact = (exact(A) && exact(B))
 #     return BestMultipliableMatrix(numbers,unitrange(A),ud,exact=bothexact)
 # end
+
+## start of UnitfulDimMatrix methods
+Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,B)
+
+function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector)
+    # compare unitdims
+    DimensionalData.comparedims(last(unitdims(A)), first(unitdims(B)); val=true)
+
+    # compare regular (axis) dims
+    DimensionalData.comparedims(last(dims(A)), first(dims(B)); val=true)
+    
+    DimensionalData.rebuild(A, parent(A) * parent(B), (first(unitdims(A)),), (first(dims(A)),))
+end
+Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector) = DimensionalData._rebuildmul(A,B)
+
+#copied from ULA.* 
+DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, b::Quantity) = rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
+Base.:*(A::AbstractUnitfulDimMatrix, b::Quantity) = DimensionalData._rebuildmul(A,b)
+Base.:*(b::Quantity, A::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,b)
+Base.:*(A::AbstractUnitfulDimMatrix, b::Number) = DimensionalData._rebuildmul(A,b)
+Base.:*(b::Number, A::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,b)
+
+#from ULA.+ 
+function Base.:+(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
+    
+    # compare unitdims
+    DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
+
+    # compare regular (axis) dims
+    DimensionalData.comparedims(last(dims(A)), last(dims(B)); val=true)
+    
+    bothexact = exact(A) && exact(B)
+    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
+        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
+        return rebuild(A,parent(A)+parent(B),(unitrange(A),unitdomain(A))) 
+    else
+        error("matrices not dimensionally conformable for addition")
+    end
+end
+
+function Base.:-(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
+    
+    # compare unitdims
+    DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
+
+    # compare regular (axis) dims
+    DimensionalData.comparedims(last(dims(A)), last(dims(B)); val=true)
+    
+    bothexact = exact(A) && exact(B)
+    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
+        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
+        return rebuild(A,parent(A)-parent(B),(unitrange(A),unitdomain(A))) 
+    else
+        error("matrices not dimensionally conformable for subtraction")
+    end
+end
+
+#this is probably bad - automatically broadcasts because I don't know how to override
+#the dot syntax
+function Base.:+(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
+    if unitrange(A)[1] == unit(b)
+        println("broadcasting!")
+        return rebuild(A, parent(A) .+ ustrip(b), (unitrange(A), unitdomain(A)))
+    else
+        error("matrix and scalar are not dimensionally conformable for subtraction")
+    end
+    
+    
+end
+
+function Base.:-(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
+    if unitrange(A)[1] == unit(b)
+        println("broadcasting!")
+        return rebuild(A, parent(A) .- ustrip(b), (unitrange(A), unitdomain(A)))
+    else
+        error("matrix and scalar are not dimensionally conformable for subtraction")
+    end
+    
+    
+end
+

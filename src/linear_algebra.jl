@@ -10,6 +10,8 @@
 """
 LinearAlgebra.inv(A::AbstractUnitfulMatrix) = ~singular(A) ? rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A))) : error("matrix is singular")
 
+LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
+
 """
     function det
 
@@ -227,3 +229,19 @@ LinearAlgebra.Diagonal(v::AbstractVector,r::Units,d::Units; exact = false) = ((l
 #         error("units not compatible for ldiv!")
 #     end
 # end
+
+
+"""
+    function det
+
+    Unitful matrix determinant.
+    same as ULA.det
+"""
+function LinearAlgebra.det(A::AbstractUnitfulDimMatrix)
+    if square(A)
+        detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
+        return Quantity(det(parent(A)),detunit)
+    else
+        error("Determinant requires square matrix")
+    end
+end

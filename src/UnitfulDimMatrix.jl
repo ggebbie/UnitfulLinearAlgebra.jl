@@ -1,5 +1,5 @@
-#import Base: (*), (+), (-)
-abstract type AbstractUnitfulDimVecOrMat{T,N,UD<:Tuple,D<:Tuple,A} <: AbstractDimArray{T,N,D,A} end
+# UnitfulDimMatrix type and constructors
+abstract type AbstractUnitfulDimVecOrMat{T,N,UD<:Tuple,D<:Tuple,A} <: AbstractUnitfulType{T,N,D,A} end
 
 const AbstractUnitfulDimVector{T<:Number} = AbstractUnitfulDimVecOrMat{T,1} where T
 const AbstractUnitfulDimMatrix{T<:Number} = AbstractUnitfulDimVecOrMat{T,2} where T
@@ -36,14 +36,6 @@ function UnitfulDimMatrix(data::AbstractArray, unitrange, unitdomain;
     dims=(), refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true)
     return UnitfulDimMatrix(data, format((Units(unitrange),Units(unitdomain)), data), format(dims, data), refdims, name, metadata, exact)
 end
-
-"""
-    function unitdims(A::UnitfulDimMatrix)
-
-    Return tuple -> (unitrange, unitdomain)
-"""
-unitdims(A::UnitfulDimMatrix) = A.unitdims
-exact(A::UnitfulDimMatrix) = A.exact
 
 """
     rebuild(A::UnitfulDimMatrix, data, [dims, refdims, name, metadata]) => UnitfulMatrix
@@ -164,111 +156,5 @@ function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUni
     
     rebuild(A, parent(A) * parent(B), (first(unitdims(A)),last(unitdims(B))), (first(dims(A)),last(dims(B))))
 end
-Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix) = _rebuildmul(A,B)
-
-function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector)
-    # compare unitdims
-    DimensionalData.comparedims(last(unitdims(A)), first(unitdims(B)); val=true)
-
-    # compare regular (axis) dims
-    DimensionalData.comparedims(last(dims(A)), first(dims(B)); val=true)
-    
-    DimensionalData.rebuild(A, parent(A) * parent(B), (first(unitdims(A)),), (first(dims(A)),))
-end
-Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector) = _rebuildmul(A,B)
-
-#copied from ULA.* 
-DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, b::Quantity) = rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
-Base.:*(A::AbstractUnitfulDimMatrix, b::Quantity) = _rebuildmul(A,b)
-Base.:*(b::Quantity, A::AbstractUnitfulDimMatrix) = _rebuildmul(A,b)
 
 DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, b::Number) = rebuild(A, parent(A).*b, (unitrange(A), unitdomain(A)))
-Base.:*(A::AbstractUnitfulDimMatrix, b::Number) = _rebuildmul(A,b)
-Base.:*(b::Number, A::AbstractUnitfulDimMatrix) = _rebuildmul(A,b)
-
-
-
-#from ULA.+ 
-function Base.:+(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
-    
-    # compare unitdims
-    DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
-
-    # compare regular (axis) dims
-    DimensionalData.comparedims(last(dims(A)), last(dims(B)); val=true)
-    
-    bothexact = exact(A) && exact(B)
-    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
-        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
-        return rebuild(A,parent(A)+parent(B),(unitrange(A),unitdomain(A))) 
-    else
-        error("matrices not dimensionally conformable for addition")
-    end
-end
-
-function Base.:-(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
-    
-    # compare unitdims
-    DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
-
-    # compare regular (axis) dims
-    DimensionalData.comparedims(last(dims(A)), last(dims(B)); val=true)
-    
-    bothexact = exact(A) && exact(B)
-    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
-        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
-        return rebuild(A,parent(A)-parent(B),(unitrange(A),unitdomain(A))) 
-    else
-        error("matrices not dimensionally conformable for subtraction")
-    end
-end
-
-#this is probably bad - automatically broadcasts because I don't know how to override
-#the dot syntax
-function Base.:+(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
-    if unitrange(A)[1] == unit(b)
-        println("broadcasting!")
-        return rebuild(A, parent(A) .+ ustrip(b), (unitrange(A), unitdomain(A)))
-    else
-        error("matrix and scalar are not dimensionally conformable for subtraction")
-    end
-    
-    
-end
-
-function Base.:-(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
-    if unitrange(A)[1] == unit(b)
-        println("broadcasting!")
-        return rebuild(A, parent(A) .- ustrip(b), (unitrange(A), unitdomain(A)))
-    else
-        error("matrix and scalar are not dimensionally conformable for subtraction")
-    end
-    
-    
-end
-
-
-#LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = ~singular(A) ? rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) )) : error("matrix is singular")
-LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
-
-"""
-    function det
-
-    Unitful matrix determinant.
-    same as ULA.det
-"""
-function LinearAlgebra.det(A::AbstractUnitfulDimMatrix)
-    if square(A)
-        detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
-        return Quantity(det(parent(A)),detunit)
-    else
-        error("Determinant requires square matrix")
-    end
-end
-
-"""
-    function singular
-    was same as ULA.singular, but I was getting singular on matrices that aren't actually
-"""
-#singular(A::AbstractUnitfulDimMatrix) = iszero(ustrip(det(A)))
-singular(A::AbstractUnitfulDimMatrix) = rank(parent(A)) == max(size(parent(A))...)
