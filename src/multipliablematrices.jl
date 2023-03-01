@@ -119,10 +119,10 @@ end
 dimensionless(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(A) && dimension(getindexqty(A,1,1)) == NoDims
 dimensionless(A::AbstractMatrix) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
-function dimensionless(A::AbstractMatrix)
-    B = UniformMatrix(A)
-    isnothing(B) ? false : dimensionless(B) # fallback
-end
+# function dimensionless(A::AbstractMatrix)
+#     B = UniformMatrix(A)
+#     isnothing(B) ? false : dimensionless(B) # fallback
+# end
 
 """
     function square(A)
