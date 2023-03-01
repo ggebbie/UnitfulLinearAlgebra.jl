@@ -21,14 +21,14 @@ struct UnitfulDimMatrix{T,N,UD<:Tuple,D<:Tuple,R<:Tuple,A<:AbstractArray{T,N},Na
     exact::Bool
 end
 
-# 2 arg version: required input: numerical values and unitdims
-UnitfulDimMatrix(data::AbstractArray, unitdims; kw...) = UnitfulMatrix(data, (unitdims,); kw...)
-function UnitfulDimMatrix(data::AbstractArray, unitdims::Union{Tuple,NamedTuple}; 
-    dims=(), refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true)
+# 2 arg version: required input: numerical values, unitdims, (axis) dims
+UnitfulDimMatrix(data::AbstractArray, unitdims; kw...) = UnitfulDimMatrix(data, (unitdims,); kw...)
+function UnitfulDimMatrix(data::AbstractArray, unitdims::Union{Tuple,NamedTuple}; dims=(),
+    refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true)
     if eltype(unitdims) <: Vector
         return UnitfulDimMatrix(data, format(Units.(unitdims), data), format(dims,data), refdims, name, metadata, exact)
     elseif eltype(unitdims) <: Units
-        return UnitfulMatrix(data, format(unitdims, data), format(dims,data), refdims, name, metadata, exact)
+        return UnitfulDimMatrix(data, format(unitdims, data), format(dims,data), refdims, name, metadata, exact)
     end        
 end
 # back consistency with MMatrix
@@ -55,9 +55,9 @@ This method can also be used with keyword arguments in place of regular argument
 end
 
 @inline function DimensionalData.rebuild(
-    A::UnitfulDimMatrix, data::AbstractArray, unitdims::Tuple, dims::Tuple, refdims::Tuple, name, metadata, exactflag
+    A::UnitfulDimMatrix, data::AbstractArray, unitdims::Tuple, dims::Tuple, refdims::Tuple, name, metadata, exact
 )
-    UnitfulDimMatrix(data, unitdims, dims, refdims, name, metadata,exactflag)
+    UnitfulDimMatrix(data, unitdims, dims, refdims, name, metadata,exact)
 end
 
 #@inline function rebuild(
@@ -78,36 +78,12 @@ update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
 #    UnitfulMatrix(data, dims, refdims, name, metadata, exactflag)
 #end
 
-function Base.show(io::IO, mime::MIME"text/plain", A::UnitfulDimMatrix{T,N}) where {T,N}
-    lines = 0
-    summary(io, A)
-    print_name(io, name(A))
-    #lines += Dimensions.print_dims(io, mime, dims(A))
-    !(isempty(dims(A)) || isempty(refdims(A))) && println(io)
-    lines += Dimensions.print_refdims(io, mime, refdims(A))
-    println(io)
-
-    # DELETED THIS OPTIONAL PART HERE
-    # Printing the array data is optional, subtypes can 
-    # show other things here instead.
-    ds = displaysize(io)
-    ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
-    #println("show after")
-    #DimensionalData.show_after(ioctx, mime, Matrix(A))
-
-    #function print_array(io::IO, mime, A::AbstractDimArray{T,2}) where T
-    T2 = eltype(A)
-    Base.print_matrix(DimensionalData._print_array_ctx(ioctx, T2), Matrix(A))
-
-    return nothing
-end
-
 """
     function UnitfulDimMatrix(A::AbstractMatrix)
 
     Constructor to make inexact UnitfulDimMatrix.
     Satisfies algebraic interpretation of multipliable
-    matrices.
+    matrices. Doesn't add any metadata of a DimArray.
 """
 function UnitfulDimMatrix(A::AbstractMatrix)
     numbers = ustrip.(A)
@@ -145,8 +121,7 @@ function UnitfulDimMatrix(A::AbstractVector) # should be called UnitfulVector?
         return nothing
     end
 end
-
-
+                            
 function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix)
     # compare unitdims
     DimensionalData.comparedims(last(unitdims(A)), first(unitdims(B)); val=true)
@@ -158,3 +133,5 @@ function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUni
 end
 
 DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, b::Number) = rebuild(A, parent(A).*b, (unitrange(A), unitdomain(A)))
+DimensionalData._rebuildmul(a::AbstractUnitfulDimVector, b::Number) = rebuild(a, parent(a).*b, (unitrange(a)))
+DimensionalData._rebuildmul(b::Number, A::AbstractUnitfulDimVecOrMat) = A*b

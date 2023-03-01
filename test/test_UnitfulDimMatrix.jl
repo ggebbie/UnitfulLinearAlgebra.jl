@@ -1,4 +1,33 @@
-#using Revise, UnitfulLinearAlgebra, Unitful, LinearAlgebra, DimensionalData
+function test_interface(x::AbstractUnitfulDimVecOrMat)
+    @testset "types" begin
+        @test parent(x) isa AbstractArray # Is this absolutely necessary?
+        @test unitdims(x) isa DimensionalData.DimTuple
+        @test dims(x) isa DimensionalData.DimTuple
+        @test refdims(x) isa Tuple
+    end
+
+    @testset "size" begin
+        @test length(unitdims(x)) == ndims(x)
+        @test length(dims(x)) == ndims(x)
+        @test map(length, dims(x)) === size(x) == size(parent(x))
+        @test map(length, unitdims(x)) === size(x) == size(parent(x))
+    end
+
+    @testset "rebuild" begin
+        # argument version
+        x1 = rebuild(x, parent(x), unitdims(x)) #, exact=exact(x))
+        # keyword version, will work magically using ConstructionBase.jl if you use the same fieldnames.
+        # If not, define it and remap these names to your fields.
+        x2 = rebuild(x; data=parent(x), unitdims= unitdims(x), dims=dims(x))
+        # all should be identical. If any fields are not used, they will always be `nothing` or `()` for `refdims`
+        @test parent(x) === parent(x1) === parent(x2)
+        @test dims(x) === dims(x1) === dims(x2)
+        @test unitdims(x) === unitdims(x1) === unitdims(x2)
+        @test refdims(x) === refdims(x1) === refdims(x2)
+        @test metadata(x) === metadata(x1) === metadata(x2)
+    end
+end
+
 @testset "dimarrays" begin
     
     @testset "time-average" begin
@@ -65,7 +94,6 @@
         #sampled at different points 
         a2_add_wrongdims = UnitfulDimMatrix(randn(stup), fill(K, stup[1]), fill(unit(1.0), stup[2]), dims = (X = [5m], Ti = (6:stup[2]+5)s))
         @test_throws DimensionMismatch a1 + a2_add_wrongdims
-        
 
         #multiply by scalar
         @test parent(5K * a1) == 5 * parent(a1)
@@ -76,9 +104,7 @@
         @test parent(a1 * a2_multiply_inner) == parent(a1) * parent(a2_multiply_inner)
         #a2_multiply_outer = copy(a1)
         #a1 * a2_multiply_outer
-
     end
-
 
     @testset "functions!" begin
         m = u"m"
@@ -93,9 +119,45 @@
         E = UnitfulDimMatrix(Eparent,fill(m,k),[u1,u2,u3],dims=(:sealevel,:coefficients))
         @test parent(inv(E)) == inv(parent(E))
         det(E)
-        singular(E) #??? this is wrong... hm 
-end
+        @test ~singular(E) # fixed now (gg)
+    end
 
+    @testset "interface" begin
+        m = u"m"
+        s = u"s"
+
+        for i = 1:3
+            if i == 1
+                p = [1.0m, 9.0s]
+                #q̃ = [-1.0K, 2.0]
+                q̃ = [-1.0K, 2.0m]
+            elseif i == 2
+                p = [1.0m, 3.0s, 5.0u"m/s"]
+                q̃ = [-1.0K]
+            elseif i == 3
+                p = [1.0m, 3.0s]
+                q̃ = [-1.0, 2.0]
+            end
+            q = ustrip.(q̃).*unit.(1 ./q̃)
+            q2 = UnitfulDimMatrix(ustrip.(q̃),unit.(q̃.^-1),dims=(:title,))
+            # outer product to make a multipliable matrix
+            A = p*q̃'
+            B = UnitfulDimMatrix(ustrip.(A),unit.(p),unit.(q),dims=(:sealevel,:coefficients)) 
+            r = UnitfulDimMatrix(ustrip.(q),unit.(q),dims=(:coefficients)) 
+
+            test_interface(B)
+            test_interface(q2)
+            
+            @test A==Matrix(B)
+            
+            # test multiplication
+            @test within(A*q,Matrix(B*r),1.0e-10)
+            @test isequal(uniform(A),uniform(B))
+            @test isequal(left_uniform(A),left_uniform(B))
+            @test isequal(right_uniform(A),right_uniform(B))
+            @test ~dimensionless(B)
+        end            
+    end
 end
 
 #  useful config for DimArrays
