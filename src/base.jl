@@ -224,7 +224,7 @@ Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
 # end
 
 ## start of UnitfulDimMatrix methods
-Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix) = _rebuildmul(A,B)
+Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,B)
 
 function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector)
     # compare unitdims
@@ -235,12 +235,14 @@ function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUni
     
     DimensionalData.rebuild(A, parent(A) * parent(B), (first(unitdims(A)),), (first(dims(A)),))
 end
-Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector) = _rebuildmul(A,B)
+Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector) = DimensionalData._rebuildmul(A,B)
 
 #copied from ULA.* 
 DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, b::Quantity) = rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
-Base.:*(A::AbstractUnitfulDimMatrix, b::Quantity) = _rebuildmul(A,b)
-Base.:*(b::Quantity, A::AbstractUnitfulDimMatrix) = _rebuildmul(A,b)
+Base.:*(A::AbstractUnitfulDimMatrix, b::Quantity) = DimensionalData._rebuildmul(A,b)
+Base.:*(b::Quantity, A::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,b)
+Base.:*(A::AbstractUnitfulDimMatrix, b::Number) = DimensionalData._rebuildmul(A,b)
+Base.:*(b::Number, A::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,b)
 
 #from ULA.+ 
 function Base.:+(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
@@ -301,5 +303,3 @@ function Base.:-(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
     
 end
 
-Base.:*(A::AbstractUnitfulDimMatrix, b::Number) = _rebuildmul(A,b)
-Base.:*(b::Number, A::AbstractUnitfulDimMatrix) = _rebuildmul(A,b)

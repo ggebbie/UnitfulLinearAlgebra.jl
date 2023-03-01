@@ -1,4 +1,4 @@
-#using Revise
+using Revise
 using UnitfulLinearAlgebra
 using Unitful
 using LinearAlgebra
@@ -34,7 +34,7 @@ within(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat,tol) =  maximum(abs
 
     @testset "UnitfulDimMatrix" begin
         #include("test_UnitfulDimMatrix.jl")
-        #include("runtests_UnitfulDimMatrix.jl")
+        include("runtests_UnitfulDimMatrix.jl")
     end
     
 end

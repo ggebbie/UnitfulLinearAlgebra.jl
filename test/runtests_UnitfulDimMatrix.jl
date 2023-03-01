@@ -24,7 +24,7 @@
         x = UnitfulDimMatrix(randn(1,1),[m],[unit(1.0)],dims=(Region(regions),:mean))
 
         # matrix multiplication with UnitfulDimMatrix
-        #y = UnitfulLinearAlgebra._rebuildmul(E,x)
+        #y = _rebuildmul(E,x)
         y = E*x
         
     end

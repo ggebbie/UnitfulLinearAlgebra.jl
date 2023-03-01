@@ -287,7 +287,7 @@ end
 -    `exact=true`: geometric interpretation of unitdomain and unitrange
 -    `exact=false`: algebraic interpretation
 """
-exact(A::UnitfulMatrix) = A.exact
+exact(A::AbstractUnitfulType) = A.exact
 
 # these dummy functions are needed for the interface for DimensionalData. They are important for matrix slices. Would be nice if they were not needed.
 DimensionalData.name(A::AbstractUnitfulVecOrMat) = ()
@@ -299,21 +299,30 @@ DimensionalData.refdims(A::AbstractUnitfulVecOrMat) = ()
 # #convert(::Type{AbstractArray{T}}, S::AbstractToeplitz) where {T<:Number} = convert(AbstractToeplitz{T}, S)
 
 """
+function unitdims(A::AbstractUnitfulVecOrMat) = dims(A)
+
+    Return tuple -> (unitrange, unitdomain)
+
+    for UnitfulMatrix, unit information overrides the `dims` function.
+"""
+unitdims(A::AbstractUnitfulVecOrMat) = dims(A)
+unitdims(A::AbstractUnitfulDimVecOrMat) = A.unitdims
+
+"""
     function unitdomain(A)
 
     Find the dimensional (unit) domain of a matrix
 """
-unitdomain(A::AbstractUnitfulMatrix) = last(dims(A))
+unitdomain(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = last(unitdims(A))
 # this line may affect matrix multiplication
-unitdomain(A::AbstractUnitfulVector) = Units([unit(1.0)]) # kludge for a nondimensional scalar 
-#unitdomain(A::AbstractUnitfulVector) = Unitful.FreeUnits{(), NoDims, nothing}() # nondimensional scalar 
+unitdomain(A::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = Units([unit(1.0)]) # kludge for a nondimensional scalar 
 
 """
     function unitrange(A)
 
     Find the dimensional (unit) range of a matrix
 """
-unitrange(A::AbstractUnitfulVecOrMat) = first(dims(A))
+unitrange(A::AbstractUnitfulType) = first(unitdims(A))
 #unitrange(A::AbstractUnitfulMatrix) = first(dims(A))
 
 """
@@ -419,8 +428,7 @@ end
     Useful for tests, display
     pp. 193, Hart
 """
-function Matrix(A::T) where T<: AbstractUnitfulMatrix
-
+function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
     M,N = size(A)
     T2 = eltype(parent(A))
     B = Matrix{Quantity{T2}}(undef,M,N)
@@ -431,7 +439,7 @@ function Matrix(A::T) where T<: AbstractUnitfulMatrix
     end
     return B
 end
-function Matrix(a::AbstractUnitfulVector) 
+function Matrix(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
 
     M, = size(a)
     T2 = eltype(parent(a))
@@ -449,7 +457,7 @@ end
 
     Is a square matrix singular? If no, then it is invertible.
 """
-singular(A::AbstractUnitfulMatrix) = iszero(ustrip(det(A)))
+singular(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = iszero(ustrip(det(A)))
 
 """
     function trace(A)
@@ -495,9 +503,3 @@ identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),(dimrange,dimrange)
 
 ## start of UnitfulDimMatrix methods
 
-"""
-    function singular
-    was same as ULA.singular, but I was getting singular on matrices that aren't actually
-"""
-#singular(A::AbstractUnitfulDimMatrix) = iszero(ustrip(det(A)))
-singular(A::AbstractUnitfulDimMatrix) = rank(parent(A)) == max(size(parent(A))...)

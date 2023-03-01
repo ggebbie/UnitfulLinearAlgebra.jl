@@ -1,5 +1,5 @@
-
-abstract type AbstractUnitfulVecOrMat{T,N,D<:Tuple,A} <: AbstractDimArray{T,N,D,A} end
+# UnitfulMatrix type and constructors
+abstract type AbstractUnitfulVecOrMat{T,N,D<:Tuple,A} <: AbstractUnitfulType{T,N,D,A} end
 
 # should be a subtype, not an actual type
 const AbstractUnitfulVector{T<:Number} = AbstractUnitfulVecOrMat{T,1} where T
@@ -14,7 +14,6 @@ const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulVecOrMat{T,2} where T
 struct UnitfulMatrix{T,N,D<:Tuple,A<:AbstractArray{T,N}} <: AbstractUnitfulVecOrMat{T,N,D,A}
     data::A
     dims::D
-    #refdims::R
     exact::Bool
 end
 

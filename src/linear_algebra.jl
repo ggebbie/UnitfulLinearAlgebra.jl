@@ -10,6 +10,8 @@
 """
 LinearAlgebra.inv(A::AbstractUnitfulMatrix) = ~singular(A) ? rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A))) : error("matrix is singular")
 
+LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
+
 """
     function det
 
@@ -228,11 +230,6 @@ LinearAlgebra.Diagonal(v::AbstractVector,r::Units,d::Units; exact = false) = ((l
 #     end
 # end
 
-
-## start of UnitfulDimMatrix methods
-
-#LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = ~singular(A) ? rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) )) : error("matrix is singular")
-LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
 
 """
     function det

@@ -1,5 +1,5 @@
-#import Base: (*), (+), (-)
-abstract type AbstractUnitfulDimVecOrMat{T,N,UD<:Tuple,D<:Tuple,A} <: AbstractDimArray{T,N,D,A} end
+# UnitfulDimMatrix type and constructors
+abstract type AbstractUnitfulDimVecOrMat{T,N,UD<:Tuple,D<:Tuple,A} <: AbstractUnitfulType{T,N,D,A} end
 
 const AbstractUnitfulDimVector{T<:Number} = AbstractUnitfulDimVecOrMat{T,1} where T
 const AbstractUnitfulDimMatrix{T<:Number} = AbstractUnitfulDimVecOrMat{T,2} where T
@@ -36,14 +36,6 @@ function UnitfulDimMatrix(data::AbstractArray, unitrange, unitdomain;
     dims=(), refdims=(), name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true)
     return UnitfulDimMatrix(data, format((Units(unitrange),Units(unitdomain)), data), format(dims, data), refdims, name, metadata, exact)
 end
-
-"""
-    function unitdims(A::UnitfulDimMatrix)
-
-    Return tuple -> (unitrange, unitdomain)
-"""
-unitdims(A::UnitfulDimMatrix) = A.unitdims
-exact(A::UnitfulDimMatrix) = A.exact
 
 """
     rebuild(A::UnitfulDimMatrix, data, [dims, refdims, name, metadata]) => UnitfulMatrix
