@@ -115,14 +115,15 @@ function LinearAlgebra.cholesky(A::AbstractUnitfulDimMatrix)
         C = LinearAlgebra.cholesky(parent(A))
 
         # What should the axis units for a Cholesky decomposition be? Just a guess here.
-        factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)),(:Normal-space,last(dims(A))))
+        # What if internal parts of Cholesky decomposition are simply UnitfulMatrix's. 
+        factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)),(:Normalspace,last(dims(A))))
         return Cholesky(factors,C.uplo,C.info)
     else
         error("requires unit symmetric matrix")
     end
 end
 
-# seems like this might be from Base?
+# seems like this might be from Base? Move to base.jl? 
 function Base.getproperty(C::Cholesky{T,<:AbstractUnitfulMatrix}, d::Symbol) where T 
     Cfactors = getfield(C, :factors)
     Cuplo    = getfield(C, :uplo)

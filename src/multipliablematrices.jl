@@ -152,7 +152,7 @@ end
     Definition: inverse dimensional range and dimensional domain are parallel.
     Called "dimensionally symmetric" by Hart, 1995.
 """
-unit_symmetric(A::UnitfulMatrix) = (unitrange(A) ∥ unitdomain(A).^-1)
+unit_symmetric(A::AbstractUnitfulType) = (unitrange(A) ∥ unitdomain(A).^-1)
 function unit_symmetric(A::AbstractMatrix)
     B = UnitfulMatrix(A)
     isnothing(B) ? false : unit_symmetric(B) # fallback
