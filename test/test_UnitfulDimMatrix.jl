@@ -3,6 +3,9 @@
     s = u"s"
     test_UnitfulDim_matrices()
 end
+@testset "dimensionless" begin
+    test_UnitfulDim_dimensionless()
+end
 
 @testset "time-average" begin
     m = u"m"
@@ -49,6 +52,8 @@ end
 
     #y = UnitfulLinearAlgebra._rebuildmul(E,x);
     y = E*x
+
+    # use matrix left divide to invert
 end
 
 @testset "PEMDAS" begin

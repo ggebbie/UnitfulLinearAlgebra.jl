@@ -5,35 +5,7 @@
 end
 
 @testset "dimensionless" begin
-
-    # scalar test
-    @test dimensionless(1.0)
-    @test ~dimensionless(1.0K)
-    
-    # Not all dimensionless matrices have
-    # dimensionless domain and range
-    for i = 1:2
-        if i == 1
-            p = [1.0m², 3.0m²]
-        elseif i ==2
-            p = [1.0m², 3.0u"m^3"]
-        end
-        
-        q̃ = [-1.0u"m^-2", 2.0u"m^-2"]
-        q = ustrip.(q̃).*unit.(1 ./q̃)
-        
-        # outer product to make a multipliable matrix
-        A = p*q̃'
-        #B = MMatrix(ustrip.(A),unit.(p),unit.(q))
-        B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q))
-        if i == 1
-            @test dimensionless(B)
-            @test dimensionless(A)
-        elseif i ==2
-            @test ~dimensionless(B)
-            @test ~dimensionless(A)
-        end
-    end
+    test_Unitful_dimensionless()
 end
 
 @testset "exact" begin
