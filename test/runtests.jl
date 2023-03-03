@@ -13,14 +13,7 @@ s = u"s"
 K = u"K"
 m² = u"m^2"
 
-"""
-    Are two matrices within a certain tolerance?
-    Use to simplify tests.
-    """
-#within(A::Union{Matrix{Quantity},Vector{Quantity}},B::Union{Matrix{Quantity},Vector{Quantity}},tol) =  maximum(abs.(ustrip.(A - B))) < tol
-within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
-# next one checks for unit consistency as well. Is more stringent.
-within(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat,tol) =  maximum(abs.(parent(A - B))) < tol
+include("test_functions.jl")
 
 @testset "UnitfulLinearAlgebra.jl" begin
 
