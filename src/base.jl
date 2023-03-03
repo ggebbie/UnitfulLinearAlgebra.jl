@@ -155,10 +155,6 @@ function (\)(A::AbstractUnitfulDimMatrix,B::AbstractUnitfulDimMatrix)
     end
 end
 
-LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
-
-
-
 """
     function ldiv(F::LU{T,MultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 

@@ -17,7 +17,7 @@ LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unit
 
     Unitful matrix determinant.
 """
-function LinearAlgebra.det(A::AbstractUnitfulMatrix) 
+function LinearAlgebra.det(A::AbstractUnitfulType) 
     if square(A)
         detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
         return Quantity(det(parent(A)),detunit)
@@ -105,6 +105,17 @@ function LinearAlgebra.cholesky(A::AbstractUnitfulMatrix)
     if unit_symmetric(A)
         C = LinearAlgebra.cholesky(parent(A))
         factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)))
+        return Cholesky(factors,C.uplo,C.info)
+    else
+        error("requires unit symmetric matrix")
+    end
+end
+function LinearAlgebra.cholesky(A::AbstractUnitfulDimMatrix)
+    if unit_symmetric(A)
+        C = LinearAlgebra.cholesky(parent(A))
+
+        # What should the axis units for a Cholesky decomposition be? Just a guess here.
+        factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)),(:Normal-space,last(dims(A))))
         return Cholesky(factors,C.uplo,C.info)
     else
         error("requires unit symmetric matrix")
