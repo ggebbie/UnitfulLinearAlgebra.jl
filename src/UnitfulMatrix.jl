@@ -51,10 +51,13 @@ end
     UnitfulMatrix(data, dims, exact)
 end
 
-# for inner products, data may become a scalar
+# for inner products, data may become a scalar quantity
+# Choice: return UnitfulMatrix or return scalar quantity?
+# Here: return scalar quantity
 @inline function DimensionalData.rebuild(
     A::AbstractUnitfulVecOrMat, data::Number, dims::Tuple, exact::Bool)
-    UnitfulMatrix([data], dims, exact)
+    #UnitfulMatrix([data], dims, exact)
+    Quantity(data,first(dims)[1])
 end
 
 """
