@@ -4,6 +4,7 @@ using Unitful
 using LinearAlgebra
 using SparseArrays
 using DimensionalData
+using Statistics
 
 export UnitfulMatrix, UnitfulDimMatrix
 export AbstractUnitfulVecOrMat, AbstractUnitfulDimVecOrMat
