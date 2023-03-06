@@ -353,3 +353,4 @@ function Base.:-(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
     
 end
 
+Base.sum(A::AbstractUnitfulType) = Base.sum(Matrix(A))

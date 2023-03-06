@@ -43,6 +43,9 @@ include("multipliablematrices.jl")
 # Extend Base methods
 include("base.jl")
 
+# Extend Statistics methods
+include("statistics.jl")
+
 # Extend LinearAlgebra methods
 # underscore to differentiate from this package
 include("linear_algebra.jl") 
