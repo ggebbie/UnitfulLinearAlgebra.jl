@@ -5,7 +5,7 @@
 #within(A::Union{Matrix{Quantity},Vector{Quantity}},B::Union{Matrix{Quantity},Vector{Quantity}},tol) =  maximum(abs.(ustrip.(A - B))) < tol
 within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
 # next one checks for unit consistency as well. Is more stringent.
-within(A::T,B::T,tol) where T <: UnitfulLinearAlgebra.AbstractUnitfulType =  maximum(abs.(parent(A - B))) < tol
+within(A::UnitfulLinearAlgebra.AbstractUnitfulType,B::UnitfulLinearAlgebra.AbstractUnitfulType,tol) =  maximum(abs.(parent(A - B))) < tol
 
 function test_Unitful_matrices()
     for i = 1:3

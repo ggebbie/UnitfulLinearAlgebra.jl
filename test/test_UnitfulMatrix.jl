@@ -145,8 +145,8 @@ end
     @test within(inv(B),inv(C),1e-10)
 
     # reconstruct using factorization
-    ur = unitrange(C.vectors)
-    ud = UnitfulLinearAlgebra.Units(unit.(C.values))
+    ud = unitrange(C.vectors)
+    ur = UnitfulLinearAlgebra.Units(unit.(C.values))
     Λ = Diagonal(C.values,ur,ud)
     # use matrix right divide would be best
     #transpose(transpose(C.vectors)\ (Λ*transpose(C.vectors)))
