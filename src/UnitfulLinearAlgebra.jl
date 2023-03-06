@@ -4,6 +4,7 @@ using Unitful
 using LinearAlgebra
 using SparseArrays
 using DimensionalData
+using Statistics
 
 export UnitfulMatrix, UnitfulDimMatrix
 export AbstractUnitfulVecOrMat, AbstractUnitfulDimVecOrMat
@@ -42,6 +43,9 @@ include("multipliablematrices.jl")
 
 # Extend Base methods
 include("base.jl")
+
+# Extend Statistics methods
+include("statistics.jl")
 
 # Extend LinearAlgebra methods
 # underscore to differentiate from this package
