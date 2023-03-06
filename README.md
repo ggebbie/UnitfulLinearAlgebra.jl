@@ -7,7 +7,7 @@
 
 Low-cost linear algebra functions for matrices with units
 
-Early work with UnitfulLinear Algebra can be found in the fork [https://github.com/ggebbie/MultipliableMatrices.jl](MultipliableMatrices.jl). That fork describes many different types of multipliable matrix types but is not as performant.
+Early work with UnitfulLinear Algebra can be found in the fork [MultipliableMatrices.jl](https://github.com/ggebbie/MultipliableMatrices.jl). That fork describes many different types of multipliable matrix types but is not as performant.
 
 ## Usage: Algebraic interpretation of unitful matrices
 
