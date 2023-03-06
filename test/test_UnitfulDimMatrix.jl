@@ -6,6 +6,9 @@ end
 @testset "dimensionless" begin
     test_UnitfulDim_dimensionless()
 end
+@testset "polynomial fitting" begin
+    test_polynomial_UnitfulDimMatrix()
+end    
 
 @testset "time-average" begin
     m = u"m"
@@ -35,26 +38,6 @@ end
     
 end
 
-@testset "polynomial fit" begin
-    m = u"m"
-    s = u"s"
-    u1 = m
-    u2 = m/s
-    u3 = m/s/s
-
-    k = 3
-    Eparent = hcat(randn(k),randn(k),randn(k))
-    #y = randn(k)u1
-    E = UnitfulDimMatrix(Eparent,fill(m,k),[u1,u2,u3],dims=(:sealevel,:coefficients))
-
-    # UnitfulDimVector so that fewer dims
-    x = UnitfulDimMatrix(randn(k,1),[u1,u2,u3],[unit(1.0)],dims=(:coefficients,:nothing))
-
-    #y = UnitfulLinearAlgebra._rebuildmul(E,x);
-    y = E*x
-
-    # use matrix left divide to invert
-end
 
 @testset "PEMDAS" begin
     m = u"m"

@@ -222,65 +222,7 @@ end
 end
 
 @testset "polynomial fitting" begin
-    
-    u1 = m
-    u2 = m/s
-    u3 = m/s/s
-    
-    # example: polynomial fitting
-    k = 3
-    E = hcat(randn(k),randn(k)u1/u2,randn(k)u1/u3)
-    y = randn(k)u1
-    x = UnitfulMatrix([randn()u1; randn()u2; randn()u3] )
-
-    Z = lu(ustrip.(E))
-    
-    F = UnitfulMatrix(E)
-    G = convert_unitdomain(F,unitrange(x))
-    Z2 = lu(G)
-
-    @test within(E[Z2.p,:],Matrix(Z2.L*Z2.U),1e-10)
-
-    @test ~singular(F)
-    det(F)
-
-    E⁻¹ = inv(G)
-    Eᵀ = transpose(G)
-    @test G[2,1] == Eᵀ[1,2]
-    #x̃ = E⁻¹ * (E * x) # doesn't work because Vector{Any} in parentheses, dimension() not valid, dimension deprecated?
-    y = G*x
-
-    # matrix left divide.
-    # just numbers.
-    x̃num = ustrip.(E) \ parent(y)
-
-    x̂ = G \ y
-
-    #y2 = convert(Vector{Quantity},y)
-    #UnitfulLinearAlgebra.ldiv!(G,y2)
-    @test within(x̂,x, 1e-10)
-
-    # an inexact matrix
-    x′ = F \ y
-    @test within(x′,x,1e-10)
-
-    #easy = [1. 0.2; 0.2 1.0]
-    #tester = cholesky(easy)
-    #@which ldiv!(tester,[2.1,3.1])
-    
-    x̃ = E⁻¹ * y
-    @test within(x̃,x,1e-10)
-
-    # Does LU solve the same problem?
-    # MISSING UNITS HERE
-    x̆ = Z2 \ y 
-    @test within(x̆,x, 1e-10)
-
-    # fails due to mixed matrix types
-    #𝐱 = Z2.U\(Z2.L\(UnitfulMatrix(Z2.P'*y)))
-    #@test within(𝐱,x,1e-10)
-    #@test abs.(maximum(ustrip.(𝐱-x))) < 1e-10
-
+    test_polynomial_UnitfulMatrix()
 end    
 
 @testset "uniform svd" begin
