@@ -203,23 +203,23 @@ end
 """
 LinearAlgebra.diagm(v::AbstractVector,r::Units,d::Units; exact = false) = UnitfulMatrix(spdiagm(length(r),length(d),ustrip.(v)),(r,d); exact=exact)    
 
-# """
-#     function diag(A::AbstractMultipliableMatrix)
+"""
+    function diag(A::AbstractMultipliableMatrix)
 
-#     Diagonal elements of matrix with units.
+    Diagonal elements of matrix with units.
 
-#     Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
-#  """
-# function diag(A::AbstractMultipliableMatrix{T}) where T <: Number
+    Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
+ """
+function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDimMatrix{T}}) where T <: Number
+    m,n = size(A)
+    ndiag = max(m,n)
+    dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
+    for nd in 1:ndiag
+        vdiag[nd] = getindexqty(A,nd,nd)
+    end
+    return vdiag
+end
 
-#     m,n = size(A)
-#     ndiag = max(m,n)
-#     dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
-#     for nd in 1:ndiag
-#         vdiag[nd] = getindex(A,nd,nd)
-#     end
-#     return vdiag
-# end
 """
     function Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
 

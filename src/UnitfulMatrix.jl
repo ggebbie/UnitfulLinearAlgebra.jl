@@ -51,6 +51,12 @@ end
     UnitfulMatrix(data, dims, exact)
 end
 
+# for inner products, data may become a scalar
+@inline function DimensionalData.rebuild(
+    A::AbstractUnitfulVecOrMat, data::Number, dims::Tuple, exact::Bool)
+    UnitfulMatrix([data], dims, exact)
+end
+
 """
     rebuild(A::UnitfulMatrix, data, dims, exact) => UnitfulMatrix
     rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix

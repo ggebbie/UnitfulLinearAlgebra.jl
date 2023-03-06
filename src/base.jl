@@ -24,8 +24,7 @@ function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulType)
 end
 
 """
-    function *(A::MultipliableMatrix,b)
-
+    function *(A::AbstractUnitfulType,b)
 
     Matrix-scalar multiplication with units/dimensions.
     Must account for change in the unitrange when the
@@ -99,6 +98,8 @@ function Base.:-(A::AbstractUnitfulVecOrMat{T1},B::AbstractUnitfulVecOrMat{T2}) 
         error("matrices not dimensionally conformable for subtraction")
     end
 end
+# define negation
+Base.:-(A::AbstractUnitfulType) = DimensionalData.rebuild(A,-parent(A)) 
 
 """
      function left divide
