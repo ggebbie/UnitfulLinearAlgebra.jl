@@ -24,8 +24,7 @@ function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulType)
 end
 
 """
-    function *(A::MultipliableMatrix,b)
-
+    function *(A::AbstractUnitfulType,b)
 
     Matrix-scalar multiplication with units/dimensions.
     Must account for change in the unitrange when the
@@ -99,6 +98,8 @@ function Base.:-(A::AbstractUnitfulVecOrMat{T1},B::AbstractUnitfulVecOrMat{T2}) 
         error("matrices not dimensionally conformable for subtraction")
     end
 end
+# define negation
+Base.:-(A::AbstractUnitfulType) = DimensionalData.rebuild(A,-parent(A)) 
 
 """
      function left divide
@@ -107,7 +108,7 @@ end
      Reverse mapping from unitdomain to range.
      Is `exact` if input is exact.
 """
-function (\)(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
+function Base.:\(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
     if exact(A)
         DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
 
@@ -119,7 +120,7 @@ function (\)(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
         error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
     end
 end
-function (\)(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
+function Base.:\(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
     if exact(A)
         DimensionalData.comparedims(first(dims(A)), first(dims(B)); val=true)
         return rebuild(A,parent(A)\parent(B),(last(dims(A)),last(dims(B)))) #,exact = (exact(A) && exact(B)))
@@ -127,11 +128,34 @@ function (\)(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
         Anew = convert_unitrange(A,unitrange(B)) 
         return rebuild(Anew,parent(Anew)\parent(B),(last(dims(Anew)),last(dims(B))))
     else
+        error("UnitfulLinearAlgebra.matrix left divide): Dimensions of Unitful Matrices A and b not compatible")
+    end
+end
+function Base.:\(A::AbstractUnitfulDimMatrix,b::AbstractUnitfulDimVector)
+    if exact(A)
+        DimensionalData.comparedims(first(unitdims(A)), first(unitdims(b)); val=true)
+        DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
+        return rebuild(A,parent(A)\parent(b),(last(unitdims(A)),),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
+    elseif ~exact(A) && (unitrange(A) ∥ unitrange(b))
+        Anew = convert_unitrange(A,unitrange(b)) 
+        return rebuild(Anew,parent(Anew)\parent(b),(last(unitdims(Anew)),),(last(dims(Anew)),))
+    else
         error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
     end
 end
+function Base.:\(A::AbstractUnitfulDimMatrix,B::AbstractUnitfulDimMatrix)
+    if exact(A)
+        DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
+        DimensionalData.comparedims(first(dims(A)), first(dims(B)); val=true)
+        return rebuild(A,parent(A)\parent(B),(last(unitdims(A)),last(unitdims(B))),(last(dims(A)),last(dims(B)))) #,exact = (exact(A) && exact(B)))
+    elseif ~exact(A) && (unitrange(A) ∥ unitrange(B))
+        Anew = convert_unitrange(A,unitrange(B)) 
+        return rebuild(Anew,parent(Anew)\parent(B),(last(unitdims(Anew)),last(unitdims(B))),(last(dims(Anew)),last(dims(B))))
+    else
+        error("UnitfulLinearAlgebra.(matrix left divide): Dimensions of Unitful Matrices A and b not compatible")
+    end
+end
 
-#function (\)(F::LU{T,AbstractMultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 """
     function ldiv(F::LU{T,MultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
 

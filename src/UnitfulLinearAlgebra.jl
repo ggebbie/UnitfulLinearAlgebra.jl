@@ -23,7 +23,7 @@ export identitymatrix
 export describe, trace
 
 # imported some troublesome methods
-import Base: size, (\), getproperty
+import Base: (\)
 import LinearAlgebra: inv
 import DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
 

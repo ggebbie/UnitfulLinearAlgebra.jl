@@ -1,4 +1,8 @@
 @testset "scalars" begin
+    K = u"K"
+    @test dimensionless(1.0)
+    @test ~dimensionless(1.0K)
+
     c = 1m
     d = 2m
     @test c~d
@@ -24,6 +28,7 @@
 end
 
 @testset "vectors" begin
+
 
     # already implemented in Unitful?
     a = [1m, 1s, 10K]

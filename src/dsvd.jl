@@ -56,7 +56,7 @@ Base.iterate(S::DSVD, ::Val{:S}) = (S.S, Val(:V))
 Base.iterate(S::DSVD, ::Val{:V}) = (S.V, Val(:done))
 Base.iterate(S::DSVD, ::Val{:done}) = nothing
 
-function getproperty(F::DSVD, d::Symbol)
+function Base.getproperty(F::DSVD, d::Symbol)
     if d === :U
         return F.Qy\F.U′
     elseif d === :U⁻¹
@@ -149,8 +149,8 @@ end
 #     return B
 # end
 
-size(A::DSVD, dim::Integer) = dim == 1 ? size(A.U, dim) : size(A.V⁻¹, dim)
-size(A::DSVD) = (size(A, 1), size(A, 2))
+Base.size(A::DSVD, dim::Integer) = dim == 1 ? size(A.U, dim) : size(A.V⁻¹, dim)
+Base.size(A::DSVD) = (size(A, 1), size(A, 2))
 
 # adjoint not yet defined for AbstractMultipliableMatrix
 #function adjoint(F::DSVD)

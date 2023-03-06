@@ -152,7 +152,7 @@ end
     Definition: inverse dimensional range and dimensional domain are parallel.
     Called "dimensionally symmetric" by Hart, 1995.
 """
-unit_symmetric(A::UnitfulMatrix) = (unitrange(A) ∥ unitdomain(A).^-1)
+unit_symmetric(A::AbstractUnitfulType) = (unitrange(A) ∥ unitdomain(A).^-1)
 function unit_symmetric(A::AbstractMatrix)
     B = UnitfulMatrix(A)
     isnothing(B) ? false : unit_symmetric(B) # fallback
@@ -184,44 +184,24 @@ dottable(a,b) = parallel(a, 1 ./ b)
     matrix to match the expected vectors during multiplication.
     Here we set the matrix to `exact=true` after this step.
 """
-function convert_unitdomain(A::AbstractUnitfulVecOrMat, newdomain::Units) 
+function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Units) 
     if unitdomain(A) ∥ newdomain
-        #shift = newdomain./unitdomain(A)
-        #newrange = unitrange(A).*shift
         newrange = Units(unitrange(A).*(newdomain[1]/unitdomain(A)[1]))
         return rebuild(A, parent(A), (newrange, newdomain), true)
-        #B = BestMultipliableMatrix(A.numbers,newrange,newdomain,exact=true)
     else
-        error("New unit domain not parallel to unit domain of Multipliable Matrix")
+        error("New unit domain not parallel to unit domain of UnitfulMatrix")
     end
 end
 
-# """
-#     function convert_unitdomain!(A, newdomain)
-
-#     In-place conversion of unit (dimensional) domain.
-#     Matrix Type not permitted to change.
-# """
-# function convert_unitdomain!(A::AbstractMultipliableMatrix, newdomain::Vector)
-#     if unitdomain(A) ∥ newdomain
-#         shift = newdomain[1]./unitdomain(A)[1]
-#         # caution: not all matrices have this attribute
-#         if hasproperty(A,:unitdomain)
-#             for (ii,vv) in enumerate(A.unitdomain)
-#                 A.unitdomain[ii] *= shift
-#             end
-#         end
-#         if hasproperty(A,:unitrange)
-#             for (ii,vv) in enumerate(A.unitrange)
-#                 A.unitrange[ii] *= shift
-#             end
-#         end
-#         # make sure the matrix is now exact
-#         #A.exact = true # immutable so not possible
-#     else
-#         error("New domain not parallel to domain of Multipliable Matrix")
-#     end
-# end
+function convert_unitdomain(A::AbstractUnitfulDimMatrix, newdomain::Units) 
+    if unitdomain(A) ∥ newdomain
+        newrange = Units(unitrange(A).*(newdomain[1]/unitdomain(A)[1]))
+        # change exact to true
+        return rebuild(A, parent(A), (newrange, newdomain), dims(A), refdims(A), name(A), metadata(A), true)
+    else
+        error("New unit domain not parallel to unit domain of UnitfulDimMatrix")
+    end
+end
 
 """
     function convert_unitrange(A, newrange)
@@ -234,53 +214,13 @@ end
 """
 function convert_unitrange(A::AbstractUnitfulMatrix, newrange::Units) 
     if unitrange(A) ∥ newrange
-        #shift = newdomain./unitdomain(A)
-        #newrange = unitrange(A).*shift
         newdomain = Units(unitdomain(A).*(newrange[1]/unitrange(A)[1]))
         B = rebuild(A, parent(A), (newrange, newdomain))
     else
-        error("New unit domain not parallel to unit domain of Multipliable Matrix")
+        error("New unit domain not parallel to unit domain of `UnitfulMatrix`")
     end
 end
 
-# """
-#     function convert_unitrange!(A, newrange)
-
-#     In-place conversion of unit (dimensional) range.
-#     Matrix Type not permitted to change.
-# """
-# function convert_unitrange!(A::AbstractMultipliableMatrix, newrange::Vector)
-#     if unitrange(A) ∥ newrange
-#         shift = newrange[1]./unitrange(A)[1]
-#         # caution: not all matrices have this attribute
-#         if hasproperty(A,:unitdomain)
-#             for (ii,vv) in enumerate(A.unitdomain)
-#                 A.unitdomain[ii] *= shift
-#             end
-#         end
-#         if hasproperty(A,:unitrange)
-#             for (ii,vv) in enumerate(A.unitrange)
-#                 A.unitrange[ii] *= shift
-#             end
-#         end
-#         #A.exact = true , immutable
-#      else
-#          error("New range not parallel to range of Multipliable Matrix")
-#      end
-# end
-# function convert_unitrange!(A::AbstractUnitfulMatrix, newrange::Vector)
-#     if unitrange(A) ∥ newrange
-#         shift = newrange[1]./unitrange(A)[1]
-#         for (ii,vv) in enumerate(A.dims[2])
-#             A.dims[2][ii] *= shift
-#         end
-#         for (ii,vv) in enumerate(A.dims[1])
-#             A.dims[1][ii] *= shift
-#         end
-#      else
-#          error("New range not parallel to range of Unitful Matrix")
-#      end
-# end
 
 """
     function exact(A)

@@ -17,7 +17,7 @@ LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unit
 
     Unitful matrix determinant.
 """
-function LinearAlgebra.det(A::AbstractUnitfulMatrix) 
+function LinearAlgebra.det(A::AbstractUnitfulType) 
     if square(A)
         detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
         return Quantity(det(parent(A)),detunit)
@@ -110,8 +110,20 @@ function LinearAlgebra.cholesky(A::AbstractUnitfulMatrix)
         error("requires unit symmetric matrix")
     end
 end
+function LinearAlgebra.cholesky(A::AbstractUnitfulDimMatrix)
+    if unit_symmetric(A)
+        C = LinearAlgebra.cholesky(parent(A))
 
-# seems like this might be from Base?
+        # What should the axis units for a Cholesky decomposition be? Just a guess here.
+        # What if internal parts of Cholesky decomposition are simply UnitfulMatrix's. 
+        factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)),(:Normalspace,last(dims(A))))
+        return Cholesky(factors,C.uplo,C.info)
+    else
+        error("requires unit symmetric matrix")
+    end
+end
+
+# seems like this might be from Base? Move to base.jl? 
 function Base.getproperty(C::Cholesky{T,<:AbstractUnitfulMatrix}, d::Symbol) where T 
     Cfactors = getfield(C, :factors)
     Cuplo    = getfield(C, :uplo)
@@ -191,23 +203,23 @@ end
 """
 LinearAlgebra.diagm(v::AbstractVector,r::Units,d::Units; exact = false) = UnitfulMatrix(spdiagm(length(r),length(d),ustrip.(v)),(r,d); exact=exact)    
 
-# """
-#     function diag(A::AbstractMultipliableMatrix)
+"""
+    function diag(A::AbstractMultipliableMatrix)
 
-#     Diagonal elements of matrix with units.
+    Diagonal elements of matrix with units.
 
-#     Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
-#  """
-# function diag(A::AbstractMultipliableMatrix{T}) where T <: Number
+    Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
+ """
+function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDimMatrix{T}}) where T <: Number
+    m,n = size(A)
+    ndiag = max(m,n)
+    dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
+    for nd in 1:ndiag
+        vdiag[nd] = getindexqty(A,nd,nd)
+    end
+    return vdiag
+end
 
-#     m,n = size(A)
-#     ndiag = max(m,n)
-#     dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
-#     for nd in 1:ndiag
-#         vdiag[nd] = getindex(A,nd,nd)
-#     end
-#     return vdiag
-# end
 """
     function Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
 
