@@ -79,6 +79,37 @@ update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
 #end
 
 """
+    rebuild(A::UnitfulMatrix, data, dims, exact) => UnitfulMatrix
+    rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix
+
+Rebuild a `UnitfulMatrix` with new fields. Handling partial field
+update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
+"""
+@inline DimensionalData.rebuildsliced(A::AbstractUnitfulDimVecOrMat, args...) = DimensionalData.rebuildsliced(getindex, A, args...)
+# WARNING: kludge here, slicedims returns Tuple(Tuple())) which causes problems, Insert [1], needs a fix
+@inline function DimensionalData.rebuildsliced(f::Function, A::AbstractUnitfulDimVecOrMat, data::AbstractArray, I::Tuple; exact= exact(A))
+
+    urange = unitrange(A)[I[1]]
+    udomain = unitdomain(A)[I[2]]
+
+    if (udomain isa Unitful.FreeUnits || urange isa Unitful.FreeUnits )
+        # case of column vector, row vector, scalar
+        # scalar appears to be overridden by getindex
+        newunitrange = slicedvector(urange,udomain)
+
+        ## NEED TO SLICE DIMS ALSO
+        return UnitfulDimMatrix(data, newunitrange)
+        #return UnitfulMatrix(data, newunitrange, newunitdomain)
+    else
+        newunitrange, newunitdomain = slicedmatrix(urange,udomain)
+        # unit range and domain of a sliced matrix are ambiguous.
+        # It must be exact=false
+        ##  NEED TO SLICE (axis) DIMS ALSO
+        return UnitfulDimMatrix(data, newunitrange, newunitdomain, exact=false)
+    end
+end
+
+"""
     function UnitfulDimMatrix(A::AbstractMatrix)
 
     Constructor to make inexact UnitfulDimMatrix.

@@ -1,6 +1,5 @@
 # Build off Base methods
-#function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat{T,N}) where {T,N}
-function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulType) 
+function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat) 
     lines = 0
     summary(io, A)
     #print_name(io, name(A))

@@ -442,5 +442,17 @@ identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),(dimrange,dimrange)
 #     return B
 # end
 
-## start of UnitfulDimMatrix methods
+slicedvector(urange,udomain) = urange./udomain
+function slicedmatrix(urange,udomain) 
+    unt = Array{Unitful.FreeUnits}(undef,length(urange),length(udomain))
+    for m in 1:length(urange)
+        for n in 1:length(udomain)
+            unt[m,n] = urange[m]./udomain[n]
+        end
+    end
+    # determine new range/domain
+    newunitrange = unt[:,1]
+    newunitdomain = unt[1,1]./unt[1,:]
+    return newunitrange,newunitdomain
+end
 
