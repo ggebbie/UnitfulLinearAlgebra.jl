@@ -151,28 +151,30 @@ DimensionalData._rebuildmul(b::Number, A::AbstractUnitfulDimVecOrMat) = A*b
 # WARNING: kludge here, slicedims returns Tuple(Tuple())) which causes problems, Insert [1], needs a fix
 @inline function DimensionalData.rebuildsliced(f::Function, A::AbstractUnitfulDimVecOrMat, data::AbstractArray, I::Tuple; exact= exact(A))
 
-    println(data)
+    ## NOTE: refdims are not displaying for vector output
+    
     # "axis" range and domain
-    newdims = (first(dims(A))[I[1]],last(dims(A))[I[2]])
+    arange = first(dims(A))[I[1]]
+    adomain = last(dims(A))[I[2]]
 
     # unit range and domain
     urange = unitrange(A)[I[1]]
     udomain = unitdomain(A)[I[2]]
-        
-    if (udomain isa Unitful.FreeUnits || urange isa Unitful.FreeUnits )
+
+    if udomain isa Unitful.FreeUnits 
         # case of column vector, row vector, scalar
         # scalar appears to be overridden by getindex
         newunitrange = slicedvector(urange,udomain)
-        return UnitfulDimMatrix(data, (newunitrange,), newdims)
-        #return UnitfulMatrix(data, newunitrange, newunitdomain)
+        return UnitfulDimMatrix(data, newunitrange, dims=arange,refdims=(Units(unit.(adomain)),),exact=false)
+
+    elseif urange isa Unitful.FreeUnits
+        newunitrange = slicedvector(urange,udomain)
+        return UnitfulDimMatrix(data, newunitrange, dims=adomain, refdims = (Units(unit.(arange)),), exact=false)
+
     else
-        println("not a vector")
         newunitrange, newunitdomain = slicedmatrix(urange,udomain)
-        println(newunitrange)
-        println(newunitdomain)
         # unit range and domain of a sliced matrix are ambiguous.
         # It must be exact=false
-        #return UnitfulDimMatrix(data,format((newunitrange,newunitdomain),data), format(newdims,data)) # exact=false)
-        return UnitfulDimMatrix(data,(newunitrange,newunitdomain), newdims) # exact=false)
+        return UnitfulDimMatrix(data,newunitrange,newunitdomain, dims=(arange,adomain), exact=false)
     end
 end

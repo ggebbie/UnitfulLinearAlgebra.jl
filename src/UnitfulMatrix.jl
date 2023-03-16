@@ -78,7 +78,7 @@ update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
         # case of column vector, row vector, scalar
         # scalar appears to be overridden by getindex
         newunitrange = slicedvector(urange,udomain)
-        return UnitfulMatrix(data, newunitrange)
+        return UnitfulMatrix(data, newunitrange,exact=false)
         #return UnitfulMatrix(data, newunitrange, newunitdomain)
     else
         newunitrange, newunitdomain = slicedmatrix(urange,udomain)
