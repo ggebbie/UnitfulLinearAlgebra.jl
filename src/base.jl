@@ -1,33 +1,33 @@
 # Build off Base methods
-# convert to DimArray. Use DimArray show method
-Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulDimVecOrMat) = Base.show(io, mime, DimArray(A))
-    # println("Base.show a test")
-    # DA = DimArray(A)
-    # convert to DimArray. Use DimArray show method
-    #Base.show(io, mime, DimArray(A))
-#end
 
-function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat)
-    #println("Base.show UnitfulVecOrMat")
+function Base.show(io::IO, mime::MIME"text/plain", B::AbstractUnitfulDimVecOrMat) 
     lines = 0
-    summary(io, A)
-    #print_name(io, name(A))
-    #lines += Dimensions.print_dims(io, mime, dims(A))
-    #!(isempty(dims(A)) || isempty(refdims(A))) && println(io)
-    #lines += Dimensions.print_refdims(io, mime, refdims(A))
+    summary(io, B)
+    A = DimArray(B)
+    print_name(io, name(A))
+    lines += Dimensions.print_dims(io, mime, dims(A))
+    !(isempty(dims(A)) || isempty(refdims(A))) && println(io)
+    lines += Dimensions.print_refdims(io, mime, refdims(A))
     println(io)
-    # DELETED THIS OPTIONAL PART HERE
+
     # Printing the array data is optional, subtypes can 
     # show other things here instead.
     ds = displaysize(io)
     ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
-    #println("show after")
-    #DimensionalData.show_after(ioctx, mime, Matrix(A))
+    DimensionalData.show_after(ioctx, mime, A)
 
-    #function print_array(io::IO, mime, A::AbstractDimArray{T,2}) where T
+    return nothing
+end
+
+
+function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat)
+    lines = 0
+    summary(io, A)
+    println(io)
+    ds = displaysize(io)
+    ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
     T2 = eltype(A)
     Base.print_matrix(DimensionalData._print_array_ctx(ioctx, T2), Matrix(A))
-
     return nothing
 end
 
