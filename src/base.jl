@@ -1,25 +1,33 @@
 # Build off Base methods
-#function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat{T,N}) where {T,N}
-function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulType) 
+
+function Base.show(io::IO, mime::MIME"text/plain", B::AbstractUnitfulDimVecOrMat) 
     lines = 0
-    summary(io, A)
-    #print_name(io, name(A))
-    #lines += Dimensions.print_dims(io, mime, dims(A))
-    #!(isempty(dims(A)) || isempty(refdims(A))) && println(io)
-    #lines += Dimensions.print_refdims(io, mime, refdims(A))
+    summary(io, B)
+    A = DimArray(B)
+    print_name(io, name(A))
+    lines += Dimensions.print_dims(io, mime, dims(A))
+    !(isempty(dims(A)) || isempty(refdims(A))) && println(io)
+    lines += Dimensions.print_refdims(io, mime, refdims(A))
     println(io)
-    # DELETED THIS OPTIONAL PART HERE
+
     # Printing the array data is optional, subtypes can 
     # show other things here instead.
     ds = displaysize(io)
     ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
-    #println("show after")
-    #DimensionalData.show_after(ioctx, mime, Matrix(A))
+    DimensionalData.show_after(ioctx, mime, A)
 
-    #function print_array(io::IO, mime, A::AbstractDimArray{T,2}) where T
+    return nothing
+end
+
+
+function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat)
+    lines = 0
+    summary(io, A)
+    println(io)
+    ds = displaysize(io)
+    ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
     T2 = eltype(A)
     Base.print_matrix(DimensionalData._print_array_ctx(ioctx, T2), Matrix(A))
-
     return nothing
 end
 
@@ -236,7 +244,7 @@ Base.:~(a,b) = similarity(a,b)
 Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)))
 Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
 Base.transpose(A::AbstractUnitfulDimMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
-Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1)),(last(dims(a)),))
+Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1)),(last(dims(a)),))
 
 # Currently untested
 Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
