@@ -38,6 +38,13 @@ function UnitfulDimMatrix(data::AbstractArray, unitrange, unitdomain;
 end
 
 """
+    DimensionalData.DimArray
+
+    convert UnitfulDimMatrix or UnitfulDimVector to DimArray
+"""
+DimensionalData.DimArray(A::AbstractUnitfulDimVecOrMat) = DimArray(Matrix(A),dims(A))
+
+"""
     rebuild(A::UnitfulDimMatrix, data, [dims, refdims, name, metadata]) => UnitfulMatrix
     rebuild(A::UnitfulDimMatrix; kw...) => UnitfulMatrix
 

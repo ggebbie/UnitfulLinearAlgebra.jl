@@ -1,6 +1,14 @@
 # Build off Base methods
-#function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat{T,N}) where {T,N}
-function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulType) 
+# convert to DimArray. Use DimArray show method
+Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulDimVecOrMat) = Base.show(io, mime, DimArray(A))
+    # println("Base.show a test")
+    # DA = DimArray(A)
+    # convert to DimArray. Use DimArray show method
+    #Base.show(io, mime, DimArray(A))
+#end
+
+function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat)
+    #println("Base.show UnitfulVecOrMat")
     lines = 0
     summary(io, A)
     #print_name(io, name(A))
