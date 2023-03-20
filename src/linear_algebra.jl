@@ -263,11 +263,11 @@ end
 
     Unitful vector (inner) dot product.
 """
-function LinearAlgebra.dot(a::T,b::T) where T<: Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}
-    if square(A)
-        detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
-        return Quantity(det(parent(A)),detunit)
+function LinearAlgebra.dot(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector})
+    if dottable(a,b)
+        dotunit = unitrange(a)[1]*unitrange(b)[1] 
+        return Quantity(parent(a) ⋅ parent(b),dotunit)
     else
-        error("Determinant requires square matrix")
+        error("Units not conformable for dot product")
     end
 end
