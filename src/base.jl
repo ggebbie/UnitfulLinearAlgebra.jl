@@ -303,7 +303,7 @@ Base.:*(A::AbstractUnitfulDimMatrix, b::Number) = DimensionalData._rebuildmul(A,
 Base.:*(b::Number, A::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,b)
 
 #from ULA.+ 
-function Base.:+(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
+function Base.:+(A::AbstractUnitfulDimVecOrMat,B::AbstractUnitfulDimVecOrMat) 
     
     # compare unitdims
     DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
@@ -320,7 +320,7 @@ function Base.:+(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}
     end
 end
 
-function Base.:-(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
+function Base.:-(A::AbstractUnitfulDimVecOrMat,B::AbstractUnitfulDimVecOrMat)
     
     # compare unitdims
     DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
@@ -339,26 +339,22 @@ end
 
 #this is probably bad - automatically broadcasts because I don't know how to override
 #the dot syntax
-function Base.:+(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
+function Base.:+(A::AbstractUnitfulDimVecOrMat,b::Quantity) 
     if unitrange(A)[1] == unit(b)
         println("broadcasting!")
         return rebuild(A, parent(A) .+ ustrip(b), (unitrange(A), unitdomain(A)))
     else
         error("matrix and scalar are not dimensionally conformable for subtraction")
     end
-    
-    
 end
 
-function Base.:-(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
+function Base.:-(A::AbstractUnitfulDimVecOrMat,b::Quantity) 
     if unitrange(A)[1] == unit(b)
         println("broadcasting!")
         return rebuild(A, parent(A) .- ustrip(b), (unitrange(A), unitdomain(A)))
     else
         error("matrix and scalar are not dimensionally conformable for subtraction")
     end
-    
-    
 end
 
 Base.sum(A::AbstractUnitfulType) = Base.sum(Matrix(A))
