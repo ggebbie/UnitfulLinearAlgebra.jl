@@ -167,6 +167,7 @@ end
 """
 #invdimension(a) = dimension.(1 ./ a)
 invdimension(a) = dimension.(a).^-1
+invdimension(a:: Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = dimension(a).^-1
 
 """
     function dottable(a,b)
@@ -175,6 +176,9 @@ invdimension(a) = dimension.(a).^-1
     to take a dot product?
 """
 dottable(a,b) = parallel(a, 1 ./ b)
+function dottable(a::T,b::T) where T<: Union{AbstractUnitfulVector,AbstractUnitfulDimVector}
+
+end
 
 """
     function convert_unitdomain(A, newdomain)
