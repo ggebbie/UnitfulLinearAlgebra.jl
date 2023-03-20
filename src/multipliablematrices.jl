@@ -184,7 +184,7 @@ invdimension(a:: Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = dimens
     to take a dot product?
 """
 dottable(a,b) = parallel(a, 1 ./ b)
-function dottable(a::T,b::T) where T<: Union{AbstractUnitfulVector,AbstractUnitfulDimVector}
+function dottable(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
     if isequal(length(a),length(b))
         if length(a) == 1
             return true
