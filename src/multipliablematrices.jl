@@ -40,7 +40,7 @@ function parallel(a,b)::Bool
         return false
     end
 end
-function parallel(a::AbstractUnitfulVector,b::AbstractUnitfulVector)::Bool
+function parallel(a::T,b::T)::Bool where T <: Union{AbstractUnitfulVector,AbstractUnitfulDimVector}
     if isequal(length(a),length(b))
         if length(a) == 1
             return true
@@ -60,7 +60,7 @@ end
 ∥(a,b)  = parallel(a,b)
 
 # not consistent in that it should be an element-wise function
-Unitful.dimension(a::AbstractUnitfulVector) = dimension.(unitrange(a)) 
+Unitful.dimension(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = dimension.(unitrange(a)) 
 
 """
     function uniform(a)

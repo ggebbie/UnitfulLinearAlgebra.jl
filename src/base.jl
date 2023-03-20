@@ -61,8 +61,8 @@ Base.:*(a::AbstractUnitfulVector,b::Unitful.FreeUnits) = DimensionalData.rebuild
 Base.:*(b::Union{Quantity,Unitful.FreeUnits},a::AbstractUnitfulVector) = a*b
 # Need to test next line
 #*(a::AbstractUnitfulVector,b::Number) = a*Quantity(b,unit(1.0))
-Base.:*(a::AbstractUnitfulVector,b::Number) = DimensionalData.rebuild(a,parent(a)*b)
-Base.:*(b::Number,a::AbstractUnitfulVector) = a*b
+Base.:*(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Number) = DimensionalData.rebuild(a,parent(a)*b)
+Base.:*(b::Number,a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = a*b
 
 # (matrix/vector)-(matrix/vector) multiplication when inexact handled here
 function Base.:*(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
@@ -244,7 +244,7 @@ Base.:~(a,b) = similarity(a,b)
 Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)))
 Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
 Base.transpose(A::AbstractUnitfulDimMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
-Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1)),(last(dims(a)),))
+Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
 
 # Currently untested
 Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
