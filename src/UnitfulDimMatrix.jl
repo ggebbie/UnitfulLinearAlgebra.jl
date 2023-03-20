@@ -165,11 +165,13 @@ DimensionalData._rebuildmul(b::Number, A::AbstractUnitfulDimVecOrMat) = A*b
         # case of column vector, row vector, scalar
         # scalar appears to be overridden by getindex
         newunitrange = slicedvector(urange,udomain)
-        return UnitfulDimMatrix(data, newunitrange, dims=arange,refdims=(Units(unit.(adomain)),),exact=false)
+        #return UnitfulDimMatrix(data, newunitrange, dims=arange,refdims=(Units(unit.(adomain)),),exact=false)
+        return UnitfulDimMatrix(data, newunitrange, dims=arange, exact=false)
 
     elseif urange isa Unitful.FreeUnits
         newunitrange = slicedvector(urange,udomain)
-        return UnitfulDimMatrix(data, newunitrange, dims=adomain, refdims = (Units(unit.(arange)),), exact=false)
+        #return UnitfulDimMatrix(data, newunitrange, dims=adomain, refdims = (Units(unit.(arange)),), exact=false)
+        return UnitfulDimMatrix(data, newunitrange, dims=adomain, exact=false)
 
     else
         newunitrange, newunitdomain = slicedmatrix(urange,udomain)
