@@ -22,7 +22,7 @@
     pp. 188, Hart
     Note: Hart uses ≈, but this conflicts with an existing Julia function.
 """
-function parallel(a::AbstractVector,b::AbstractVector) 
+function parallel(a,b) 
     if isequal(length(a),length(b))
         if length(a) == 1
             return true
