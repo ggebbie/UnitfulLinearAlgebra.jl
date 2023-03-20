@@ -61,8 +61,8 @@ Base.:*(a::AbstractUnitfulVector,b::Unitful.FreeUnits) = DimensionalData.rebuild
 Base.:*(b::Union{Quantity,Unitful.FreeUnits},a::AbstractUnitfulVector) = a*b
 # Need to test next line
 #*(a::AbstractUnitfulVector,b::Number) = a*Quantity(b,unit(1.0))
-Base.:*(a::AbstractUnitfulVector,b::Number) = DimensionalData.rebuild(a,parent(a)*b)
-Base.:*(b::Number,a::AbstractUnitfulVector) = a*b
+Base.:*(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Number) = DimensionalData.rebuild(a,parent(a)*b)
+Base.:*(b::Number,a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = a*b
 
 # (matrix/vector)-(matrix/vector) multiplication when inexact handled here
 function Base.:*(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
@@ -244,7 +244,7 @@ Base.:~(a,b) = similarity(a,b)
 Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)))
 Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
 Base.transpose(A::AbstractUnitfulDimMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
-Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1)),(last(dims(a)),))
+Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
 
 # Currently untested
 Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
@@ -303,7 +303,7 @@ Base.:*(A::AbstractUnitfulDimMatrix, b::Number) = DimensionalData._rebuildmul(A,
 Base.:*(b::Number, A::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,b)
 
 #from ULA.+ 
-function Base.:+(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
+function Base.:+(A::AbstractUnitfulDimVecOrMat,B::AbstractUnitfulDimVecOrMat) 
     
     # compare unitdims
     DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
@@ -320,7 +320,7 @@ function Base.:+(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}
     end
 end
 
-function Base.:-(A::AbstractUnitfulDimMatrix{T1},B::AbstractUnitfulDimMatrix{T2}) where T1 where T2
+function Base.:-(A::AbstractUnitfulDimVecOrMat,B::AbstractUnitfulDimVecOrMat)
     
     # compare unitdims
     DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
@@ -339,26 +339,22 @@ end
 
 #this is probably bad - automatically broadcasts because I don't know how to override
 #the dot syntax
-function Base.:+(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
+function Base.:+(A::AbstractUnitfulDimVecOrMat,b::Quantity) 
     if unitrange(A)[1] == unit(b)
         println("broadcasting!")
         return rebuild(A, parent(A) .+ ustrip(b), (unitrange(A), unitdomain(A)))
     else
         error("matrix and scalar are not dimensionally conformable for subtraction")
     end
-    
-    
 end
 
-function Base.:-(A::AbstractUnitfulDimMatrix{T1},b::Quantity) where T1
+function Base.:-(A::AbstractUnitfulDimVecOrMat,b::Quantity) 
     if unitrange(A)[1] == unit(b)
         println("broadcasting!")
         return rebuild(A, parent(A) .- ustrip(b), (unitrange(A), unitdomain(A)))
     else
         error("matrix and scalar are not dimensionally conformable for subtraction")
     end
-    
-    
 end
 
 Base.sum(A::AbstractUnitfulType) = Base.sum(Matrix(A))

@@ -257,3 +257,17 @@ function LinearAlgebra.det(A::AbstractUnitfulDimMatrix)
         error("Determinant requires square matrix")
     end
 end
+
+"""
+    function dot
+
+    Unitful vector (inner) dot product.
+"""
+function LinearAlgebra.dot(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector})
+    if dottable(a,b)
+        dotunit = unitrange(a)[1]*unitrange(b)[1] 
+        return Quantity(parent(a) ⋅ parent(b),dotunit)
+    else
+        error("Units not conformable for dot product")
+    end
+end
