@@ -367,6 +367,7 @@ endomorphic(A::Number) = dimensionless(A) # scalars must be dimensionless to be 
     Note: Calling B::UnitfulMatrix[i,j] doesn't currently return the units.
 """
 getindexqty(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix},i::Int,j::Int) = Quantity.(parent(A)[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+getindexqty(A::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},i::Int) = Quantity.(parent(A)[i],unitrange(A)[i]) 
 
 """
     function setindex!(A::MultipliableMatrix,v,i,j)
