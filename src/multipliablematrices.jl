@@ -357,7 +357,7 @@ multipliable(A::UnitfulMatrix) = true
 
 """
 endomorphic(A::Matrix) = endomorphic(UnitfulMatrix(A))
-endomorphic(A::UnitfulMatrix) = isequal(unitdomain(A),unitrange(A))
+endomorphic(A::AbstractUnitfulType) = isequal(unitdomain(A),unitrange(A))
 endomorphic(A::Number) = dimensionless(A) # scalars must be dimensionless to be endomorphic
 
 """
