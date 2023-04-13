@@ -17,12 +17,19 @@ end
     q = UnitfulMatrix(ustrip.(q̃),unit.(1 ./q̃))
     
     # outer product to make a multipliable matrix
-    A = p*q̃'
+    A = p*q̃' #Vector{Quantity} * UnitfulMatrix
     #B = MMatrix(ustrip.(A),unit.(p),unit.(q),exact=true)
     B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(qold))
-    Bq = B*q
+    Bq = B*q #UnitfulMatrix * UnitfulMatrix
     @test A==Matrix(B)
     @test isequal(A*qold,Matrix(Bq))
+
+    #test UnitfulMatrix * Matrix
+    C = UnitfulMatrix([1 2;3 4],fill(unit(1.0), 2), fill(m, 2))
+    @test isequal(C * Matrix(I(2)), C)
+    @test isequal(Matrix(I(2)) * C, C)
+    #make sure the show() works
+    C * Matrix(I(2))
     
     # new domain
     qnew = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
@@ -33,7 +40,7 @@ end
     @test Bq ∥ D*qnew
 
     p2 = UnitfulMatrix(ustrip.(p),unit.(p))
-    pnew = p2 *s
+    pnew = p2 *s #multiply by a unit 
     qnew2 = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
     E = convert_unitrange(B,unitrange(pnew))
     @test Bq ∥ E*qnew2
