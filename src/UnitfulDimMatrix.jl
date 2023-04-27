@@ -37,6 +37,12 @@ function UnitfulDimMatrix(data::AbstractArray, unitrange, unitdomain;
     return UnitfulDimMatrix(data, format((Units(unitrange),Units(unitdomain)), data), format(dims, data), refdims, name, metadata, exact)
 end
 
+UnitfulDimMatrix(data::AbstractArray, unitrange::AbstractVector, unitdomain::Units; dims=(),refdims=(),name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true) = UnitfulDimMatrix(data, format((Units(unitrange),unitdomain), data), format(dims, data), refdims, name, metadata, exact)
+
+UnitfulDimMatrix(data::AbstractArray, unitrange::Units, unitdomain::AbstractVector; dims=(),refdims=(),name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true) = UnitfulDimMatrix(data, format((unitrange,Units(unitdomain)), data), format(dims, data), refdims, name, metadata, exact)
+
+UnitfulDimMatrix(data::AbstractArray, unitrange::Units, unitdomain::Units; dims=(),refdims=(),name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true) = UnitfulDimMatrix(data, format((unitrange,unitdomain), data), format(dims, data), refdims, name, metadata, exact)
+
 """
     DimensionalData.DimArray
 
