@@ -231,6 +231,8 @@ end
 # handle the case where unitdomain and unitrange have the same type
 LinearAlgebra.Diagonal(v::AbstractVector,r::Union{AbstractVector,Units},d::Union{AbstractVector,Units}; exact = true)  = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
 
+LinearAlgebra.Diagonal(v::AbstractVector,r::Union{AbstractVector,Units},d::Union{AbstractVector,Units},dims; refdims=(),name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true)  = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulDimMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d,dims=dims,refdims=refdims,name=name,metadata=metadata,exact=exact) : error("unit range and domain do not define a square matrix")   
+
 #LinearAlgebra.Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) where T <: Union{AbstractVector,Units} = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
 
 #LinearAlgebra.Diagonal(v::AbstractVector,r::Units,d::Units; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
