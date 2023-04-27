@@ -43,10 +43,6 @@ UnitfulDimMatrix(data::AbstractArray, unitrange::Units, unitdomain::AbstractVect
 
 UnitfulDimMatrix(data::AbstractArray, unitrange::Units, unitdomain::Units; dims=(),refdims=(),name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true) = UnitfulDimMatrix(data, format((unitrange,unitdomain), data), format(dims, data), refdims, name, metadata, exact)
 
-# UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::AbstractVector; exact = true) = UnitfulMatrix(data, format((unitrange,Units(unitdomain)), data), exact)
-
-# UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::Units; exact = true) = UnitfulMatrix(data, format((unitrange,unitdomain), data), exact)
-
 """
     DimensionalData.DimArray
 
