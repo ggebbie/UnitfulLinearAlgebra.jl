@@ -15,6 +15,9 @@ end
     qold = ustrip.(q̃).*unit.(1 ./q̃)
     q = UnitfulMatrix(qold)
     q = UnitfulMatrix(ustrip.(q̃),unit.(1 ./q̃))
+
+    # Does vec return unit information?
+    # Does this break anything else?
     
     # outer product to make a multipliable matrix
     A = p*q̃' #Vector{Quantity} * UnitfulMatrix
@@ -34,9 +37,6 @@ end
     # new domain
     qnew = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
     D = convert_unitdomain(B,unitrange(qnew))
-    #convert_unitdomain!(B,unit.(qnew)) # removed
-    #@test unitrange(D) == unitrange(B)
-    #@test unitdomain(D) == unitdomain(B)
     @test Bq ∥ D*qnew
 
     p2 = UnitfulMatrix(ustrip.(p),unit.(p))

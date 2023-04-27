@@ -360,3 +360,20 @@ function Base.:-(A::AbstractUnitfulDimVecOrMat,b::Quantity)
 end
 
 Base.sum(A::AbstractUnitfulType) = Base.sum(Matrix(A))
+
+"""
+    function vec(A::AbstractUnitfulType)
+
+    return a Vector{Quantity}
+    note ambiguity whether this function should return a Vector{Quantity} or an `AbstractUnitfulType` with one column
+
+# Arguments
+- `A::AbstractUnitfulType`: input matrix
+"""
+function Base.vec(A::AbstractUnitfulType)
+    qn = vec(parent(A))
+    ur = unitrange(A)
+    ud = unitdomain(A)
+    qu = vec([ur[i]/ud[j] for i in 1:first(size(A)), j in 1:last(size(A))])
+    return Quantity.(qn,qu)
+end
