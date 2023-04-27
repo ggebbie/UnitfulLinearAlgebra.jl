@@ -54,6 +54,8 @@ Base.:*(A::AbstractUnitfulMatrix,b::Unitful.FreeUnits) = DimensionalData.rebuild
 Base.:*(b::Union{Quantity,Unitful.FreeUnits},A::AbstractUnitfulMatrix) = A*b
 Base.:*(A::AbstractUnitfulMatrix,b::Number) = DimensionalData.rebuild(A,parent(A)*b)
 Base.:*(b::Number,A::AbstractUnitfulMatrix) = A*b
+Base.:*(A::AbstractUnitfulMatrix, B::Matrix) = A * UnitfulMatrix(B)
+Base.:*(A::Matrix, B::AbstractUnitfulMatrix) = UnitfulMatrix(A) * B
 
 # vector-scalar multiplication
 Base.:*(a::AbstractUnitfulVector,b::Quantity) = DimensionalData.rebuild(a,parent(a)*ustrip(b),(Units(unitrange(a).*unit(b)),))
