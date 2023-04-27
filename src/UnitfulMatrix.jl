@@ -27,9 +27,13 @@ function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; exact
     end        
 end
 # back consistency with MMatrix
-function UnitfulMatrix(data::AbstractArray, unitrange::Vector, unitdomain::Vector; exact = true)
-    return UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), exact)
-end
+UnitfulMatrix(data::AbstractArray, unitrange::AbstractVector, unitdomain::AbstractVector; exact = true) = UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), exact)
+
+UnitfulMatrix(data::AbstractArray, unitrange::AbstractVector, unitdomain::Units; exact = true) = UnitfulMatrix(data, format((Units(unitrange),unitdomain), data), exact)
+
+UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::AbstractVector; exact = true) = UnitfulMatrix(data, format((unitrange,Units(unitdomain)), data), exact)
+
+UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::Units; exact = true) = UnitfulMatrix(data, format((unitrange,unitdomain), data), exact)
 
 """
     rebuild(A::UnitfulMatrix, data, [dims, exact]) => UnitfulMatrix

@@ -228,8 +228,26 @@ end
      and dimensional unit domain `d`.
     Like `LinearAlgebra.Diagonal`, this extension is restricted to square matrices.
 """
-LinearAlgebra.Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
-LinearAlgebra.Diagonal(v::AbstractVector,r::Units,d::Units; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
+# handle the case where unitdomain and unitrange have the same type
+LinearAlgebra.Diagonal(v::AbstractVector,r::Union{AbstractVector,Units},d::Union{AbstractVector,Units}; exact = true)  = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
+
+#LinearAlgebra.Diagonal(v::AbstractVector,r::AbstractVector,d::AbstractVector; exact = false) where T <: Union{AbstractVector,Units} = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
+
+#LinearAlgebra.Diagonal(v::AbstractVector,r::Units,d::Units; exact = false) = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact) : error("unit range and domain do not define a square matrix")   
+
+# 2 cases where unitdomain and unitrange do not have the same type
+# function LinearAlgebra.Diagonal(v::AbstractVector,r::Union{AbstractVector,Units},d::Union{AbstractVector,Units}; exact = false)
+
+#     if (length(r) == length(d)) && (length(v) == length(d))
+
+#         if r isa AbstractVector
+#             UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(Units(r),d); exact=exact)
+#         else
+#             UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),(r,d); exact=exact)
+#         else error("unit range and domain do not define a square matrix")
+
+#         end
+# end
 
 # Some lost code
 # function ldiv!(A::LU{<:Any,<:StridedMatrix}, B::StridedVecOrMat)
