@@ -62,7 +62,6 @@ Base.:*(a::AbstractUnitfulVector,b::Quantity) = DimensionalData.rebuild(a,parent
 Base.:*(a::AbstractUnitfulVector,b::Unitful.FreeUnits) = DimensionalData.rebuild(a,parent(a),(Units(unitrange(a).*b),))
 Base.:*(b::Union{Quantity,Unitful.FreeUnits},a::AbstractUnitfulVector) = a*b
 # Need to test next line
-#*(a::AbstractUnitfulVector,b::Number) = a*Quantity(b,unit(1.0))
 Base.:*(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Number) = DimensionalData.rebuild(a,parent(a)*b)
 Base.:*(b::Number,a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = a*b
 
@@ -244,9 +243,9 @@ Base.:~(a,b) = similarity(a,b)
 """
 # A redefined tranpose that corrects error based on AbstractArray interface
 Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)))
-Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
+Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
 Base.transpose(A::AbstractUnitfulDimMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
-Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([unit(1.0)]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
+Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
 
 # Currently untested
 Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =

@@ -28,7 +28,7 @@ end
     @test isequal(A*qold,Matrix(Bq))
 
     #test UnitfulMatrix * Matrix
-    C = UnitfulMatrix([1 2;3 4],fill(unit(1.0), 2), fill(m, 2))
+    C = UnitfulMatrix([1 2;3 4],fill(NoUnits,2), fill(m, 2))
     @test isequal(C * Matrix(I(2)), C)
     @test isequal(Matrix(I(2)) * C, C)
     #make sure the show() works

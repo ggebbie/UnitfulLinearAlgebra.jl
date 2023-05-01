@@ -282,7 +282,7 @@ unitdims(A::AbstractUnitfulDimVecOrMat) = A.unitdims
 """
 unitdomain(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = last(unitdims(A))
 # this line may affect matrix multiplication
-unitdomain(A::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = Units([unit(1.0)]) # kludge for a nondimensional scalar 
+unitdomain(A::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = Units([NoUnits]) # kludge for a nondimensional scalar 
 
 """
     function unitrange(A)

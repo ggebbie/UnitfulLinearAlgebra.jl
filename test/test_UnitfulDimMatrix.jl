@@ -30,7 +30,7 @@ end
     E = UnitfulDimMatrix(Eparent,urange,udomain,dims=(YearCE(years),Region(regions)))
 
     # add UnitfulDimVector constructor
-    x = UnitfulDimMatrix(randn(1,1),[m],[unit(1.0)],dims=(Region(regions),:mean))
+    x = UnitfulDimMatrix(randn(1,1),[m],[NoUnits],dims=(Region(regions),:mean))
 
     # matrix multiplication with UnitfulDimMatrix
     #y = _rebuildmul(E,x)
@@ -46,15 +46,15 @@ end
     stup = (1,5)
 
     #can we add two matrices with same dimensions and units? 
-    a1 = UnitfulDimMatrix(randn(stup), fill(K, stup[1]), fill(unit(1.0), stup[2]), dims = (X = [5m], Ti = (1:stup[2])s))
-    a2_add = UnitfulDimMatrix(randn(stup), fill(K, stup[1]), fill(unit(1.0), stup[2]), dims = (X = [5m], Ti = (1:stup[2])s))
+    a1 = UnitfulDimMatrix(randn(stup), fill(K, stup[1]), fill(NoUnits, stup[2]), dims = (X = [5m], Ti = (1:stup[2])s))
+    a2_add = UnitfulDimMatrix(randn(stup), fill(K, stup[1]), fill(NoUnits, stup[2]), dims = (X = [5m], Ti = (1:stup[2])s))
     @test parent(a1 + a2_add) == parent(a1) .+ parent(a2_add)
     #subtraction 
     @test parent(a1 - a2_add) == parent(a1) .- parent(a2_add)
     
     #do we throw an error when the two matrices use the same dimensions, but are
     #sampled at different points 
-    a2_add_wrongdims = UnitfulDimMatrix(randn(stup), fill(K, stup[1]), fill(unit(1.0), stup[2]), dims = (X = [5m], Ti = (6:stup[2]+5)s))
+    a2_add_wrongdims = UnitfulDimMatrix(randn(stup), fill(K, stup[1]), fill(NoUnits, stup[2]), dims = (X = [5m], Ti = (6:stup[2]+5)s))
     @test_throws DimensionMismatch a1 + a2_add_wrongdims
 
     #multiply by scalar
@@ -62,7 +62,7 @@ end
     @test parent(5 * a1) == 5 * parent(a1)        
 
     #inner product
-    a2_multiply_inner = UnitfulDimMatrix(randn(stup[2], stup[1]), fill(unit(1.0), stup[2]), fill(K, stup[1]), dims = (Ti = (1:stup[2])s, X = [5m]))
+    a2_multiply_inner = UnitfulDimMatrix(randn(stup[2], stup[1]), fill(NoUnits, stup[2]), fill(K, stup[1]), dims = (Ti = (1:stup[2])s, X = [5m]))
     @test parent(a1 * a2_multiply_inner) == parent(a1) * parent(a2_multiply_inner)
     #a2_multiply_outer = copy(a1)
     #a1 * a2_multiply_outer

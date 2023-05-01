@@ -42,7 +42,7 @@ end
 function LinearAlgebra.eigen(A::AbstractUnitfulMatrix;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby) 
     if squarable(A) 
         F = LinearAlgebra.eigen(parent(A), permute=permute, scale=scale, sortby=sortby)
-        return LinearAlgebra.Eigen(F.values.*(unitrange(A)[1]/unitdomain(A)[1]), rebuild(A,F.vectors,(unitdomain(A),Units(fill(unit(1.0),size(A,2))))))
+        return LinearAlgebra.Eigen(F.values.*(unitrange(A)[1]/unitdomain(A)[1]), rebuild(A,F.vectors,(unitdomain(A),Units(fill(NoUnits,size(A,2))))))
     else
         error("UnitfulLinearAlgebra: Eigenvalue decomposition doesn't exist for for non-squarable matrices")
     end

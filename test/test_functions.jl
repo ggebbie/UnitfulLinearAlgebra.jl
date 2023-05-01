@@ -202,7 +202,7 @@ function vandermonde_UnitfulMatrix_vector_pair(uy,ux)
     k = 3
     Eparent = hcat(randn(k),randn(k),randn(k))
     E = UnitfulMatrix(Eparent,fill(m,k),[u1,u2,u3])
-    x = UnitfulMatrix(randn(k,1),[u1,u2,u3],[unit(1.0)])
+    x = UnitfulMatrix(randn(k,1),[u1,u2,u3],[NoUnits])
     return E,x
 end
 function vandermonde_UnitfulDimMatrix_vector_pair(uy,ux)
@@ -212,7 +212,7 @@ function vandermonde_UnitfulDimMatrix_vector_pair(uy,ux)
     k = 3
     Eparent = hcat(randn(k),randn(k),randn(k))
     E = UnitfulDimMatrix(Eparent,fill(m,k),[u1,u2,u3],dims=(:sealevel,:coefficients))
-    x = UnitfulDimMatrix(randn(k,1),[u1,u2,u3],[unit(1.0)],dims=(:coefficients,:nothing))
+    x = UnitfulDimMatrix(randn(k,1),[u1,u2,u3],[NoUnits],dims=(:coefficients,:nothing))
     return E,x
 end
 
