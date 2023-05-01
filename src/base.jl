@@ -374,6 +374,6 @@ function Base.vec(A::AbstractUnitfulType)
     qn = vec(parent(A))
     ur = unitrange(A)
     ud = unitdomain(A)
-    qu = vec([ur[i]/ud[j] for i in 1:first(size(ur)), j in 1:last(size(ud))])
+    qu = vec([ur[i]/ud[j] for i in eachindex(ur), j in eachindex(ud)])
     return Quantity.(qn,qu)
 end
