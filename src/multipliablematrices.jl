@@ -370,12 +370,12 @@ getindexqty(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix},i::Int,j::I
 getindexqty(A::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},i::Int) = Quantity.(parent(A)[i],unitrange(A)[i]) 
 
 """
-    function setindex!(A::MultipliableMatrix,v,i,j)
+    function setindex!(A::AbstractUnitfulMatrix,v,i,j)
 
-    Set element (i,j) of a MultipliableMatrix.
+    Set element (i,j) of a multipliable matrix.
     Part of the AbstractArray interface.
 #Input
-- `A::AbstractMultipliableMatrix`
+- `A::AbstractUnitfulMatrix`
 - `v`: new value
 - `i::Integer`: row index
 - `j::Integer`: column index
@@ -390,7 +390,7 @@ function setindex!(A::AbstractUnitfulMatrix,v::Quantity,i::Int,j::Int)
 end
 
 """
-    function Matrix(A::MultipliableMatrix)
+    function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
 
     Expand A into array form
     Useful for tests, display
