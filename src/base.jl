@@ -164,6 +164,10 @@ function Base.:\(A::AbstractUnitfulDimMatrix,B::AbstractUnitfulDimMatrix)
         error("UnitfulLinearAlgebra.(matrix left divide): Dimensions of Unitful Matrices A and b not compatible")
     end
 end
+# do what the investigator means -- convert to UnitfulType -- probably a promotion mechanism to do the same thing
+Base.:\(A::AbstractUnitfulType,b::Number) = A\UnitfulMatrix([b])
+# this next one is quite an assumption
+Base.:\(A::AbstractUnitfulMatrix,b::AbstractVector) = A\UnitfulMatrix(vec(b)) #error("UnitfulLinearAlgebra: types not consistent")
 
 """
     function ldiv(F::LU{T,MultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
@@ -376,3 +380,6 @@ function Base.vec(A::AbstractUnitfulType)
     qu = vec([ur[i]/ud[j] for i in eachindex(ur), j in eachindex(ud)])
     return Quantity.(qn,qu)
 end
+
+Base.first(A::AbstractUnitfulType) = first(vec(A))
+Base.last(A::AbstractUnitfulType) = last(vec(A))

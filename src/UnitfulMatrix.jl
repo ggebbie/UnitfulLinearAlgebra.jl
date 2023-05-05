@@ -35,6 +35,8 @@ UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::AbstractVector;
 
 UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::Units; exact = true) = UnitfulMatrix(data, format((unitrange,unitdomain), data), exact)
 
+# lose the meta data
+UnitfulMatrix(data::DimArray) = UnitfulMatrix(parent(data))
 """
     rebuild(A::UnitfulMatrix, data, [dims, exact]) => UnitfulMatrix
     rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix
