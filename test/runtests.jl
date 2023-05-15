@@ -12,6 +12,7 @@ m = u"m"
 s = u"s"
 K = u"K"
 m² = u"m^2"
+permil = Unitful.FixedUnits(u"permille")
 
 include("test_functions.jl")
 

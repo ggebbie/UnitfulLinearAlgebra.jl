@@ -204,7 +204,7 @@ end
 LinearAlgebra.diagm(v::AbstractVector,r::Units,d::Units; exact = false) = UnitfulMatrix(spdiagm(length(r),length(d),ustrip.(v)),(r,d); exact=exact)    
 
 """
-    function diag(A::AbstractMultipliableMatrix)
+    function diag(A::AbstractUnitfulMatrix)
 
     Diagonal elements of matrix with units.
 

@@ -16,7 +16,7 @@ export invdimension, dottable
 export getindexqty
 export size, similar
 export convert_unitrange, convert_unitdomain
-export exact, multipliable, dimensionless, endomorphic
+export exact, multipliable, dimensionless, unitless, endomorphic
 export svd, dsvd
 export transpose
 export unitrange, unitdomain, unitdims

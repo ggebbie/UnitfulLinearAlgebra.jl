@@ -8,6 +8,11 @@ end
     test_Unitful_dimensionless()
 end
 
+@testset "fixed units" begin
+    mat = UnitfulMatrix(ones(2,2)*permil)
+    diag(mat)
+end
+
 @testset "exact" begin
     p = [1.0m, 3.0s]
     q̃ = [-1.0K, 2.0]
