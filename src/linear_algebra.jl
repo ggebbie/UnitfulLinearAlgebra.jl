@@ -8,9 +8,10 @@
 
     Hart, pp. 205. 
 """
-LinearAlgebra.inv(A::AbstractUnitfulMatrix) = ~singular(A) ? rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A))) : error("matrix is singular")
-
+LinearAlgebra.inv(A::AbstractUnitfulMatrix) = rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A)))
 LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
+# PR 78: singular check sometimes fails but matrix is invertible.
+#LinearAlgebra.inv(A::AbstractUnitfulMatrix) = ~singular(A) ? rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A))) : error("matrix is singular")
 
 """
     function det
