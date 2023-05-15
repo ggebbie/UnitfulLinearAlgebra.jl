@@ -213,7 +213,7 @@ LinearAlgebra.diagm(v::AbstractVector,r::Units,d::Units; exact = false) = Unitfu
 function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDimMatrix{T}}) where T <: Number
     m,n = size(A)
     ndiag = max(m,n)
-    dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
+    unitless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
     for nd in 1:ndiag
         vdiag[nd] = getindexqty(A,nd,nd)
     end

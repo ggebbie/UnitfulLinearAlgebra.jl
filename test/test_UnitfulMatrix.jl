@@ -10,7 +10,7 @@ end
 
 @testset "fixed units" begin
     mat = UnitfulMatrix(ones(2,2)*permil)
-    diag(mat)
+    unit(diag(mat)[1]) != NoUnits
 end
 
 @testset "exact" begin
