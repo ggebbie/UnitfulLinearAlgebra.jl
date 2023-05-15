@@ -80,7 +80,7 @@ update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
     urange = unitrange(A)[I[1]]
     udomain = unitdomain(A)[I[2]]
 
-    if (udomain isa Unitful.FreeUnits || urange isa Unitful.FreeUnits )
+    if (udomain isa Unitful.Units || urange isa Unitful.Units )
         # case of column vector, row vector, scalar
         # scalar appears to be overridden by getindex
         newunitrange = slicedvector(urange,udomain)
@@ -96,7 +96,7 @@ end
 
 slicedvector(urange,udomain) = urange./udomain
 function slicedmatrix(urange,udomain) 
-    unt = Array{Unitful.FreeUnits}(undef,length(urange),length(udomain))
+    unt = Array{Unitful.Units}(undef,length(urange),length(udomain))
     for m in 1:length(urange)
         for n in 1:length(udomain)
             unt[m,n] = urange[m]./udomain[n]
@@ -118,8 +118,8 @@ end
 function UnitfulMatrix(A::AbstractMatrix)
     numbers = ustrip.(A)
     M,N = size(numbers)
-    unitdomain = Vector{Unitful.FreeUnits}(undef,N)
-    unitrange = Vector{Unitful.FreeUnits}(undef,M)
+    unitdomain = Vector{Unitful.Units}(undef,N)
+    unitrange = Vector{Unitful.Units}(undef,M)
 
     for i = 1:M
         unitrange[i] = unit(A[i,1])
@@ -140,7 +140,7 @@ end
 # function UnitfulMatrix(A::AbstractVector) # should be called UnitfulVector?
 #     numbers = ustrip.(A)
 #     #M = size(numbers)
-#     #unitrange = Vector{Unitful.FreeUnits}(undef,M)
+#     #unitrange = Vector{Unitful.Units}(undef,M)
 
 #     unitrange = Units(unit.(A))
 #     B = UnitfulMatrix(numbers,unitrange,exact=false)
@@ -154,7 +154,7 @@ end
 function UnitfulMatrix(a::AbstractVector) # should be called UnitfulVector?
     numbers = ustrip.(a)
     M = size(numbers)
-    unitrange = Vector{Unitful.FreeUnits}(undef,M)
+    unitrange = Vector{Unitful.Units}(undef,M)
 
     unitrange = unit.(a)
     b = UnitfulMatrix(numbers,unitrange,exact=false)

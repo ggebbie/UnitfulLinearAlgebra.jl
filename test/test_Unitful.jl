@@ -56,3 +56,9 @@ end
     @test dottable(a,k)
     @test ~dottable(a,b)
 end
+
+@testset "unitless" begin
+    @test unitless(1.0)
+    @test !unitless(1.0permil)
+    @test !unitless(1.0permil*2.0)
+end

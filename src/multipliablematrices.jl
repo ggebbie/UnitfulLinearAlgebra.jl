@@ -133,6 +133,15 @@ dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
 # end
 
 """
+     function unitless(A)
+
+    Some quantities are dimensionless but still have units.
+"""
+unitless(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(A) && unit(getindexqty(A,1,1)) == NoUnits
+unitless(A::AbstractMatrix) = uniform(A) && unit(A[1,1]) == NoUnits
+unitless(A::T) where T <: Number = (unit(A) == NoUnits)
+
+"""
     function square(A)
 
     size(A)[1] == size(A)[2]

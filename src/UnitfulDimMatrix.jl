@@ -101,8 +101,8 @@ update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
 function UnitfulDimMatrix(A::AbstractMatrix)
     numbers = ustrip.(A)
     M,N = size(numbers)
-    unitdomain = Vector{Unitful.FreeUnits}(undef,N)
-    unitrange = Vector{Unitful.FreeUnits}(undef,M)
+    unitdomain = Vector{Unitful.Units}(undef,N)
+    unitrange = Vector{Unitful.Units}(undef,M)
 
     for i = 1:M
         unitrange[i] = unit(A[i,1])
@@ -123,7 +123,7 @@ end
 function UnitfulDimMatrix(A::AbstractVector) # should be called UnitfulVector?
     numbers = ustrip.(A)
     M = size(numbers)
-    unitrange = Vector{Unitful.FreeUnits}(undef,M)
+    unitrange = Vector{Unitful.Units}(undef,M)
 
     unitrange = unit.(A)
     B = UnitfulDimMatrix(numbers,unitrange)
@@ -167,14 +167,14 @@ DimensionalData._rebuildmul(b::Number, A::AbstractUnitfulDimVecOrMat) = A*b
     urange = unitrange(A)[I[1]]
     udomain = unitdomain(A)[I[2]]
 
-    if udomain isa Unitful.FreeUnits 
+    if udomain isa Unitful.Units 
         # case of column vector, row vector, scalar
         # scalar appears to be overridden by getindex
         newunitrange = slicedvector(urange,udomain)
         #return UnitfulDimMatrix(data, newunitrange, dims=arange,refdims=(Units(unit.(adomain)),),exact=false)
         return UnitfulDimMatrix(data, newunitrange, dims=arange, exact=false)
 
-    elseif urange isa Unitful.FreeUnits
+    elseif urange isa Unitful.Units
         newunitrange = slicedvector(urange,udomain)
         #return UnitfulDimMatrix(data, newunitrange, dims=adomain, refdims = (Units(unit.(arange)),), exact=false)
         return UnitfulDimMatrix(data, newunitrange, dims=adomain, exact=false)

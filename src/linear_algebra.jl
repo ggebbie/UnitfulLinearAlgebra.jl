@@ -195,7 +195,7 @@ function Base.getproperty(F::LU{T,<:AbstractUnitfulVecOrMat,Vector{Int64}}, d::S
 end
 
 """
-    function diagm(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
+    function diagm(v::AbstractVector,r::Unitful.Units,d::Unitful.Units; exact = false)
 
     Construct diagonal matrix with units where the diagonal has elements `v`.
     If `v` has units, check that they conform with dimensional unit range `r`
@@ -204,7 +204,7 @@ end
 LinearAlgebra.diagm(v::AbstractVector,r::Units,d::Units; exact = false) = UnitfulMatrix(spdiagm(length(r),length(d),ustrip.(v)),(r,d); exact=exact)    
 
 """
-    function diag(A::AbstractMultipliableMatrix)
+    function diag(A::AbstractUnitfulMatrix)
 
     Diagonal elements of matrix with units.
 
@@ -213,7 +213,7 @@ LinearAlgebra.diagm(v::AbstractVector,r::Units,d::Units; exact = false) = Unitfu
 function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDimMatrix{T}}) where T <: Number
     m,n = size(A)
     ndiag = max(m,n)
-    dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
+    unitless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
     for nd in 1:ndiag
         vdiag[nd] = getindexqty(A,nd,nd)
     end
@@ -221,7 +221,7 @@ function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDim
 end
 
 """
-    function Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
+    function Diagonal(v::AbstractVector,r::Unitful.Units,d::Unitful.Units; exact = false)
 
     Construct diagonal matrix with units where the diagonal has elements `v`.
     If `v` has units, check that they conform with dimensional unit range `r`

@@ -8,6 +8,11 @@ end
     test_Unitful_dimensionless()
 end
 
+@testset "fixed units" begin
+    mat = UnitfulMatrix(ones(2,2)*permil)
+    unit(diag(mat)[1]) != NoUnits
+end
+
 @testset "exact" begin
     p = [1.0m, 3.0s]
     q̃ = [-1.0K, 2.0]
@@ -41,7 +46,7 @@ end
 
     p2 = UnitfulMatrix(ustrip.(p),unit.(p))
     pnew = p2 *s #multiply by a unit 
-    qnew2 = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
+     qnew2 = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
     E = convert_unitrange(B,unitrange(pnew))
     @test Bq ∥ E*qnew2
 end
