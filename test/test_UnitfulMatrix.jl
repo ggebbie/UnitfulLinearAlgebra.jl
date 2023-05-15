@@ -46,7 +46,7 @@ end
 
     p2 = UnitfulMatrix(ustrip.(p),unit.(p))
     pnew = p2 *s #multiply by a unit 
-    qnew2 = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
+     qnew2 = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
     E = convert_unitrange(B,unitrange(pnew))
     @test Bq ∥ E*qnew2
 end

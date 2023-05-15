@@ -50,8 +50,8 @@ end
     Unitrange of B should be parallel to unitdomain of A in algebraic interpretation.
 """
 Base.:*(A::AbstractUnitfulMatrix,b::Quantity) = DimensionalData.rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
-Base.:*(A::AbstractUnitfulMatrix,b::Unitful.FreeUnits) = DimensionalData.rebuild(A,parent(A),(Units(unitrange(A).*b),unitdomain(A)))
-Base.:*(b::Union{Quantity,Unitful.FreeUnits},A::AbstractUnitfulMatrix) = A*b
+Base.:*(A::AbstractUnitfulMatrix,b::Unitful.Units) = DimensionalData.rebuild(A,parent(A),(Units(unitrange(A).*b),unitdomain(A)))
+Base.:*(b::Union{Quantity,Unitful.Units},A::AbstractUnitfulMatrix) = A*b
 Base.:*(A::AbstractUnitfulMatrix,b::Number) = DimensionalData.rebuild(A,parent(A)*b)
 Base.:*(b::Number,A::AbstractUnitfulMatrix) = A*b
 Base.:*(A::AbstractUnitfulMatrix, B::Matrix) = A * UnitfulMatrix(B)
@@ -59,8 +59,8 @@ Base.:*(A::Matrix, B::AbstractUnitfulMatrix) = UnitfulMatrix(A) * B
 
 # vector-scalar multiplication
 Base.:*(a::AbstractUnitfulVector,b::Quantity) = DimensionalData.rebuild(a,parent(a)*ustrip(b),(Units(unitrange(a).*unit(b)),))
-Base.:*(a::AbstractUnitfulVector,b::Unitful.FreeUnits) = DimensionalData.rebuild(a,parent(a),(Units(unitrange(a).*b),))
-Base.:*(b::Union{Quantity,Unitful.FreeUnits},a::AbstractUnitfulVector) = a*b
+Base.:*(a::AbstractUnitfulVector,b::Unitful.Units) = DimensionalData.rebuild(a,parent(a),(Units(unitrange(a).*b),))
+Base.:*(b::Union{Quantity,Unitful.Units},a::AbstractUnitfulVector) = a*b
 # Need to test next line
 Base.:*(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Number) = DimensionalData.rebuild(a,parent(a)*b)
 Base.:*(b::Number,a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = a*b

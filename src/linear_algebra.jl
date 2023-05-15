@@ -195,7 +195,7 @@ function Base.getproperty(F::LU{T,<:AbstractUnitfulVecOrMat,Vector{Int64}}, d::S
 end
 
 """
-    function diagm(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
+    function diagm(v::AbstractVector,r::Unitful.Units,d::Unitful.Units; exact = false)
 
     Construct diagonal matrix with units where the diagonal has elements `v`.
     If `v` has units, check that they conform with dimensional unit range `r`
@@ -221,7 +221,7 @@ function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDim
 end
 
 """
-    function Diagonal(v::AbstractVector,r::Unitful.Unitlike,d::Unitful.Unitlike; exact = false)
+    function Diagonal(v::AbstractVector,r::Unitful.Units,d::Unitful.Units; exact = false)
 
     Construct diagonal matrix with units where the diagonal has elements `v`.
     If `v` has units, check that they conform with dimensional unit range `r`
