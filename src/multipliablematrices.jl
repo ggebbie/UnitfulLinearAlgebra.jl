@@ -222,7 +222,9 @@ end
 function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Units) 
     if unitdomain(A) ∥ newdomain
         newrange = Units(unitrange(A).*(newdomain[1]/unitdomain(A)[1]))
-        return rebuild(A, parent(A), (newrange, newdomain), true)
+        # be conservative: leave `exact` parameter unchanged
+        #return rebuild(A, parent(A), (newrange, newdomain), true)
+        return rebuild(A, parent(A), (newrange, newdomain))
     else
         error("New unit domain not parallel to unit domain of UnitfulMatrix")
     end

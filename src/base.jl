@@ -54,8 +54,11 @@ Base.:*(A::AbstractUnitfulMatrix,b::Unitful.Units) = DimensionalData.rebuild(A,p
 Base.:*(b::Union{Quantity,Unitful.Units},A::AbstractUnitfulMatrix) = A*b
 Base.:*(A::AbstractUnitfulMatrix,b::Number) = DimensionalData.rebuild(A,parent(A)*b)
 Base.:*(b::Number,A::AbstractUnitfulMatrix) = A*b
+# could probably merge Matrix and Vector versions below
 Base.:*(A::AbstractUnitfulMatrix, B::Matrix) = A * UnitfulMatrix(B)
 Base.:*(A::Matrix, B::AbstractUnitfulMatrix) = UnitfulMatrix(A) * B
+Base.:*(A::AbstractUnitfulMatrix, b::Vector) = A * UnitfulMatrix(b)
+Base.:*(A::Vector, B::AbstractUnitfulMatrix) = UnitfulMatrix(a) * B
 
 # vector-scalar multiplication
 Base.:*(a::AbstractUnitfulVector,b::Quantity) = DimensionalData.rebuild(a,parent(a)*ustrip(b),(Units(unitrange(a).*unit(b)),))

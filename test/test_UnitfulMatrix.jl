@@ -46,9 +46,36 @@ end
 
     p2 = UnitfulMatrix(ustrip.(p),unit.(p))
     pnew = p2 *s #multiply by a unit 
-     qnew2 = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
+    qnew2 = UnitfulMatrix(ustrip.(qold),unit.(qold).*s)
     E = convert_unitrange(B,unitrange(pnew))
     @test Bq ∥ E*qnew2
+end
+
+@testset "backslash inexact" begin
+    A = rand(3, 3) + I
+    Au = A * 1u"1/s" # u= with units
+    Amm = UnitfulMatrix(Au) # mm= multipliable matrix
+    
+    x = rand(3)
+    xu = (x)u"mol/m^3"
+    xmm = UnitfulMatrix(xu)
+
+    # Test *
+    A * x # no units
+    Au * xu # should have correct units
+    Au * x # missing units for x
+    A * xu # missing units for A
+    Amm*xu # no longer returns invalid object
+    
+    # Test \
+    A \ x # works without units
+    #Au \ x # won't work
+    Amm \ xmm # gets units right
+
+    @test !exact(Amm)
+    @test !exact(xmm)
+    @test !exact(Amm\xmm)
+    
 end
 
 @testset "array" begin
@@ -417,8 +444,7 @@ end
     #Au \ x # won't work
     Amm \ xmm # gets units right
     #A \ xu # won't work
-    #Au \ xu # no existing method
-
+    #Au \ xu # no existing method: limitation of Unitful.jl
 
     # ---------- Sparse tests ----------
     A = sprand(3, 3, 0.5) + I

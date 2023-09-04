@@ -9,12 +9,21 @@ const AbstractUnitfulMatrix{T<:Number} = AbstractUnitfulVecOrMat{T,2} where T
 """
     struct UnitfulMatrix
 
-    Take DimArray and use dimensions for units
+Extend `DimArray` to use dimensions for units, also add `exact` boolean flag
+
+struct UnitfulMatrix{T,N,D<:Tuple,A<:AbstractArray{T,N}} <: AbstractUnitfulVecOrMat{T,N,D,A}
+    data::A
+    dims::D
+    exact::Bool
+end
 """
 struct UnitfulMatrix{T,N,D<:Tuple,A<:AbstractArray{T,N}} <: AbstractUnitfulVecOrMat{T,N,D,A}
     data::A
     dims::D
     exact::Bool
+    # inner constructor: do not allow units into `data`
+    # must be better way to incorporate types into `new` function
+    UnitfulMatrix(data,dims,exact) = (eltype(parent(data)) <: Quantity) ? error("units not allowed in data field") : new{eltype(data),ndims(data),typeof(dims),typeof(data)}(data,dims,exact)
 end
 
 # 2 arg version
@@ -37,6 +46,7 @@ UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::Units; exact = 
 
 # lose the meta data
 UnitfulMatrix(data::DimArray) = UnitfulMatrix(parent(data))
+
 """
     rebuild(A::UnitfulMatrix, data, [dims, exact]) => UnitfulMatrix
     rebuild(A::UnitfulMatrix; kw...) => UnitfulMatrix
