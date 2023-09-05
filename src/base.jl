@@ -254,6 +254,12 @@ Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units
 Base.transpose(A::AbstractUnitfulDimMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
 Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
 
+# adjoint follows transpose structure
+Base.adjoint(A::AbstractUnitfulMatrix) = rebuild(A,adjoint(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)))
+Base.adjoint(a::AbstractUnitfulVector) = rebuild(a,adjoint(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
+Base.adjoint(A::AbstractUnitfulDimMatrix) = rebuild(A,adjoint(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
+Base.adjoint(a::AbstractUnitfulDimVector) = rebuild(a,adjoint(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
+
 # Currently untested
 Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
        DimensionalData.rebuild(A, zeros(A))
