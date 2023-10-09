@@ -33,6 +33,8 @@ function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; exact
         return UnitfulMatrix(data, format(Units.(dims), data), exact)
     elseif eltype(dims) <: Units
         return UnitfulMatrix(data, format(dims, data), exact)
+    else
+        error("something unexpected has happened! Please report it to the developer at https://github.com/ggebbie/UnitfulLinearAlgebra.jl/issues/new")
     end        
 end
 # back consistency with MMatrix
@@ -166,7 +168,7 @@ function UnitfulMatrix(a::AbstractVector) # should be called UnitfulVector?
     M = size(numbers)
     unitrange = Vector{Unitful.Units}(undef,M)
 
-    unitrange = unit.(a)
+    unitrange[:] = unit.(a)
     b = UnitfulMatrix(numbers,unitrange,exact=false)
     # if the array is not multipliable, return nothing
     if Matrix(b) == a
