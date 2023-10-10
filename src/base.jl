@@ -123,7 +123,6 @@ Base.:-(A::AbstractUnitfulType) = DimensionalData.rebuild(A,-parent(A))
 function Base.:\(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
     if exact(A)
         DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
-
         return rebuild(A,parent(A)\parent(b),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
     elseif ~exact(A) && (unitrange(A) ∥ unitrange(b))
         Anew = convert_unitrange(A,unitrange(b)) 
