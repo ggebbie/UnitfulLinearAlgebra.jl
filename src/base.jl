@@ -75,7 +75,7 @@ function Base.:*(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
     elseif unitdomain(A) ∥ unitrange(B)
         return DimensionalData._rebuildmul(convert_unitdomain(A,unitrange(B)),B)
     else
-        error("unitdomain(A) and unitrange(B) not parallel")
+        error("UnitfulLinearAlgebra: unitdomain(A) and unitrange(B) not parallel")
     end
 end
 

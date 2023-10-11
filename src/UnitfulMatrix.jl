@@ -149,36 +149,18 @@ function UnitfulMatrix(A::AbstractMatrix)
         return nothing
     end
 end
-# function UnitfulMatrix(A::AbstractVector) # should be called UnitfulVector?
-#     numbers = ustrip.(A)
-#     #M = size(numbers)
-#     #unitrange = Vector{Unitful.Units}(undef,M)
-
-#     unitrange = Units(unit.(A))
-#     B = UnitfulMatrix(numbers,unitrange,exact=false)
-#     # if the array is not multipliable, return nothing
-#     if Matrix(B) == A
-#         return B
-#     else
-#         return nothing
-#     end
-# end
 function UnitfulMatrix(a::AbstractVector) # should be called UnitfulVector?
     numbers = ustrip.(a)
     M = size(numbers)
     unitrange = Vector{Unitful.FreeUnits}(undef,M)
-
-    #println(typeof(vec(unit.(a))))
     unitrange[:] = unit.(a)
-    #println(typeof(unitrange))
-    
-    # unitrange[:] = unit.(a)
+
     b = UnitfulMatrix(numbers,unitrange,exact=false)
     # if the array is not multipliable, return nothing
     if Matrix(b) == a
         return b
     else
-        println("warning: vector not multipliable")
+        println("UnitfulLinearAlgebra warning: vector not multipliable (strange: vectors should always be multipliable)")
         return nothing
     end
 end
