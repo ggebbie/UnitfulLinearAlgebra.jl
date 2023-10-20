@@ -13,6 +13,19 @@ end
     unit(diag(mat)[1]) != NoUnits
 end
 
+@testset "static arrays" begin
+    using StaticArrays
+
+    A = SMatrix{3,3}([2 0 0
+        0 2 0
+        0 0 2] * u"m"
+    )
+    x = [1,2,3]
+    y = A * x
+    @test isequal(UnitfulMatrix(A) \ y,x)
+        
+end
+
 @testset "adjoint" begin
     p = [1.0m, 3.0s]
     q̃ = [-1.0K, 2.0]
