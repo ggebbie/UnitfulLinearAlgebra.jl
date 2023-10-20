@@ -2,7 +2,7 @@ module UnitfulLinearAlgebra
 
 using Unitful
 using LinearAlgebra
-using SparseArrays
+#using SparseArrays
 using DimensionalData
 using Statistics
 

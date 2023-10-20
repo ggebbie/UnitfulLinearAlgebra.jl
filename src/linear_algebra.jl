@@ -201,7 +201,7 @@ end
     If `v` has units, check that they conform with dimensional unit range `r`
      and dimensional unit domain `d`. Works for square or non-square matrices.
 """
-LinearAlgebra.diagm(v::AbstractVector,r::Units,d::Units; exact = false) = UnitfulMatrix(spdiagm(length(r),length(d),ustrip.(v)),(r,d); exact=exact)    
+LinearAlgebra.diagm(v::AbstractVector,r::Units,d::Units; exact = false) = UnitfulMatrix(diagm(length(r),length(d),ustrip.(v)),(r,d); exact=exact)    
 
 """
     function diag(A::AbstractUnitfulMatrix)
