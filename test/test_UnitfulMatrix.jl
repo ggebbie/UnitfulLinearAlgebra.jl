@@ -13,6 +13,18 @@ end
     unit(diag(mat)[1]) != NoUnits
 end
 
+@testset "adjoint" begin
+    p = [1.0m, 3.0s]
+    q̃ = [-1.0K, 2.0]
+
+    qold = ustrip.(q̃).*unit.(1 ./q̃)
+    q = UnitfulMatrix(qold)
+
+    @test DimensionalData.comparedims(unitdomain(q'),unitdomain(transpose(q))) isa UnitfulLinearAlgebra.Units
+    @test DimensionalData.comparedims(unitrange(q'),unitrange(transpose(q))) isa UnitfulLinearAlgebra.Units
+    
+end
+
 @testset "exact" begin
     p = [1.0m, 3.0s]
     q̃ = [-1.0K, 2.0]
