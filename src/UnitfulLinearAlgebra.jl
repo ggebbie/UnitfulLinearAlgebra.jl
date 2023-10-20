@@ -52,7 +52,7 @@ include("statistics.jl")
 include("linear_algebra.jl") 
 
 # a new struct and methods
-# Dimensional SVD: an underappreciated concept
+# Dimensioned SVD: an underappreciated concept
 include("dsvd.jl") 
 
 end

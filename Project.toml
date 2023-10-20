@@ -1,7 +1,7 @@
 name = "UnitfulLinearAlgebra"
 uuid = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 authors = ["G Jake Gebbie <ggebbie@whoi.edu>"]
-version = "0.3.2"
+version = "0.3.3"
 
 [deps]
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
