@@ -322,7 +322,7 @@ end
 
 end
 
-@testset "dimensional svd (DSVD)" begin
+@testset "dimensioned svd (DSVD)" begin
     s = u"s"
     m = u"m"
     u1 = m
