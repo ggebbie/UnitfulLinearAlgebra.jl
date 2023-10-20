@@ -11,6 +11,30 @@ end
 @testset "fixed units" begin
     mat = UnitfulMatrix(ones(2,2)*permil)
     unit(diag(mat)[1]) != NoUnits
+
+    #using Unitful, UnitfulLinearAlgebra, LinearAlgebra
+    permil = Unitful.FixedUnits(u"permille")
+    #urange = fill(permil, 2)
+    #udomain = fill(permil, 3)
+    urange = fill(u"K", 2)
+    udomain = fill(u"K", 3)
+    A = UnitfulMatrix(randn(length(urange),length(udomain)),urange,udomain)
+
+    Pr = UnitfulMatrix(I(length(urange)),urange.^-1,urange)
+    Pd = UnitfulMatrix(I(length(udomain)),udomain.^-1,udomain)
+    U,σ,V = dsvd(A,Pr,Pd)
+
+    #This seems to trace back to the fact that when the following is called
+    #https://github.com/ggebbie/UnitfulLinearAlgebra.jl/blob/de6592342d2aaf7c2eaae4d59125cc2b04a8f690/src/dsvd.jl#L61
+    #`F.Qy` and `F.U′ ` have different unitranges/domains, so the ldiv can't be called. E.g.
+
+    F = dsvd(A,Pr,Pd)
+    F.Qy.dims
+    F.U'.dims
+
+    DimensionalData.comparedims(F.Qy,F.U')
+    #It seems to me like the Categorical Units versus the Sampled Units is the problem, and I'm not sure how to fix this. Would there be a way to expand on the test of equivalent dimensions that ldiv calls to make it broader? Like if the vector version of the units is equivalent, it's okay to ldiv? 
+
 end
 
 @testset "exact" begin
