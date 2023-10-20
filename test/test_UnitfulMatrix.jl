@@ -331,7 +331,6 @@ end
     
     # example: polynomial fitting
     k = 3
-    #E2 = BestMultipliableMatrix(hcat(randn(k),randn(k)u1/u2,randn(k)u1/u3))
     E = UnitfulMatrix(randn(k,3),fill(m,k),[u1,u2,u3],exact=true)
     y = UnitfulMatrix(randn(k)u1)
     x = UnitfulMatrix([randn()u1; randn()u2; randn()u3])
@@ -425,7 +424,7 @@ end
 
     # solve for particular solution.
     x = UnitfulMatrix(randn(size(E,2)),unitdomain(E))
-    y = UnitfulMatrix(Matrix(E*x)) # need y to be inexact
+    y = E*x # need y to be inexact
     xₚ1 = E\y # find particular solution
     xₚ2 = inv(G)*y # find particular solution
     @test within(xₚ1,xₚ2,1e-10)
@@ -462,7 +461,7 @@ end
     A = sprand(3, 3, 0.5) + I
     Au = A * 1u"1/s"
     Ammfull = UnitfulMatrix(Matrix(Au))# not working with SparseArray now
-    Amm = UnitfulMatrix(A,fill(u"mol/m^3",3),fill(u"s*mol/m^3",3))  # use constructor, internally stores a sparse matrix
+    Amm = UnitfulMatrix(A,fill(u"mol/m^3",3),fill(u"s*mol/m^3",3))  # use constructor, internally stores a sparse matrix, is exact
     x = rand(3)
     xu = x * 1u"mol/m^3"
     xmm = UnitfulMatrix(xu)
@@ -484,5 +483,9 @@ end
     #Au \ x # stack overflow, doesn't work at lu, no method
     #A \ yu # doesn't work, no method
     #Au \ yu, doens't work, no lu method
-    Amm \ ymm # works, should be same units as x but they aren't?
+
+    # Amm is exact, thus requires conversion of unitrange
+    convert_unitrange(Amm,unitrange(ymm)) \ ymm
+    
 end
+

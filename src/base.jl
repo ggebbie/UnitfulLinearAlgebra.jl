@@ -75,7 +75,7 @@ function Base.:*(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
     elseif unitdomain(A) ∥ unitrange(B)
         return DimensionalData._rebuildmul(convert_unitdomain(A,unitrange(B)),B)
     else
-        error("unitdomain(A) and unitrange(B) not parallel")
+        error("UnitfulLinearAlgebra: unitdomain(A) and unitrange(B) not parallel")
     end
 end
 
@@ -123,7 +123,6 @@ Base.:-(A::AbstractUnitfulType) = DimensionalData.rebuild(A,-parent(A))
 function Base.:\(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
     if exact(A)
         DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
-
         return rebuild(A,parent(A)\parent(b),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
     elseif ~exact(A) && (unitrange(A) ∥ unitrange(b))
         Anew = convert_unitrange(A,unitrange(b)) 
