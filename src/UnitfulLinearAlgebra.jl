@@ -2,7 +2,6 @@ module UnitfulLinearAlgebra
 
 using Unitful
 using LinearAlgebra
-#using SparseArrays
 using DimensionalData
 using Statistics
 
@@ -22,11 +21,13 @@ export transpose
 export unitrange, unitdomain, unitdims
 export identitymatrix
 export describe, trace
+export latexify
 
 # imported some troublesome methods
 import Base: (\)
 import LinearAlgebra: inv
 import DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
+#import Latexify: latexify
 
 @dim Units "units"
 
@@ -54,5 +55,7 @@ include("linear_algebra.jl")
 # a new struct and methods
 # Dimensioned SVD: an underappreciated concept
 include("dsvd.jl") 
+
+latexify() = nothing
 
 end
