@@ -21,7 +21,7 @@ export transpose
 export unitrange, unitdomain, unitdims
 export identitymatrix
 export describe, trace
-export latexify
+#export latexify
 
 # imported some troublesome methods
 import Base: (\)
@@ -56,6 +56,6 @@ include("linear_algebra.jl")
 # Dimensioned SVD: an underappreciated concept
 include("dsvd.jl") 
 
-latexify() = nothing
+#latexify() = nothing
 
 end
