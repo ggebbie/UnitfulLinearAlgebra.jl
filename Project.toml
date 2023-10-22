@@ -11,12 +11,10 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [weakdeps]
 Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
+UnitfulLatexify = "45397f5d-5981-4c77-b2b3-fc36d6e9b728"
 
 [extensions]
-# name of extension to the left
-# extension dependencies required to load the extension to the right
-# use a list for multiple extension dependencies
-UnitfulLinearAlgebraLatexifyExt = "Latexify"
+UnitfulLinearAlgebraLatexifyExt = ["Latexify","UnitfulLatexify"]
 
 [compat]
 DimensionalData = "0.24, 0.25"

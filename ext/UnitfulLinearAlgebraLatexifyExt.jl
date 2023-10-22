@@ -1,7 +1,8 @@
 module UnitfulLinearAlgebraLatexifyExt
 
-using UnitfulLinearAlgebra, Latexify
+using UnitfulLinearAlgebra, UnitfulLatexify, Latexify
 
-Latexify.latexify(A::UnitfulLinearAlgebra.AbstractUnitfulType) = Latexify.latexify(Matrix(A))
+#UnitfulLatexify.latexify(A::UnitfulLinearAlgebra.AbstractUnitfulType) = UnitfulLatexify.latexify(Matrix(A))
+UnitfulLatexify.latexify(A::UnitfulLinearAlgebra.AbstractUnitfulType) = UnitfulLatexify.latexify(Matrix(A))
 
 end

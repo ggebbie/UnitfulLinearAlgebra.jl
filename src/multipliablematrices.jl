@@ -409,10 +409,16 @@ end
 """
 function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
     M,N = size(A)
-    T2 = eltype(parent(A))
-    B = Matrix{Quantity{T2}}(undef,M,N)
+    if uniform(A)
+        T2 = typeof(getindexqty(A,1,1))
+        B = Matrix{T2}(undef,M,N)
+    else
+        T2 = eltype(parent(A))
+        B = Matrix{Quantity{T2}}(undef,M,N)
+    end
     for m = 1:M
         for n = 1:N
+            # for uniform case, this is overkill, it is already known that the unit is the same for all entries.
             B[m,n] = Quantity.(getindex(A,m,n),unitrange(A)[m]./unitdomain(A)[n])
         end
     end
@@ -425,9 +431,7 @@ function Matrix(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector})
     b = Vector{Quantity{T2}}(undef,M)
     for m = 1:M
         b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
-    #    b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
     end
-    #b= Quantity.(parent(a),unitrange(a)[1][:])
     return b
 end
 
