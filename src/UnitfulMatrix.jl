@@ -164,6 +164,3 @@ function UnitfulMatrix(a::AbstractVector) # should be called UnitfulVector?
         return nothing
     end
 end
-
-# seem to need a placeholder function for the extension?
-#latexify() = nothing
