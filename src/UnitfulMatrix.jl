@@ -33,9 +33,11 @@ function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; exact
         return UnitfulMatrix(data, format(Units.(dims), data), exact)
     elseif eltype(dims) <: Units
         return UnitfulMatrix(data, format(dims, data), exact)
+    else
+        error("something unexpected has happened! Please report it to the developer at https://github.com/ggebbie/UnitfulLinearAlgebra.jl/issues/new")
     end        
 end
-# back consistency with MMatrix
+# back consistency with MultipliableMatrices.MMatrix
 UnitfulMatrix(data::AbstractArray, unitrange::AbstractVector, unitdomain::AbstractVector; exact = true) = UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), exact)
 
 UnitfulMatrix(data::AbstractArray, unitrange::AbstractVector, unitdomain::Units; exact = true) = UnitfulMatrix(data, format((Units(unitrange),unitdomain), data), exact)
@@ -147,32 +149,18 @@ function UnitfulMatrix(A::AbstractMatrix)
         return nothing
     end
 end
-# function UnitfulMatrix(A::AbstractVector) # should be called UnitfulVector?
-#     numbers = ustrip.(A)
-#     #M = size(numbers)
-#     #unitrange = Vector{Unitful.Units}(undef,M)
-
-#     unitrange = Units(unit.(A))
-#     B = UnitfulMatrix(numbers,unitrange,exact=false)
-#     # if the array is not multipliable, return nothing
-#     if Matrix(B) == A
-#         return B
-#     else
-#         return nothing
-#     end
-# end
 function UnitfulMatrix(a::AbstractVector) # should be called UnitfulVector?
     numbers = ustrip.(a)
     M = size(numbers)
-    unitrange = Vector{Unitful.Units}(undef,M)
+    unitrange = Vector{Unitful.FreeUnits}(undef,M)
+    unitrange[:] = unit.(a)
 
-    unitrange = unit.(a)
     b = UnitfulMatrix(numbers,unitrange,exact=false)
     # if the array is not multipliable, return nothing
     if Matrix(b) == a
         return b
     else
-        println("warning: vector not multipliable")
+        println("UnitfulLinearAlgebra warning: vector not multipliable (strange: vectors should always be multipliable)")
         return nothing
     end
 end

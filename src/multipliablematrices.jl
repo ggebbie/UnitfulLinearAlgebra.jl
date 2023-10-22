@@ -92,7 +92,7 @@ function uniform(A::Matrix)
     B = UnitfulMatrix(A)
     isnothing(B) ? false : uniform(B)
 end
-uniform(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = left_uniform(A) && right_uniform(A)
+uniform(A::AbstractUnitfulType) = left_uniform(A) && right_uniform(A)
 
 """
     function left_uniform(A)
@@ -100,7 +100,7 @@ uniform(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = left_uniform
     Definition: uniform unitrange of A
     Left uniform matrix: output of matrix has uniform units
 """
-left_uniform(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(unitrange(A)) ? true : false
+left_uniform(A::AbstractUnitfulType) = uniform(unitrange(A)) ? true : false
 function left_uniform(A::Matrix)
     B = UnitfulMatrix(A)
     isnothing(B) ? false : left_uniform(B)
@@ -112,7 +112,7 @@ end
     Does the unitdomain of A have uniform dimensions?
     Right uniform matrix: input of matrix must have uniform units
 """
-right_uniform(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(unitdomain(A)) ? true : false
+right_uniform(A::AbstractUnitfulType) = uniform(unitdomain(A)) ? true : false
 function right_uniform(A::Matrix)
     B = UnitfulMatrix(A)
     isnothing(B) ? false : right_uniform(B)
@@ -409,25 +409,33 @@ end
 """
 function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
     M,N = size(A)
-    T2 = eltype(parent(A))
-    B = Matrix{Quantity{T2}}(undef,M,N)
+    if uniform(A)
+        T2 = typeof(getindexqty(A,1,1))
+        B = Matrix{T2}(undef,M,N)
+    else
+        T2 = eltype(parent(A))
+        B = Matrix{Quantity{T2}}(undef,M,N)
+    end
     for m = 1:M
         for n = 1:N
+            # for uniform case, this is overkill, it is already known that the unit is the same for all entries.
             B[m,n] = Quantity.(getindex(A,m,n),unitrange(A)[m]./unitdomain(A)[n])
         end
     end
     return B
 end
 function Matrix(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
-
     M, = size(a)
-    T2 = eltype(parent(a))
-    b = Vector{Quantity{T2}}(undef,M)
+    if uniform(a)
+        T2 = typeof(getindexqty(a,1))
+        b = Vector{T2}(undef,M)
+    else
+        T2 = eltype(parent(a))
+        b = Vector{Quantity{T2}}(undef,M)
+    end
     for m = 1:M
         b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
-    #    b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
     end
-    #b= Quantity.(parent(a),unitrange(a)[1][:])
     return b
 end
 

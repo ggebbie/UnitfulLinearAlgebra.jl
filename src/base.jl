@@ -75,7 +75,7 @@ function Base.:*(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
     elseif unitdomain(A) ∥ unitrange(B)
         return DimensionalData._rebuildmul(convert_unitdomain(A,unitrange(B)),B)
     else
-        error("unitdomain(A) and unitrange(B) not parallel")
+        error("UnitfulLinearAlgebra: unitdomain(A) and unitrange(B) not parallel")
     end
 end
 
@@ -123,7 +123,6 @@ Base.:-(A::AbstractUnitfulType) = DimensionalData.rebuild(A,-parent(A))
 function Base.:\(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
     if exact(A)
         DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
-
         return rebuild(A,parent(A)\parent(b),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
     elseif ~exact(A) && (unitrange(A) ∥ unitrange(b))
         Anew = convert_unitrange(A,unitrange(b)) 
@@ -253,6 +252,12 @@ Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units
 Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
 Base.transpose(A::AbstractUnitfulDimMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
 Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
+
+# adjoint follows transpose structure
+Base.adjoint(A::AbstractUnitfulMatrix) = rebuild(A,adjoint(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)))
+Base.adjoint(a::AbstractUnitfulVector) = rebuild(a,adjoint(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
+Base.adjoint(A::AbstractUnitfulDimMatrix) = rebuild(A,adjoint(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
+Base.adjoint(a::AbstractUnitfulDimVector) = rebuild(a,adjoint(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
 
 # Currently untested
 Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =

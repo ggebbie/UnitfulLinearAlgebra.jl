@@ -1,8 +1,8 @@
-# Dimensional (Unitful) Singular Value Decomposition, following Singular Value Decomposition from Julia LinearAlgebra.jl
+# Dimensioned (Unitful) Singular Value Decomposition, following Singular Value Decomposition from Julia LinearAlgebra.jl
 """
     DSVD <: Factorization
 
-Matrix factorization type of the dimensional singular value decomposition (DSVD) of a matrix `A`.
+Matrix factorization type of the dimensioned singular value decomposition (DSVD) of a matrix `A`.
 This is the return type of [`dsvd(_)`](@ref), the corresponding matrix factorization function.
 
 If `F::DSVD` is the factorization object, `U`, `S`, `V` and `V⁻¹` can be obtained
@@ -76,7 +76,7 @@ Base.propertynames(F::DSVD, private::Bool=false) =
 """
     function dsvd(A::AbstractMultipliableMatrix,Prange::UnitSymmetricMatrix,Pdomain::UnitSymmetricMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(A.numbers)) 
 
-    Dimensional singular value decomposition (DSVD).
+    Dimensioned singular value decomposition (DSVD).
     Appropriate version of SVD for non-uniform matrices.
     `svd` can be computed for `Number`s, `Adjoint`s, `Tranpose`s, and `Integers`; `dsvd` doesn't yet implement these.
 # Input
@@ -86,7 +86,7 @@ Base.propertynames(F::DSVD, private::Bool=false) =
 - `full=false`: optional argument
 - `alg`: optional argument for algorithm
 # Output:
-- `F::DSVD`: Dimensional SVD object with units that can be deconstructed
+- `F::DSVD`: Dimensioned SVD object with units that can be deconstructed
 """
 function dsvd(A::AbstractUnitfulMatrix,Py::AbstractUnitfulMatrix,Px::AbstractUnitfulMatrix;full=false,alg::LinearAlgebra.Algorithm = LinearAlgebra.default_svd_alg(parent(A))) 
 

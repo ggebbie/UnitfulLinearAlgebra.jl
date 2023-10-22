@@ -39,6 +39,31 @@ end
 
 end
 
+@testset "static arrays" begin
+    using StaticArrays
+
+    A = SMatrix{3,3}([2 0 0
+        0 2 0
+        0 0 2] * u"m"
+    )
+    x = [1,2,3]
+    y = A * x
+    @test isequal(UnitfulMatrix(A) \ y,x)
+        
+end
+
+@testset "adjoint" begin
+    p = [1.0m, 3.0s]
+    q̃ = [-1.0K, 2.0]
+
+    qold = ustrip.(q̃).*unit.(1 ./q̃)
+    q = UnitfulMatrix(qold)
+
+    @test DimensionalData.comparedims(unitdomain(q'),unitdomain(transpose(q))) isa UnitfulLinearAlgebra.Units
+    @test DimensionalData.comparedims(unitrange(q'),unitrange(transpose(q))) isa UnitfulLinearAlgebra.Units
+    
+end
+
 @testset "exact" begin
     p = [1.0m, 3.0s]
     q̃ = [-1.0K, 2.0]
@@ -296,9 +321,13 @@ end
     
     E2 = UnitfulMatrix(E)
     @test size(E2)==size(E)
+
     Eᵀ = transpose(E2)
     @test E2[2,1] == Eᵀ[1,2]
 
+    # check whether Matrix(UnitfulMatrix(E)) keeps same type as E. Useful for displaying uniform matrices with UnitfulLatexify.
+    @test isequal(typeof(E),typeof(Matrix(E2)))
+    
     F = svd(ustrip.(E))
     F2 = svd(E2,full=true)
     F3 = svd(E2)
@@ -336,7 +365,7 @@ end
 
 end
 
-@testset "dimensional svd (DSVD)" begin
+@testset "dimensioned svd (DSVD)" begin
     s = u"s"
     m = u"m"
     u1 = m
@@ -345,7 +374,6 @@ end
     
     # example: polynomial fitting
     k = 3
-    #E2 = BestMultipliableMatrix(hcat(randn(k),randn(k)u1/u2,randn(k)u1/u3))
     E = UnitfulMatrix(randn(k,3),fill(m,k),[u1,u2,u3],exact=true)
     y = UnitfulMatrix(randn(k)u1)
     x = UnitfulMatrix([randn()u1; randn()u2; randn()u3])
@@ -439,7 +467,7 @@ end
 
     # solve for particular solution.
     x = UnitfulMatrix(randn(size(E,2)),unitdomain(E))
-    y = UnitfulMatrix(Matrix(E*x)) # need y to be inexact
+    y = E*x # need y to be inexact
     xₚ1 = E\y # find particular solution
     xₚ2 = inv(G)*y # find particular solution
     @test within(xₚ1,xₚ2,1e-10)
@@ -476,7 +504,7 @@ end
     A = sprand(3, 3, 0.5) + I
     Au = A * 1u"1/s"
     Ammfull = UnitfulMatrix(Matrix(Au))# not working with SparseArray now
-    Amm = UnitfulMatrix(A,fill(u"mol/m^3",3),fill(u"s*mol/m^3",3))  # use constructor, internally stores a sparse matrix
+    Amm = UnitfulMatrix(A,fill(u"mol/m^3",3),fill(u"s*mol/m^3",3))  # use constructor, internally stores a sparse matrix, is exact
     x = rand(3)
     xu = x * 1u"mol/m^3"
     xmm = UnitfulMatrix(xu)
@@ -498,5 +526,9 @@ end
     #Au \ x # stack overflow, doesn't work at lu, no method
     #A \ yu # doesn't work, no method
     #Au \ yu, doens't work, no lu method
-    Amm \ ymm # works, should be same units as x but they aren't?
+
+    # Amm is exact, thus requires conversion of unitrange
+    convert_unitrange(Amm,unitrange(ymm)) \ ymm
+    
 end
+
