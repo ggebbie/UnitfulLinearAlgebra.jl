@@ -14,14 +14,16 @@ end
 
     #using Unitful, UnitfulLinearAlgebra, LinearAlgebra
     permil = Unitful.FixedUnits(u"permille")
-    #urange = fill(permil, 2)
-    #udomain = fill(permil, 3)
-    urange = fill(u"K", 2)
-    udomain = fill(u"K", 3)
+    permil = u"permille"
+    urange = fill(permil, 2)
+    udomain = fill(permil, 3)
     A = UnitfulMatrix(randn(length(urange),length(udomain)),urange,udomain)
 
     Pr = UnitfulMatrix(I(length(urange)),urange.^-1,urange)
     Pd = UnitfulMatrix(I(length(udomain)),udomain.^-1,udomain)
+
+    #Pr = I(length(urange))/permil^2
+    #Pd = I(length(udomain))/permil^2
     U,σ,V = dsvd(A,Pr,Pd)
 
     #This seems to trace back to the fact that when the following is called
