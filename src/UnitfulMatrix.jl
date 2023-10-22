@@ -37,7 +37,7 @@ function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; exact
         error("something unexpected has happened! Please report it to the developer at https://github.com/ggebbie/UnitfulLinearAlgebra.jl/issues/new")
     end        
 end
-# back consistency with MMatrix
+# back consistency with MultipliableMatrices.MMatrix
 UnitfulMatrix(data::AbstractArray, unitrange::AbstractVector, unitdomain::AbstractVector; exact = true) = UnitfulMatrix(data, format((Units(unitrange),Units(unitdomain)), data), exact)
 
 UnitfulMatrix(data::AbstractArray, unitrange::AbstractVector, unitdomain::Units; exact = true) = UnitfulMatrix(data, format((Units(unitrange),unitdomain), data), exact)

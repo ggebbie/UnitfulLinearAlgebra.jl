@@ -295,9 +295,13 @@ end
     
     E2 = UnitfulMatrix(E)
     @test size(E2)==size(E)
+
     Eᵀ = transpose(E2)
     @test E2[2,1] == Eᵀ[1,2]
 
+    # check whether Matrix(UnitfulMatrix(E)) keeps same type as E. Useful for displaying uniform matrices with UnitfulLatexify.
+    @test isequal(typeof(E),typeof(Matrix(E2)))
+    
     F = svd(ustrip.(E))
     F2 = svd(E2,full=true)
     F3 = svd(E2)
