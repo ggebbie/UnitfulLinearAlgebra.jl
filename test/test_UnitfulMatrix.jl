@@ -10,11 +10,8 @@ end
 
 @testset "fixed units" begin
     mat = UnitfulMatrix(ones(2,2)*permil)
-    unit(diag(mat)[1]) != NoUnits
+    unit(diag(mat)[1]) != NoUnits # not sure what this is testing
 
-    #using Unitful, UnitfulLinearAlgebra, LinearAlgebra
-    permil = Unitful.FixedUnits(u"permille")
-    permil = u"permille"
     urange = fill(permil, 2)
     udomain = fill(permil, 3)
     A = UnitfulMatrix(randn(length(urange),length(udomain)),urange,udomain)
@@ -24,7 +21,8 @@ end
 
     #Pr = I(length(urange))/permil^2
     #Pd = I(length(udomain))/permil^2
-    U,σ,V = dsvd(A,Pr,Pd)
+    U,σ,V = dsvd(A,Pr,Pd);
+    F = dsvd(A,Pr,Pd) # works but not F.U, F.V
 
     #This seems to trace back to the fact that when the following is called
     #https://github.com/ggebbie/UnitfulLinearAlgebra.jl/blob/de6592342d2aaf7c2eaae4d59125cc2b04a8f690/src/dsvd.jl#L61

@@ -152,7 +152,7 @@ end
 function UnitfulMatrix(a::AbstractVector) # should be called UnitfulVector?
     numbers = ustrip.(a)
     M = size(numbers)
-    unitrange = Vector{Unitful.FreeUnits}(undef,M)
+    unitrange = Vector{Unitful.Units}(undef,M)
     unitrange[:] = unit.(a)
 
     b = UnitfulMatrix(numbers,unitrange,exact=false)
