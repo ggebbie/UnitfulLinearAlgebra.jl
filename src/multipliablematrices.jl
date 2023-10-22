@@ -425,10 +425,14 @@ function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix})
     return B
 end
 function Matrix(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
-
     M, = size(a)
-    T2 = eltype(parent(a))
-    b = Vector{Quantity{T2}}(undef,M)
+    if uniform(a)
+        T2 = typeof(getindexqty(A,1,1))
+        b = Matrix{T2}(undef,M)
+    else
+        T2 = eltype(parent(a))
+        b = Matrix{Quantity{T2}}(undef,M)
+    end
     for m = 1:M
         b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
     end
