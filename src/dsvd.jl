@@ -58,15 +58,18 @@ Base.iterate(S::DSVD, ::Val{:done}) = nothing
 
 function Base.getproperty(F::DSVD, d::Symbol)
     if d === :U
-        return inv(F.U⁻¹) # short-term workaround
+        #return inv(F.U⁻¹) # short-term workaround
+        # would be better to handle with multiplication of non-UnitfulMatrix F.U′
+        return F.Qy\convert_unitrange(F.U′,unitrange(F.Qy))
         #return F.Qy\F.U′
     elseif d === :U⁻¹
         return transpose(F.U′)*F.Qy
     elseif d === :V⁻¹
         return F.V′⁻¹*F.Qx
     elseif d === :V
-        return inv(F.V⁻¹) # short-term workaround
+        #return inv(F.V⁻¹) # short-term workaround
         #return F.Qx\transpose(F.V′⁻¹)
+        return F.Qx\convert_unitrange(transpose(F.V′⁻¹),unitrange(F.Qx))
     else
         return getfield(F, d)
     end
