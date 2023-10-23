@@ -10,7 +10,19 @@ end
 
 @testset "fixed units" begin
     mat = UnitfulMatrix(ones(2,2)*permil)
-    unit(diag(mat)[1]) != NoUnits
+    unit(diag(mat)[1]) != NoUnits # not sure what this is testing
+
+    urange = fill(permil, 2)
+    udomain = fill(permil, 3)
+    A = UnitfulMatrix(randn(length(urange),length(udomain)),urange,udomain)
+
+    Pr = UnitfulMatrix(I(length(urange)),urange.^-1,urange)
+    Pd = UnitfulMatrix(I(length(udomain)),udomain.^-1,udomain)
+
+    # simply testing that it runs
+    U,σ,V = dsvd(A,Pr,Pd)
+    F = dsvd(A,Pr,Pd) 
+
 end
 
 @testset "static arrays" begin

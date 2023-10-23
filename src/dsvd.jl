@@ -58,13 +58,18 @@ Base.iterate(S::DSVD, ::Val{:done}) = nothing
 
 function Base.getproperty(F::DSVD, d::Symbol)
     if d === :U
-        return F.Qy\F.U′
+        #return inv(F.U⁻¹) # short-term workaround
+        # would be better to handle with multiplication of non-UnitfulMatrix F.U′
+        return F.Qy\convert_unitrange(F.U′,unitrange(F.Qy))
+        #return F.Qy\F.U′
     elseif d === :U⁻¹
         return transpose(F.U′)*F.Qy
     elseif d === :V⁻¹
         return F.V′⁻¹*F.Qx
     elseif d === :V
-        return F.Qx\transpose(F.V′⁻¹)
+        #return inv(F.V⁻¹) # short-term workaround
+        #return F.Qx\transpose(F.V′⁻¹)
+        return F.Qx\convert_unitrange(transpose(F.V′⁻¹),unitrange(F.Qx))
     else
         return getfield(F, d)
     end
@@ -97,7 +102,7 @@ function dsvd(A::AbstractUnitfulMatrix,Py::AbstractUnitfulMatrix,Px::AbstractUni
     #A′ = Qr*(A*inv(Qd))
     # still inefficient with copy
     A′ =   copy(transpose(transpose(Qx)\transpose(Qy*A)))
-    ~dimensionless(A′) && error("A′ should be dimensionless to implement `LinearAlgebra.svd`")
+    !dimensionless(A′) && error("A′ should be dimensionless to implement `LinearAlgebra.svd`")
     F = svd(parent(A′), full=full, alg=alg)
 
     # matrix slices cause unit domain and range to become ambiguous.
