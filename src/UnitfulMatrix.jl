@@ -129,17 +129,20 @@ end
 """
 function UnitfulMatrix(A::AbstractMatrix)
     numbers = ustrip.(A)
-    M,N = size(numbers)
-    unitdomain = Vector{Unitful.Units}(undef,N)
-    unitrange = Vector{Unitful.Units}(undef,M)
+    #M,N = size(numbers)
+    #unitdomain = Vector{Unitful.Units}(undef,N)
+    #unitrange = Vector{Unitful.Units}(undef,M)
 
-    for i = 1:M
-        unitrange[i] = unit(A[i,1])
-    end
+    unitrange = unit.(A[:,1])
+    # for i = 1:M
+    #     unitrange[i] = unit(A[i,1])
+    # end
+
+    unitdomain = unit(A[1,1])./unit.(A[1,:])
     
-    for j = 1:N
-        unitdomain[j] = unit(A[1,1])/unit(A[1,j])
-    end
+    #for j = 1:N
+    #    unitdomain[j] = unit(A[1,1])/unit(A[1,j])
+    #end
 
     B = UnitfulMatrix(numbers,unitrange,unitdomain,exact=false)
     # if the array is not multipliable, return nothing
@@ -151,9 +154,13 @@ function UnitfulMatrix(A::AbstractMatrix)
 end
 function UnitfulMatrix(a::AbstractVector) # should be called UnitfulVector?
     numbers = ustrip.(a)
-    M = size(numbers)
-    unitrange = Vector{Unitful.Units}(undef,M)
-    unitrange[:] = unit.(a)
+    #M, = size(numbers)
+
+    unitrange = unit.(a)
+    #unitrange = Vector{Unitful.Units}(undef,M)
+    #for i = 1:M
+    #    unitrange[i] = unit(a[i])
+    #end
 
     b = UnitfulMatrix(numbers,unitrange,exact=false)
     # if the array is not multipliable, return nothing
