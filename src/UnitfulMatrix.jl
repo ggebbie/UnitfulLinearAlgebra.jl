@@ -129,16 +129,22 @@ end
 """
 function UnitfulMatrix(A::AbstractMatrix)
     numbers = ustrip.(A)
-    M,N = size(numbers)
-    unitdomain = Vector{Unitful.Units}(undef,N)
-    unitrange = Vector{Unitful.Units}(undef,M)
 
-    for i = 1:M
-        unitrange[i] = unit(A[i,1])
-    end
-    
-    for j = 1:N
-        unitdomain[j] = unit(A[1,1])/unit(A[1,j])
+    if unit.(A[:,1]) isa Vector
+        unitrange = unit.(A[:,1])
+        unitdomain = unit(A[1,1])./unit.(A[1,:])
+    else # code for StaticArrays (and other types?)
+        M,N = size(numbers)
+        unitdomain = Vector{Unitful.Units}(undef,N)
+        unitrange = Vector{Unitful.Units}(undef,M)
+
+        for i = 1:M
+            unitrange[i] = unit(A[i,1])
+        end
+
+        for j = 1:N
+           unitdomain[j] = unit(A[1,1])/unit(A[1,j])
+        end
     end
 
     B = UnitfulMatrix(numbers,unitrange,unitdomain,exact=false)
@@ -150,12 +156,18 @@ function UnitfulMatrix(A::AbstractMatrix)
     end
 end
 function UnitfulMatrix(a::AbstractVector) # should be called UnitfulVector?
-    numbers = ustrip.(a)
-    M = size(numbers)
-    unitrange = Vector{Unitful.Units}(undef,M)
-    unitrange[:] = unit.(a)
-
-    b = UnitfulMatrix(numbers,unitrange,exact=false)
+    ur = unit.(a)
+    if ur isa Vector
+        b = UnitfulMatrix(ustrip.(a),ur,exact=false)
+    else # code for StaticArrays (and other types?)
+        M, = size(ur)
+        unitrange = Vector{Unitful.Units}(undef,M)
+        for i = 1:M
+            unitrange[i] = unit(a[i])
+        end
+        b = UnitfulMatrix(ustrip.(a),unitrange,exact=false)
+    end
+    
     # if the array is not multipliable, return nothing
     if Matrix(b) == a
         return b

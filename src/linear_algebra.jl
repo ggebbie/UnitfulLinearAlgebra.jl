@@ -31,10 +31,12 @@ end
     function eigen(A::T;permute::Bool=true, scale::Bool=true, sortby::Union{Function,Nothing}=eigsortby) where T <: AbstractMultipliableMatrix
 
     Thin wrapper for `UnitfulLinearAlgebra.eigen` with same keyword arguments as `LinearAlgebra.eigen`.
-    There are multiple ways to distribute the units amongst the values and vectors.
-    Here, physical intuition and the equation 𝐀𝐱 = λ𝐱
-    dictate that the units of the eigenvectors are equal to the unit domain of 𝐀 (pp. 206, Hart, 1995).
     Only squarable matrices have eigenstructure (pp. 96, Hart, 1995).
+    There are multiple ways to distribute the units amongst the values and vectors.
+    If 𝐀 is endomorphic (i.e., the unit domain and range are the same), then the unit domain should
+    be taken as the units of the eigenvectors (pp. 205, Hart, 1995).  
+    In the general case, physical intuition and the equation 𝐀𝐱 = λ𝐱
+    dictate that the units of the eigenvectors are equal to the unit domain of 𝐀 (pp. 206, Hart, 1995).
     Ideally the AbstractArray interface would automatically handle `eigen`,
     but there is an unsolved issue with Unitful conversions.
     The following functions are available for `Eigen` objects:  [`det`](@ref), [`inv`](@ref) and [`isposdef`](@ref). Some are restricted to uniform matrices.

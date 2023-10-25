@@ -1,7 +1,7 @@
 name = "UnitfulLinearAlgebra"
 uuid = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 authors = ["G Jake Gebbie <ggebbie@whoi.edu>"]
-version = "0.3.3"
+version = "0.3.4"
 
 [deps]
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
@@ -14,7 +14,7 @@ Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 UnitfulLatexify = "45397f5d-5981-4c77-b2b3-fc36d6e9b728"
 
 [extensions]
-UnitfulLinearAlgebraLatexifyExt = ["Latexify","UnitfulLatexify"]
+UnitfulLinearAlgebraLatexifyExt = ["Latexify", "UnitfulLatexify"]
 
 [compat]
 DimensionalData = "0.24, 0.25"
