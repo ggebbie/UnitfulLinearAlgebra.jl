@@ -1,4 +1,4 @@
-# Build off Base methods
+# Extend Base methods
 
 function Base.show(io::IO, mime::MIME"text/plain", B::AbstractUnitfulDimVecOrMat) 
     lines = 0
@@ -57,10 +57,14 @@ Base.:*(b::Number,A::AbstractUnitfulMatrix) = A*b
 # could probably merge Matrix and Vector versions below
 Base.:*(A::AbstractUnitfulMatrix, B::Matrix) = A * UnitfulMatrix(B)
 Base.:*(A::Matrix, B::AbstractUnitfulMatrix) = UnitfulMatrix(A) * B
-Base.:*(A::AbstractUnitfulMatrix, b::Vector) = A * UnitfulMatrix(b)
-Base.:*(A::Vector, B::AbstractUnitfulMatrix) = UnitfulMatrix(a) * B
+Base.:*(a::Vector, B::AbstractUnitfulMatrix) = UnitfulMatrix(a) * B
 
-# vector-scalar multiplication
+# matrix-vector multiplication, return vector of same type as input
+# function uses two instances of transformation: slow?
+Base.:*(A::AbstractUnitfulMatrix, b::Vector) = vec(A * UnitfulMatrix(b))
+
+# vector-scalar multiplication: not recommended to use AbstractUnitfulVector,
+# but if it is used, return variable has same type
 Base.:*(a::AbstractUnitfulVector,b::Quantity) = DimensionalData.rebuild(a,parent(a)*ustrip(b),(Units(unitrange(a).*unit(b)),))
 Base.:*(a::AbstractUnitfulVector,b::Unitful.Units) = DimensionalData.rebuild(a,parent(a),(Units(unitrange(a).*b),))
 Base.:*(b::Union{Quantity,Unitful.Units},a::AbstractUnitfulVector) = a*b
