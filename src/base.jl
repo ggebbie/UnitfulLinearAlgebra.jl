@@ -173,7 +173,8 @@ end
 # do what the investigator means -- convert to UnitfulType -- probably a promotion mechanism to do the same thing
 Base.:\(A::AbstractUnitfulType,b::Number) = A\UnitfulMatrix([b])
 # this next one is quite an assumption
-Base.:\(A::AbstractUnitfulMatrix,b::AbstractVector) = A\UnitfulMatrix(vec(b)) #error("UnitfulLinearAlgebra: types not consistent")
+#Base.:\(A::AbstractUnitfulMatrix,b::AbstractVector) = A\UnitfulMatrix(vec(b)) #error("UnitfulLinearAlgebra: types not consistent")
+Base.:\(A::AbstractUnitfulMatrix,b::Vector) = vec(A\UnitfulMatrix(b)) # return something with same type as input `b`
 
 """
     function ldiv(F::LU{T,MultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number
