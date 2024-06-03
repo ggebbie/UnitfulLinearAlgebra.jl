@@ -29,6 +29,12 @@ function test_matrices(A,B,r,q)
     @test isequal(left_uniform(A),left_uniform(B))
     @test isequal(right_uniform(A),right_uniform(B))
     @test ~dimensionless(B)
+
+    # check that a Vector type does not become a UnitfulMatrix when multiplying
+    # by UnitfulMatrix
+    if q isa Vector
+        @test UnitfulMatrix(A)*q isa Vector
+    end
 end
 
 function random_UnitfulMatrix_vector_pairs(i)
