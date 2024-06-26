@@ -40,7 +40,7 @@ include("UnitfulMatrix.jl")
 include("UnitfulDimMatrix.jl")
 
 # new methods
-include("multipliablematrices.jl")
+include("multipliable_matrices.jl")
 
 # Extend Base methods
 include("base.jl")

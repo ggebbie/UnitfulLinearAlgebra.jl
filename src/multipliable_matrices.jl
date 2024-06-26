@@ -79,7 +79,7 @@ Unitful.dimension(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = di
     Uniform matrix: All entries have the same units
 """
 uniform(a::T) where T <: Number = true # all scalars by default
-function uniform(a::Union{Vector,<:DimensionalData.Dimension}) 
+function uniform(a::Union{Vector, <: DimensionalData.Dimension, <: AbstractDimArray}) 
     dima = dimension.(a)
     for dd = 2:length(dima)
         if dima[dd] ≠ dima[1]
