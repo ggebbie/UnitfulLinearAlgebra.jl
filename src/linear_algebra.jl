@@ -224,6 +224,31 @@ function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDim
     end
     return vdiag
 end
+function LinearAlgebra.diag(A::AbstractUnitfulMatrix{T}) where T <: AbstractDimArray
+
+    if uniform(A)
+        inside_type = typeof(getindexqty(A,1,1))
+        sigma = Array{inside_type}(undef,size(A))
+    else
+        sigma = Array{Quantity}(undef,size(A))
+    end
+    
+    for i in eachindex(A)
+        sigma[i] = getindexqty(A,i,i)
+    end
+    return DimArray(sigma,dims(A))
+
+    # m,n = size(A)
+    # ndiag = max(m,n)
+    # # bugfix: unitless -> dimensionless, is ternary operator needed any more?
+    # # error because other operations always want a UnitfulMatrix output
+    # #dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
+    # unitless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
+    # for nd in 1:ndiag
+    #     vdiag[nd] = getindexqty(A,nd,nd)
+    # end
+    # return vdiag
+end
 
 """
     function Diagonal(v::AbstractVector,r::Unitful.Units,d::Unitful.Units; exact = false)

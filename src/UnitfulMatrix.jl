@@ -46,8 +46,33 @@ UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::AbstractVector;
 
 UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::Units; exact = true) = UnitfulMatrix(data, format((unitrange,unitdomain), data), exact)
 
-# lose the meta data
+# lose the meta data (this line needs revisiting)
 UnitfulMatrix(data::DimArray) = UnitfulMatrix(parent(data))
+
+# also useful to do the reverse conversion: UnitfulMatrix -> DimArray
+function DimArray(A::UnitfulMatrix{T}) where T <: AbstractDimArray
+
+    # GAG stopped here
+    # get first column following matrix to dimarray in BLUEs
+
+    
+    if uniform(A)
+        inside_type = typeof(getindexqty(A,1,1))
+        u = Array{inside_type}(undef,size(A))
+    else
+        u = Array{Quantity}(undef,size(A))
+    end
+
+    #u = similar(A)
+
+    for j in eachindex(u)
+        for i in eachindex(u[j])
+            u[j][i] = getindexqty(A,i,j)
+        end
+    end
+    #return u
+    return DimArray(U,dims(urange))
+end
 
 """
     rebuild(A::UnitfulMatrix, data, [dims, exact]) => UnitfulMatrix
@@ -155,7 +180,7 @@ function UnitfulMatrix(A::AbstractMatrix)
         return nothing
     end
 end
-function UnitfulMatrix(a::AbstractVector) # should be called UnitfulVector?
+function UnitfulMatrix(a::AbstractVector) # should be deprecated
     ur = unit.(a)
     if ur isa Vector
         b = UnitfulMatrix(ustrip.(a),ur,exact=false)

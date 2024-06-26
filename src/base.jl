@@ -19,7 +19,6 @@ function Base.show(io::IO, mime::MIME"text/plain", B::AbstractUnitfulDimVecOrMat
     return nothing
 end
 
-
 function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat)
     lines = 0
     summary(io, A)
@@ -30,6 +29,17 @@ function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat)
     Base.print_matrix(DimensionalData._print_array_ctx(ioctx, T2), Matrix(A))
     return nothing
 end
+
+# function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat{T}) where T <: AbstractDimArray
+#     lines = 0
+#     summary(io, A)
+#     println(io)
+#     ds = displaysize(io)
+#     ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
+#     T2 = eltype(A)
+#     Base.print_matrix(DimensionalData._print_array_ctx(ioctx, T2), Matrix(A))
+#     return nothing
+# end
 
 """
     function *(A::AbstractUnitfulType,b)
