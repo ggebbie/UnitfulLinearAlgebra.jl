@@ -31,7 +31,7 @@ UnitfulMatrix(data::AbstractArray, dims; kw...) = UnitfulMatrix(data, (dims,); k
 function UnitfulMatrix(data::AbstractArray, dims::Union{Tuple,NamedTuple}; exact = false)
     if eltype(dims) <: Vector
         return UnitfulMatrix(data, format(Units.(dims), data), exact)
-    elseif eltype(dims) <: Units
+    elseif eltype(dims) <: Units || eltype(dims) <: AbstractDimArray
         return UnitfulMatrix(data, format(dims, data), exact)
     else
         error("something unexpected has happened! Please report it to the developer at https://github.com/ggebbie/UnitfulLinearAlgebra.jl/issues/new")
