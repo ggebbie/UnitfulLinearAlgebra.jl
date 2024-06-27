@@ -36,7 +36,7 @@ abstract type AbstractUnitfulType{T,N,D,A} <: AbstractDimArray{T,N,D,A} end
 # constructor for streamlined struct based on DimensionalData.DimArray
 include("UnitfulMatrix.jl")
 
-# constructor for expanded struct based on DimensionalData.DimArray
+# another constructor for expanded struct based on DimensionalData.DimArray
 include("UnitfulDimMatrix.jl")
 
 # new methods
@@ -55,7 +55,5 @@ include("linear_algebra.jl")
 # a new struct and methods
 # Dimensioned SVD: an underappreciated concept
 include("dsvd.jl") 
-
-#latexify() = nothing
 
 end

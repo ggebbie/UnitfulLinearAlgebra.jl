@@ -47,7 +47,7 @@ UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::AbstractVector;
 UnitfulMatrix(data::AbstractArray, unitrange::Units, unitdomain::Units; exact = true) = UnitfulMatrix(data, format((unitrange,unitdomain), data), exact)
 
 # lose the meta data (this line needs revisiting)
-UnitfulMatrix(data::DimArray) = UnitfulMatrix(parent(data))
+UnitfulMatrix(data::DimArray{T}) where T <: Number = UnitfulMatrix(parent(data))
 
 # also useful to do the reverse conversion: UnitfulMatrix -> DimArray
 function DimArray(A::UnitfulMatrix{T}) where T <: AbstractDimArray
@@ -73,6 +73,29 @@ function DimArray(A::UnitfulMatrix{T}) where T <: AbstractDimArray
     #return u
     return DimArray(U,dims(urange))
 end
+
+"""
+function DimArray(A,rangedims,domaindims)
+
+borrowed from BLUEs.matrix_to_dimarray
+
+future plan: reorganize location of this code
+"""
+function DimArray(A::Matrix,rangedims=rdims,domaindims=ddims)
+
+    # extra step for type stability
+    Q1 = reshape(A[:,1],size(rdims))
+    P1 = DimArray(Q1, rdims)
+
+    P = Array{typeof(P1)}(undef,size(ddims))
+    for j in eachindex(P)
+        Q = reshape(A[:,j],size(rdims))
+        P[j] = DimArray(Q, rdims)
+    end
+    return DimArray(P, ddims)
+end
+
+
 
 """
     rebuild(A::UnitfulMatrix, data, [dims, exact]) => UnitfulMatrix

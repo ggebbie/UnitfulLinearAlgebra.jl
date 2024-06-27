@@ -409,7 +409,7 @@ end
     Useful for tests, display
     pp. 193, Hart
 """
-function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
+function Matrix(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDimMatrix{T}}) where T <: Number  
     M,N = size(A)
     if uniform(A)
         T2 = typeof(getindexqty(A,1,1))
@@ -468,27 +468,3 @@ trace(A::AbstractUnitfulMatrix) = sum(diag(parent(A))).*(unitrange(A)[1]/unitdom
     Maybe change the name to UnitfulI?
 """
 identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),(dimrange,dimrange),exact=true)
-
-# """
-#     function convert(AbstractMatrix,A::MultipliableMatrix)
-
-#     Expand A into array form
-#     Useful for tests, display
-#     pp. 193, Hart
-# """
-# function convert(AbstractMatrix{T},A::AbstractMultipliableMatrix)  where T<: Number
-
-#     M = rangelength(A)
-#     N = domainlength(A)
-#     T2 = eltype(A.numbers)
-#     B = Matrix{Quantity{T2}}(undef,M,N)
-#     for m = 1:M
-#         for n = 1:N
-#             B[m,n] = getindex(A,m,n)
-#         end
-#     end
-#     return B
-# end
-
-## start of UnitfulDimMatrix methods
-
