@@ -217,7 +217,8 @@ function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDim
     ndiag = max(m,n)
     # bugfix: unitless -> dimensionless, is ternary operator needed any more?
     # error because other operations always want a UnitfulMatrix output
-    dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
+    #dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
+    unitless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
     for nd in 1:ndiag
         vdiag[nd] = getindexqty(A,nd,nd)
     end
