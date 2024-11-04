@@ -124,7 +124,7 @@ Base.:-(A::AbstractUnitfulType) = DimensionalData.rebuild(A,-parent(A))
      Reverse mapping from unitdomain to range.
      Is `exact` if input is exact.
 """
-function Base.:\(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
+function Base.:(\ )(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
     if exact(A)
         DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
         return rebuild(A,parent(A)\parent(b),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
@@ -135,7 +135,7 @@ function Base.:\(A::AbstractUnitfulMatrix,b::AbstractUnitfulVector)
         error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
     end
 end
-function Base.:\(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
+function Base.:(\ )(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
     if exact(A)
         DimensionalData.comparedims(first(dims(A)), first(dims(B)); val=true)
         return rebuild(A,parent(A)\parent(B),(last(dims(A)),last(dims(B)))) #,exact = (exact(A) && exact(B)))
@@ -146,7 +146,7 @@ function Base.:\(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
         error("UnitfulLinearAlgebra.matrix left divide): Dimensions of Unitful Matrices A and b not compatible")
     end
 end
-function Base.:\(A::AbstractUnitfulDimMatrix,b::AbstractUnitfulDimVector)
+function Base.:(\ )(A::AbstractUnitfulDimMatrix,b::AbstractUnitfulDimVector)
     if exact(A)
         DimensionalData.comparedims(first(unitdims(A)), first(unitdims(b)); val=true)
         DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
@@ -158,7 +158,7 @@ function Base.:\(A::AbstractUnitfulDimMatrix,b::AbstractUnitfulDimVector)
         error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
     end
 end
-function Base.:\(A::AbstractUnitfulDimMatrix,B::AbstractUnitfulDimMatrix)
+function Base.:(\ )(A::AbstractUnitfulDimMatrix,B::AbstractUnitfulDimMatrix)
     if exact(A)
         DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
         DimensionalData.comparedims(first(dims(A)), first(dims(B)); val=true)
@@ -171,10 +171,10 @@ function Base.:\(A::AbstractUnitfulDimMatrix,B::AbstractUnitfulDimMatrix)
     end
 end
 # do what the investigator means -- convert to UnitfulType -- probably a promotion mechanism to do the same thing
-Base.:\(A::AbstractUnitfulType,b::Number) = A\UnitfulMatrix([b])
+Base.:(\ )(A::AbstractUnitfulType,b::Number) = A\UnitfulMatrix([b])
 # this next one is quite an assumption
 #Base.:\(A::AbstractUnitfulMatrix,b::AbstractVector) = A\UnitfulMatrix(vec(b)) #error("UnitfulLinearAlgebra: types not consistent")
-Base.:\(A::AbstractUnitfulMatrix,b::Vector) = vec(A\UnitfulMatrix(b)) # return something with same type as input `b`
+Base.:(\ )(A::AbstractUnitfulMatrix,b::Vector) = vec(A\UnitfulMatrix(b)) # return something with same type as input `b`
 
 """
     function ldiv(F::LU{T,MultipliableMatrix{T},Vector{Int64}}, B::AbstractVector) where T<:Number

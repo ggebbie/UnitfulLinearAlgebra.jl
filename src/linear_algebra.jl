@@ -68,10 +68,10 @@ function LinearAlgebra.inv(A::Eigen{T,V,S,U}) where {U <: AbstractVector, S <: A
         ur = unitrange(A.vectors)
         ud = Units(unit.(A.values))
         Λ⁻¹ = Diagonal(A.values.^-1,ud,ur)
-        return A.vectors* transpose(transpose(A.vectors) \ Λ⁻¹)
+        #return A.vectors* transpose(transpose(A.vectors) \ Λ⁻¹)
 
         # LinearAlgebra.eigen uses matrix right divide, i.e., 
-        #return A.vectors * Λ⁻¹ / A.vectors
+        return A.vectors * Λ⁻¹ / A.vectors
         # but this is not available yet for `Multipliable Matrix`s.
 
     else

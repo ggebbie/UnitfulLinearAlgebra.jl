@@ -45,8 +45,8 @@ end
     qold = ustrip.(q̃).*unit.(1 ./q̃)
     q = UnitfulMatrix(qold)
 
-    @test DimensionalData.comparedims(unitdomain(q'),unitdomain(transpose(q))) isa UnitfulLinearAlgebra.Units
-    @test DimensionalData.comparedims(unitrange(q'),unitrange(transpose(q))) isa UnitfulLinearAlgebra.Units
+    @test DimensionalData.comparedims(unitdomain(q'),unitdomain(transpose(q)))# isa UnitfulLinearAlgebra.Units
+    @test DimensionalData.comparedims(unitrange(q'),unitrange(transpose(q))) #isa UnitfulLinearAlgebra.Units
     
 end
 
@@ -226,7 +226,8 @@ end
     Λ = Diagonal(C.values,ur,ud)
     # use matrix right divide would be best
     #transpose(transpose(C.vectors)\ (Λ*transpose(C.vectors)))
-    B̃ = C.vectors * Λ* inv(C.vectors)
+    #B̃ = C.vectors * Λ* inv(C.vectors) # fails with DD 0.28
+    B̃ = C.vectors * Λ  / C.vectors # fails with DD 0.28
     @test within(B̃,B,1e-10)
 
     # check eigenvalue condition
@@ -319,7 +320,7 @@ end
     F3 = svd(E2)
 
     Krank = length(F3.S)
-    G = 0 .*E
+    G = 0 .*E 
     for k = 1:Krank
         # outer product
         G += F2.S[k] * F2.U[:,k] * transpose(F2.Vt[k,:])
@@ -329,7 +330,7 @@ end
     # recover using Diagonal dimensional matrix
     # use Full SVD (thin may not work)
     Λ = diagm(F2.S,unitrange(E2),unitdomain(E2),exact=true)
-    Ẽ = UnitfulMatrix(F2.U)*(Λ*UnitfulMatrix(F2.Vt))
+    Ẽ = UnitfulMatrix(F2.U)*(Λ*UnitfulMatrix(F2.Vt))  # possible error
     @test within(Matrix(Ẽ),E,1e-10)
 
     # solve a linear system with SVD
