@@ -107,7 +107,8 @@ end
 function LinearAlgebra.cholesky(A::AbstractUnitfulMatrix)
     if unit_symmetric(A)
         C = LinearAlgebra.cholesky(parent(A))
-        factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)))
+        #factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)))
+        factors = rebuild(A,C.factors,(Units(fill(NoUnits,size(A,1))),unitdomain(A)))
         return Cholesky(factors,C.uplo,C.info)
     else
         error("requires unit symmetric matrix")

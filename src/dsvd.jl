@@ -83,7 +83,7 @@ Base.propertynames(F::DSVD, private::Bool=false) =
 
     Dimensioned singular value decomposition (DSVD).
     Appropriate version of SVD for non-uniform matrices.
-    `svd` can be computed for `Number`s, `Adjoint`s, `Tranpose`s, and `Integers`; `dsvd` doesn't yet implement these.
+    `svd` can be computed for `Number`s, `Adjoint`s, `Transpose`s, and `Integers`; `dsvd` doesn't yet implement these.
 # Input
 - `A::AbstractMultipliableMatrix`
 - `Pr::UnitSymmetricMatrix`: square matrix defining norm of range

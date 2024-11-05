@@ -250,9 +250,9 @@ end
     
     # outer product to make a multipliable matrix
     A = [1.0 0.1; 0.1 1.0]
-    B = UnitfulMatrix(A,p,q ,exact=true)
-    @test square(B)
-    @test ~squarable(B)
+    Be = UnitfulMatrix(A,p,q ,exact=true)
+    @test square(Be)
+    @test ~squarable(Be)
 
     # make equivalent Diagonal matrix.
     C = Diagonal([1.0m, 4.0s],p,q)
@@ -261,6 +261,9 @@ end
     # try cholesky decomposition
     Qnodims = cholesky(Anodims)
 
+    B = UnitfulMatrix(A,p,q ,exact=true)
+    @test square(B)
+    @test ~squarable(B)
     Q = UnitfulLinearAlgebra.cholesky(B)
     test1 = transpose(Q.U)*Q.U
     @test within(B,test1,1e-6)
