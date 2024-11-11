@@ -27,14 +27,6 @@ function parallel(a,b)
         if length(a) == 1
             return true
         else
-            # error: DD v0.28 comparedims fails
-            # Δdim = dimension.(a)./dimension.(b)
-            # for i = 2:length(a)
-            #     if Δdim[i] ≠ Δdim[1]
-            #         return false
-            #     end
-            # end
-
             Δdim = dimension(a[begin] / b[begin])
             for i in eachindex(a) # repeat first element for simplicity
                 if Δdim ≠ dimension(a[i] / b[i])
@@ -47,18 +39,6 @@ function parallel(a,b)
         return false
     end
 end
-# function parallel(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
-#     if isequal(length(a),length(b))
-#         if length(a) == 1
-#             return true
-#         else
-#             Δdim = dimension(a)./dimension(b) # inconsistent function call
-#             return allequal(Δdim)
-#         end
-#     else
-#         return false
-#     end
-# end
 ∥(a,b)  = parallel(a,b)
 
 function allequal(itr)
@@ -135,10 +115,6 @@ end
 dimensionless(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(A) && dimension(getindexqty(A,1,1)) == NoDims
 dimensionless(A::AbstractMatrix) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
-# function dimensionless(A::AbstractMatrix)
-#     B = UniformMatrix(A)
-#     isnothing(B) ? false : dimensionless(B) # fallback
-# end
 
 """
      function unitless(A)
@@ -203,7 +179,6 @@ invdimension(a:: Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = dimens
 dottable(a,b) = parallel(a, 1 ./ b)
 function dottable(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
 
-
     if isequal(length(a),length(b))
         if length(a) == 1
             return true
@@ -217,14 +192,6 @@ function dottable(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Un
                     return false
                 end
             end
-
-            # DD < 0.27 code 
-            # Δdim = dimension(a).*dimension(b) 
-            # for i = 2:length(a)
-            #     if Δdim[i] ≠ Δdim[1]
-            #         return false
-            #     end
-            # end
             return true
         end
     else
@@ -243,8 +210,6 @@ end
 function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Units) 
     if unitdomain(A) ∥ newdomain
         newrange = Units(unitrange(A).*(newdomain[1]/unitdomain(A)[1]))
-        # be conservative: leave `exact` parameter unchanged
-        #return rebuild(A, parent(A), (newrange, newdomain), true)
         return rebuild(A, parent(A), (newrange, newdomain))
     else
         error("New unit domain not parallel to unit domain of UnitfulMatrix")
@@ -293,10 +258,6 @@ DimensionalData.name(A::AbstractUnitfulVecOrMat) = ()
 DimensionalData.metadata(A::AbstractUnitfulVecOrMat) = NoMetadata()
 DimensionalData.refdims(A::AbstractUnitfulVecOrMat) = ()
 
-# convert(::Type{AbstractMatrix{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
-# convert(::Type{AbstractArray{T}}, A::AbstractMultipliableMatrix) where {T<:Number} = convert(AbstractMultipliableMatrix{T}, A)
-# #convert(::Type{AbstractArray{T}}, S::AbstractToeplitz) where {T<:Number} = convert(AbstractToeplitz{T}, S)
-
 """
 function unitdims(A::AbstractUnitfulVecOrMat) = dims(A)
 
@@ -322,7 +283,6 @@ unitdomain(A::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = Units([No
     Find the dimensional (unit) range of a matrix
 """
 unitrange(A::AbstractUnitfulType) = first(unitdims(A))
-#unitrange(A::AbstractUnitfulMatrix) = first(dims(A))
 
 """
     function describe(A::UnitfulMatrix)
@@ -487,27 +447,3 @@ trace(A::AbstractUnitfulMatrix) = sum(diag(parent(A))).*(unitrange(A)[1]/unitdom
     Maybe change the name to UnitfulI?
 """
 identitymatrix(dimrange) = UnitfulMatrix(I(length(dimrange)),(dimrange,dimrange),exact=true)
-
-# """
-#     function convert(AbstractMatrix,A::MultipliableMatrix)
-
-#     Expand A into array form
-#     Useful for tests, display
-#     pp. 193, Hart
-# """
-# function convert(AbstractMatrix{T},A::AbstractMultipliableMatrix)  where T<: Number
-
-#     M = rangelength(A)
-#     N = domainlength(A)
-#     T2 = eltype(A.numbers)
-#     B = Matrix{Quantity{T2}}(undef,M,N)
-#     for m = 1:M
-#         for n = 1:N
-#             B[m,n] = getindex(A,m,n)
-#         end
-#     end
-#     return B
-# end
-
-## start of UnitfulDimMatrix methods
-
