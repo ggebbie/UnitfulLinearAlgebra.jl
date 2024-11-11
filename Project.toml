@@ -18,7 +18,8 @@ UnitfulLatexify = "45397f5d-5981-4c77-b2b3-fc36d6e9b728"
 UnitfulLinearAlgebraLatexifyExt = ["Latexify", "UnitfulLatexify"]
 
 [compat]
-DimensionalData = "0.24,0.25,0.27,0.28"
+#DimensionalData = "0.24,0.25,0.27,0.28"
+DimensionalData = "0.29"
 Revise = "3.6.2"
 Statistics = "1"
 Unitful = "1"

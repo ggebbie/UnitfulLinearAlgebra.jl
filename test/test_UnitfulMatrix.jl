@@ -10,7 +10,7 @@ end
 
 @testset "fixed units" begin
     mat = UnitfulMatrix(ones(2,2)*permil)
-    unit(diag(mat)[1]) != NoUnits # not sure what this is testing
+    @test unit(diag(mat)[1]) != NoUnits # not sure what this is testing
 
     urange = fill(permil, 2)
     udomain = fill(permil, 3)

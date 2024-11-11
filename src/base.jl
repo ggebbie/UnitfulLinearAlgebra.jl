@@ -75,9 +75,27 @@ Base.:*(b::Number,a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = a*
 # (matrix/vector)-(matrix/vector) multiplication when inexact handled here
 function Base.:*(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
     if exact(A) && exact(B)
-        return DimensionalData._rebuildmul(A,B)
+        #return DimensionalData._rebuildmul(A,B) # uses strict checking
+
+        # replace DimensionalData._rebuildmul(A,B) # uses strict checking
+        # instead reproduce necessary part of DimensionalData here
+
+        # from DimensionalData._comparedims_mul(A, B)
+        DimensionalData.comparedims(last(dims(A)), first(dims(B)); 
+            order=false, val=true, length=false
+        )
+        return rebuild(A, parent(A) * parent(B), (first(dims(A)), last(dims(B))))
+        #rebuild(A, parent(A) * parent(B), (first(dims(A)),))
+
     elseif unitdomain(A) ∥ unitrange(B)
         return DimensionalData._rebuildmul(convert_unitdomain(A,unitrange(B)),B)
+
+        Anew = convert_unitdomain(A,unitrange(B))
+        DimensionalData.comparedims(last(dims(Anew)),
+            first(dims(B)); 
+            order=false, val=true, length=false
+        )
+        return rebuild(Anew, parent(Anew) * parent(B), (first(dims(Anew)), last(dims(B))))
     else
         error("UnitfulLinearAlgebra: unitdomain(A) and unitrange(B) not parallel")
     end
@@ -254,7 +272,9 @@ Base.:~(a,b) = similarity(a,b)
 """
 # A redefined tranpose that corrects error based on AbstractArray interface
 #Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)))
-Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(inv.(unitdomain(A))), Units(inv.(unitrange(A)))))
+# previous working version here
+#Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(inv.(unitdomain(A))), Units(inv.(unitrange(A)))))
+Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(parent(inv.(unitdomain(A)))), Units(parent(inv.(unitrange(A))))))
 Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
 Base.transpose(A::AbstractUnitfulDimMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
 Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))

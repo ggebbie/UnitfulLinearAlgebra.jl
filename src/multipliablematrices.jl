@@ -27,9 +27,17 @@ function parallel(a,b)
         if length(a) == 1
             return true
         else
-            Δdim = dimension.(a)./dimension.(b)
-            for i = 2:length(a)
-                if Δdim[i] ≠ Δdim[1]
+            # error: DD v0.28 comparedims fails
+            # Δdim = dimension.(a)./dimension.(b)
+            # for i = 2:length(a)
+            #     if Δdim[i] ≠ Δdim[1]
+            #         return false
+            #     end
+            # end
+
+            Δdim = dimension(a[begin] / b[begin])
+            for i in eachindex(a) # repeat first element for simplicity
+                if Δdim ≠ dimension(a[i] / b[i])
                     return false
                 end
             end
@@ -39,18 +47,18 @@ function parallel(a,b)
         return false
     end
 end
-function parallel(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
-    if isequal(length(a),length(b))
-        if length(a) == 1
-            return true
-        else
-            Δdim = dimension(a)./dimension(b) # inconsistent function call
-            return allequal(Δdim)
-        end
-    else
-        return false
-    end
-end
+# function parallel(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
+#     if isequal(length(a),length(b))
+#         if length(a) == 1
+#             return true
+#         else
+#             Δdim = dimension(a)./dimension(b) # inconsistent function call
+#             return allequal(Δdim)
+#         end
+#     else
+#         return false
+#     end
+# end
 ∥(a,b)  = parallel(a,b)
 
 function allequal(itr)

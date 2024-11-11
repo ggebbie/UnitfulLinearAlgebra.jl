@@ -27,7 +27,7 @@ export describe, trace
 import Base: (\)
 import LinearAlgebra: inv
 import DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetadata, format, print_name
-#import Latexify: latexify
+#import Unitful: Units #import Latexify: latexify
 
 @dim Units "units"
 
