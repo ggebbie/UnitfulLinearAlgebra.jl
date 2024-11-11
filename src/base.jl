@@ -88,7 +88,7 @@ function Base.:*(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
         #rebuild(A, parent(A) * parent(B), (first(dims(A)),))
 
     elseif unitdomain(A) ∥ unitrange(B)
-        return DimensionalData._rebuildmul(convert_unitdomain(A,unitrange(B)),B)
+        #return DimensionalData._rebuildmul(convert_unitdomain(A,unitrange(B)),B)
 
         Anew = convert_unitdomain(A,unitrange(B))
         DimensionalData.comparedims(last(dims(Anew)),

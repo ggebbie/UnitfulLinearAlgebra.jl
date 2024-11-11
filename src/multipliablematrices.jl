@@ -202,16 +202,29 @@ invdimension(a:: Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = dimens
 """
 dottable(a,b) = parallel(a, 1 ./ b)
 function dottable(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
+
+
     if isequal(length(a),length(b))
         if length(a) == 1
             return true
         else
-            Δdim = dimension(a).*dimension(b) 
-            for i = 2:length(a)
-                if Δdim[i] ≠ Δdim[1]
+            # error: DD v0.28 comparedims fails
+            # adapt similarly to `parallel`
+
+            Δdim = dimension(a[begin]) * dimension(b[begin]) 
+            for i in eachindex(a) # repeat first element for simplicity
+                if Δdim ≠ dimension(a[i]) * dimension(b[i]) 
                     return false
                 end
             end
+
+            # DD < 0.27 code 
+            # Δdim = dimension(a).*dimension(b) 
+            # for i = 2:length(a)
+            #     if Δdim[i] ≠ Δdim[1]
+            #         return false
+            #     end
+            # end
             return true
         end
     else
