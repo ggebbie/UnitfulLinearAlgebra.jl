@@ -10,8 +10,6 @@
 """
 LinearAlgebra.inv(A::AbstractUnitfulMatrix) = rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A)))
 LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
-# PR 78: singular check sometimes fails but matrix is invertible.
-#LinearAlgebra.inv(A::AbstractUnitfulMatrix) = ~singular(A) ? rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A))) : error("matrix is singular")
 
 """
     function det
@@ -68,10 +66,10 @@ function LinearAlgebra.inv(A::Eigen{T,V,S,U}) where {U <: AbstractVector, S <: A
         ur = unitrange(A.vectors)
         ud = Units(unit.(A.values))
         Λ⁻¹ = Diagonal(A.values.^-1,ud,ur)
-        return A.vectors* transpose(transpose(A.vectors) \ Λ⁻¹)
+        #return A.vectors* transpose(transpose(A.vectors) \ Λ⁻¹)
 
         # LinearAlgebra.eigen uses matrix right divide, i.e., 
-        #return A.vectors * Λ⁻¹ / A.vectors
+        return A.vectors * Λ⁻¹ / A.vectors
         # but this is not available yet for `Multipliable Matrix`s.
 
     else
@@ -107,7 +105,8 @@ end
 function LinearAlgebra.cholesky(A::AbstractUnitfulMatrix)
     if unit_symmetric(A)
         C = LinearAlgebra.cholesky(parent(A))
-        factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)))
+        #factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)))
+        factors = rebuild(A,C.factors,(Units(fill(NoUnits,size(A,1))),unitdomain(A)))
         return Cholesky(factors,C.uplo,C.info)
     else
         error("requires unit symmetric matrix")
@@ -116,9 +115,6 @@ end
 function LinearAlgebra.cholesky(A::AbstractUnitfulDimMatrix)
     if unit_symmetric(A)
         C = LinearAlgebra.cholesky(parent(A))
-
-        # What should the axis units for a Cholesky decomposition be? Just a guess here.
-        # What if internal parts of Cholesky decomposition are simply UnitfulMatrix's. 
         factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)),(:Normalspace,last(dims(A))))
         return Cholesky(factors,C.uplo,C.info)
     else
@@ -126,7 +122,7 @@ function LinearAlgebra.cholesky(A::AbstractUnitfulDimMatrix)
     end
 end
 
-# seems like this might be from Base? Move to base.jl? 
+# Move to base.jl? 
 function Base.getproperty(C::Cholesky{T,<:AbstractUnitfulMatrix}, d::Symbol) where T 
     Cfactors = getfield(C, :factors)
     Cuplo    = getfield(C, :uplo)

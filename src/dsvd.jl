@@ -83,7 +83,7 @@ Base.propertynames(F::DSVD, private::Bool=false) =
 
     Dimensioned singular value decomposition (DSVD).
     Appropriate version of SVD for non-uniform matrices.
-    `svd` can be computed for `Number`s, `Adjoint`s, `Tranpose`s, and `Integers`; `dsvd` doesn't yet implement these.
+    `svd` can be computed for `Number`s, `Adjoint`s, `Transpose`s, and `Integers`; `dsvd` doesn't yet implement these.
 # Input
 - `A::AbstractMultipliableMatrix`
 - `Pr::UnitSymmetricMatrix`: square matrix defining norm of range
@@ -107,13 +107,8 @@ function dsvd(A::AbstractUnitfulMatrix,Py::AbstractUnitfulMatrix,Px::AbstractUni
 
     # matrix slices cause unit domain and range to become ambiguous.
     # output of DSVD cannot be exact.
-    # if exact(A)
-    #     U = convert_unitdomain(UnitfulMatrix(F.U),Units(fill(unit(1.0),size(F.U,2))))
-    #     Vt = convert_unitrange(UnitfulMatrix(F.Vt),Units(fill(unit(1.0),size(F.Vt,1))))
-    #     return DSVD(U,F.S,Vt,Qy,Qx)
-    # else
-        return DSVD(UnitfulMatrix(F.U),F.S,UnitfulMatrix(F.Vt),Qy,Qx)
-    #end
+    return DSVD(UnitfulMatrix(F.U),F.S,UnitfulMatrix(F.Vt),Qy,Qx)
+
 end
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, F::DSVD{<:Any,<:Any,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractArray,<:AbstractVector})
@@ -133,29 +128,17 @@ function inv(F::DSVD{T}) where T
         iszero(F.S[i]) && throw(SingularException(i))
     end
     k = searchsortedlast(F.S, eps(real(T))*F.S[1], rev=true)
-    # adapted from `svd.jl`
-    #@views (F.S[1:k] .\ F.V[:,1:k, :]) #* F.U⁻¹[1:k,:]
 
+    # adapted from `svd.jl`
     # make sure it is inexact
     Σ⁻¹ = UnitfulMatrix(Diagonal(F.S[1:k].^-1))
-    # a less efficient matrix way to do it.
-    #Σ⁻¹ = Diagonal(F.S[1:k].^-1,fill(unit(1.0),k),fill(unit(1.0),k))
-    # Σ⁻¹ = Diagonal(F.S[1:k].^-1,unitdomain(F.V[:,1:k]),unitrange(F.U⁻¹[1:k,:]))
-    #    Σ⁻¹ = Diagonal(F.S[1:k].^-1,unitdomain(F.V)[1:k],unitrange(F.U⁻¹)[1:k])
-    #println(exact(F.V[:,1:k]))
     return F.V[:,1:k]*Σ⁻¹*F.U⁻¹[1:k,:]
 end
 
-### DSVD least squares ### Not implemented
-# function ldiv!(A::SVD{T}, B::StridedVecOrMat) where T
-#     m, n = size(A)
-#     k = searchsortedlast(A.S, eps(real(T))*A.S[1], rev=true)
-#     mul!(view(B, 1:n, :), view(A.Vt, 1:k, :)', view(A.S, 1:k) .\ (view(A.U, :, 1:k)' * _cut_B(B, 1:m)))
-#     return B
-# end
-
 Base.size(A::DSVD, dim::Integer) = dim == 1 ? size(A.U, dim) : size(A.V⁻¹, dim)
 Base.size(A::DSVD) = (size(A, 1), size(A, 2))
+
+### DSVD least squares ### Not implemented
 
 # adjoint not yet defined for AbstractMultipliableMatrix
 #function adjoint(F::DSVD)

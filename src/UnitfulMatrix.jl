@@ -92,13 +92,17 @@ update is dealt with in `rebuild` for `AbstractDimArray` (still true?).
     urange = unitrange(A)[I[1]]
     udomain = unitdomain(A)[I[2]]
 
-    if (udomain isa Unitful.Units || urange isa Unitful.Units )
-        # case of column vector, row vector, scalar
-        # scalar appears to be overridden by getindex
-        newunitrange = slicedvector(urange,udomain)
+    # something strange with two types of `Units` type
+    if (udomain isa Unitful.Units && urange isa UnitfulLinearAlgebra.Units )
+        # case of column vector
+        newunitrange = slicedvector(parent(urange),udomain)
         return UnitfulMatrix(data, newunitrange,exact=false)
-        #return UnitfulMatrix(data, newunitrange, newunitdomain)
+    elseif (udomain isa UnitfulLinearAlgebra.Units && urange isa Unitful.Units )
+        # case of row vector
+        newunitrange = slicedvector(urange,parent(udomain))
+        return UnitfulMatrix(data, newunitrange,exact=false)
     else
+        # matrix case
         newunitrange, newunitdomain = slicedmatrix(urange,udomain)
         # unit range and domain of a sliced matrix are ambiguous.
         # It must be exact=false

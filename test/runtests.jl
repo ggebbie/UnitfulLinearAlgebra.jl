@@ -14,6 +14,7 @@ m² = u"m^2"
 permil = Unitful.FixedUnits(u"permille")
 
 include("test_functions.jl")
+#DimensionalData.strict_matmul!(false) # DD 0.28, 0.29
 
 @testset "UnitfulLinearAlgebra.jl" begin
 
@@ -30,6 +31,3 @@ include("test_functions.jl")
     end
     
 end
-
-
-        
