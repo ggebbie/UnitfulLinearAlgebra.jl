@@ -1,5 +1,7 @@
 # Extend Base methods
 
+using LinearAlgebra: AdjointRotation
+using DimensionalData: AbstractMatrixDimStack
 function Base.show(io::IO, mime::MIME"text/plain", B::AbstractUnitfulDimVecOrMat) 
     lines = 0
     summary(io, B)
@@ -54,10 +56,11 @@ Base.:*(b::Union{Quantity,Unitful.Units},A::AbstractUnitfulMatrix) = A*b
 Base.:*(A::AbstractUnitfulMatrix,b::Number) = DimensionalData.rebuild(A,parent(A)*b)
 Base.:*(b::Number,A::AbstractUnitfulMatrix) = A*b
 # could probably merge Matrix and Vector versions below
-Base.:*(A::AbstractUnitfulMatrix, B::Matrix) = A * UnitfulMatrix(B)
-Base.:*(A::Matrix, B::AbstractUnitfulMatrix) = UnitfulMatrix(A) * B
+# ambiguous dispatch if Union is replaced with `AbstractMatrix` in next two lines
+Base.:*(A::AbstractUnitfulMatrix, B::Union{Matrix,Transpose,Adjoint}) = A * UnitfulMatrix(B)
+Base.:*(A::Union{Matrix,Transpose,Adjoint}, B::AbstractUnitfulMatrix) = UnitfulMatrix(A) * B
 Base.:*(a::Vector, B::AbstractUnitfulMatrix) = UnitfulMatrix(a) * B
-
+ 
 # matrix-vector multiplication, return vector of same type as input
 # function uses two instances of transformation: slow?
 Base.:*(A::AbstractUnitfulMatrix, b::Vector) = vec(A * UnitfulMatrix(b))
