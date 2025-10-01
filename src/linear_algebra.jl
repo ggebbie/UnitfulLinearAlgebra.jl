@@ -224,15 +224,37 @@ end
 """
     function Diagonal(v::AbstractVector,r::Unitful.Units,d::Unitful.Units; exact = false)
 
-    Construct diagonal matrix with units where the diagonal has elements `v`.
-    If `v` has units, check that they conform with dimensional unit range `r`
-     and dimensional unit domain `d`.
-    Like `LinearAlgebra.Diagonal`, this extension is restricted to square matrices.
+Construct diagonal matrix with units where the diagonal has elements `v`.
+If `v` has units, check that they conform with dimensional unit range `r`
+and dimensional unit domain `d`.
+Like `LinearAlgebra.Diagonal`, this extension is restricted to square matrices.
 """
 # handle the case where unitdomain and unitrange have the same type
-LinearAlgebra.Diagonal(v::AbstractVector,r::Union{AbstractVector,Units},d::Union{AbstractVector,Units}; exact = true)  = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) : error("unit range and domain do not define a square matrix")   
+LinearAlgebra.Diagonal(v::AbstractVector,
+    r::Union{AbstractVector,Units},
+    d::Union{AbstractVector,Units}; exact = true)  =
+    ((length(r) == length(d)) &&
+     (length(v) == length(d))) ?
+    UnitfulMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d; exact=exact) :
+    error("unit range and domain do not define a square matrix")   
 
-LinearAlgebra.Diagonal(v::AbstractVector,r::Union{AbstractVector,Units},d::Union{AbstractVector,Units},dims; refdims=(),name=DimensionalData.NoName(), metadata=DimensionalData.NoMetadata(), exact = true)  = ((length(r) == length(d)) && (length(v) == length(d))) ? UnitfulDimMatrix(LinearAlgebra.Diagonal(ustrip.(v)),r,d,dims=dims,refdims=refdims,name=name,metadata=metadata,exact=exact) : error("unit range and domain do not define a square matrix")
+LinearAlgebra.Diagonal(v::AbstractVector,
+    r::Union{AbstractVector,Units},
+    d::Union{AbstractVector,Units},
+    dims;
+    refdims=(),
+    name=DimensionalData.NoName(),
+    metadata=DimensionalData.NoMetadata(), exact = true)  =
+    ((length(r) == length(d)) && (length(v) == length(d))) ?
+    UnitfulDimMatrix(LinearAlgebra.Diagonal(ustrip.(v)),
+        r,
+        d,
+        dims=dims,
+        refdims=refdims,
+        name=name,
+        metadata=metadata,
+        exact=exact) :
+    error("unit range and domain do not define a square matrix")
 
 """
     function det
