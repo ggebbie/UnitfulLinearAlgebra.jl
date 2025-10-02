@@ -56,6 +56,4 @@ include("linear_algebra.jl")
 # Dimensioned SVD: an underappreciated concept
 include("dsvd.jl") 
 
-#latexify() = nothing
-
 end
