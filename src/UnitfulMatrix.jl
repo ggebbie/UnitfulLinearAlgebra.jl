@@ -127,9 +127,9 @@ end
 """
     function UnitfulMatrix(A::AbstractMatrix)
 
-    Constructor to make inexact UnitfulMatrix.
-    Satisfies algebraic interpretation of multipliable
-    matrices.
+Constructor to make inexact UnitfulMatrix.
+Satisfies algebraic interpretation of multipliable
+matrices.
 """
 function UnitfulMatrix(A::AbstractMatrix)
     numbers = ustrip.(A)

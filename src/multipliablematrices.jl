@@ -2,25 +2,25 @@
 """
     function similarity(a,b)::Bool
 
-    Dimensional similarity of vectors, a binary relation
-    Read "a has the same dimensional form as b"
-    `a` and `b` may still have different units.
-    A stronger condition than being parallel.
-    pp. 184, Hart
+Dimensional similarity of vectors, a binary relation
+Read "a has the same dimensional form as b"
+`a` and `b` may still have different units.
+A stronger condition than being parallel.
+pp. 184, Hart
 """
  similarity(a,b)::Bool = isequal(dimension.(a),dimension.(b))
 
 """
     function parallel
 
-    Vector a is dimensionally parallel to vector b if
-    they have the same length and a consistent dimensional
-    change relates corresponding components.
-    Guaranteed if two vectors are dimensionally similar.
-    True for scalars in all cases. 
+Vector a is dimensionally parallel to vector b if
+they have the same length and a consistent dimensional
+change relates corresponding components.
+Guaranteed if two vectors are dimensionally similar.
+True for scalars in all cases. 
 
-    pp. 188, Hart
-    Note: Hart uses ≈, but this conflicts with an existing Julia function.
+pp. 188, Hart
+Note: Hart uses ≈, but this conflicts with an existing Julia function.
 """
 function parallel(a,b) 
     if isequal(length(a),length(b))
@@ -61,10 +61,10 @@ Unitful.dimension(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = di
 """
     function uniform(a)
 
-    Is the dimension of this quantity uniform?
+Is the dimension of this quantity uniform?
 
-    There must be a way to inspect the Unitful type to answer this.
-    Uniform matrix: All entries have the same units
+There must be a way to inspect the Unitful type to answer this.
+Uniform matrix: All entries have the same units
 """
 uniform(a::T) where T <: Number = true # all scalars by default
 function uniform(a::Union{Vector,<:DimensionalData.Dimension}) 
