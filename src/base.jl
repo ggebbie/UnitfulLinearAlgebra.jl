@@ -2,24 +2,24 @@
 
 using LinearAlgebra: AdjointRotation
 using DimensionalData: AbstractMatrixDimStack
-function Base.show(io::IO, mime::MIME"text/plain", B::AbstractUnitfulDimVecOrMat) 
-    lines = 0
-    summary(io, B)
-    A = DimArray(B)
-    print_name(io, name(A))
-    lines += Dimensions.print_dims(io, mime, dims(A))
-    !(isempty(dims(A)) || isempty(refdims(A))) && println(io)
-    lines += Dimensions.print_refdims(io, mime, refdims(A))
-    println(io)
+# function Base.show(io::IO, mime::MIME"text/plain", B::AbstractUnitfulDimVecOrMat) 
+#     lines = 0
+#     summary(io, B)
+#     A = DimArray(B)
+#     print_name(io, name(A))
+#     lines += Dimensions.print_dims(io, mime, dims(A))
+#     !(isempty(dims(A)) || isempty(refdims(A))) && println(io)
+#     lines += Dimensions.print_refdims(io, mime, refdims(A))
+#     println(io)
 
-    # Printing the array data is optional, subtypes can 
-    # show other things here instead.
-    ds = displaysize(io)
-    ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
-    DimensionalData.show_after(ioctx, mime, A)
+#     # Printing the array data is optional, subtypes can 
+#     # show other things here instead.
+#     ds = displaysize(io)
+#     ioctx = IOContext(io, :displaysize => (ds[1] - lines, ds[2]))
+#     DimensionalData.show_after(ioctx, mime, A)
 
-    return nothing
-end
+#     return nothing
+# end
 
 function Base.show(io::IO, mime::MIME"text/plain", A::AbstractUnitfulVecOrMat)
     lines = 0
@@ -71,8 +71,10 @@ Base.:*(a::AbstractUnitfulVector,b::Quantity) = DimensionalData.rebuild(a,parent
 Base.:*(a::AbstractUnitfulVector,b::Unitful.Units) = DimensionalData.rebuild(a,parent(a),(Units(unitrange(a).*b),))
 Base.:*(b::Union{Quantity,Unitful.Units},a::AbstractUnitfulVector) = a*b
 # Need to test next line
-Base.:*(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Number) = DimensionalData.rebuild(a,parent(a)*b)
-Base.:*(b::Number,a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = a*b
+Base.:*(a::AbstractUnitfulVector,b::Number) = DimensionalData.rebuild(a,parent(a)*b)
+# Base.:*(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Number) = DimensionalData.rebuild(a,parent(a)*b)
+# Base.:*(b::Number,a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = a*b
+Base.:*(b::Number,a::AbstractUnitfulVector) = a*b
 
 # (matrix/vector)-(matrix/vector) multiplication when inexact handled here
 function Base.:*(A::AbstractUnitfulVecOrMat,B::AbstractUnitfulVecOrMat)
@@ -162,30 +164,30 @@ function Base.:(\ )(A::AbstractUnitfulMatrix,B::AbstractUnitfulMatrix)
         error("UnitfulLinearAlgebra.matrix left divide): Dimensions of Unitful Matrices A and b not compatible")
     end
 end
-function Base.:(\ )(A::AbstractUnitfulDimMatrix,b::AbstractUnitfulDimVector)
-    if exact(A)
-        DimensionalData.comparedims(first(unitdims(A)), first(unitdims(b)); val=true)
-        DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
-        return rebuild(A,parent(A)\parent(b),(last(unitdims(A)),),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
-    elseif ~exact(A) && (unitrange(A) ∥ unitrange(b))
-        Anew = convert_unitrange(A,unitrange(b)) 
-        return rebuild(Anew,parent(Anew)\parent(b),(last(unitdims(Anew)),),(last(dims(Anew)),))
-    else
-        error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
-    end
-end
-function Base.:(\ )(A::AbstractUnitfulDimMatrix,B::AbstractUnitfulDimMatrix)
-    if exact(A)
-        DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
-        DimensionalData.comparedims(first(dims(A)), first(dims(B)); val=true)
-        return rebuild(A,parent(A)\parent(B),(last(unitdims(A)),last(unitdims(B))),(last(dims(A)),last(dims(B)))) #,exact = (exact(A) && exact(B)))
-    elseif ~exact(A) && (unitrange(A) ∥ unitrange(B))
-        Anew = convert_unitrange(A,unitrange(B)) 
-        return rebuild(Anew,parent(Anew)\parent(B),(last(unitdims(Anew)),last(unitdims(B))),(last(dims(Anew)),last(dims(B))))
-    else
-        error("UnitfulLinearAlgebra.(matrix left divide): Dimensions of Unitful Matrices A and b not compatible")
-    end
-end
+# function Base.:(\ )(A::AbstractUnitfulDimMatrix,b::AbstractUnitfulDimVector)
+#     if exact(A)
+#         DimensionalData.comparedims(first(unitdims(A)), first(unitdims(b)); val=true)
+#         DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
+#         return rebuild(A,parent(A)\parent(b),(last(unitdims(A)),),(last(dims(A)),)) #,exact = (exact(A) && exact(B)))
+#     elseif ~exact(A) && (unitrange(A) ∥ unitrange(b))
+#         Anew = convert_unitrange(A,unitrange(b)) 
+#         return rebuild(Anew,parent(Anew)\parent(b),(last(unitdims(Anew)),),(last(dims(Anew)),))
+#     else
+#         error("UnitfulLinearAlgebra.mldivide: Dimensions of Unitful Matrices A and b not compatible")
+#     end
+# end
+# function Base.:(\ )(A::AbstractUnitfulDimMatrix,B::AbstractUnitfulDimMatrix)
+#     if exact(A)
+#         DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
+#         DimensionalData.comparedims(first(dims(A)), first(dims(B)); val=true)
+#         return rebuild(A,parent(A)\parent(B),(last(unitdims(A)),last(unitdims(B))),(last(dims(A)),last(dims(B)))) #,exact = (exact(A) && exact(B)))
+#     elseif ~exact(A) && (unitrange(A) ∥ unitrange(B))
+#         Anew = convert_unitrange(A,unitrange(B)) 
+#         return rebuild(Anew,parent(Anew)\parent(B),(last(unitdims(Anew)),last(unitdims(B))),(last(dims(Anew)),last(dims(B))))
+#     else
+#         error("UnitfulLinearAlgebra.(matrix left divide): Dimensions of Unitful Matrices A and b not compatible")
+#     end
+# end
 # do what the investigator means -- convert to UnitfulType -- probably a promotion mechanism to do the same thing
 Base.:(\ )(A::AbstractUnitfulType,b::Number) = A\UnitfulMatrix([b])
 Base.:(\ )(A::AbstractUnitfulMatrix,b::Vector) = vec(A\UnitfulMatrix(b)) # return something with same type as input `b`
@@ -235,14 +237,14 @@ Base.:~(a,b) = similarity(a,b)
 #Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(inv.(unitdomain(A))), Units(inv.(unitrange(A)))))
 Base.transpose(A::AbstractUnitfulMatrix) = rebuild(A,transpose(parent(A)),(Units(parent(inv.(unitdomain(A)))), Units(parent(inv.(unitrange(A))))))
 Base.transpose(a::AbstractUnitfulVector) = rebuild(a,transpose(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
-Base.transpose(A::AbstractUnitfulDimMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
-Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
+# Base.transpose(A::AbstractUnitfulDimMatrix) = rebuild(A,transpose(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
+# Base.transpose(a::AbstractUnitfulDimVector) = rebuild(a,transpose(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
 
 # adjoint follows transpose structure
 Base.adjoint(A::AbstractUnitfulMatrix) = rebuild(A,adjoint(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)))
 Base.adjoint(a::AbstractUnitfulVector) = rebuild(a,adjoint(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1))) # kludge for unitrange of row vector
-Base.adjoint(A::AbstractUnitfulDimMatrix) = rebuild(A,adjoint(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
-Base.adjoint(a::AbstractUnitfulDimVector) = rebuild(a,adjoint(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
+# Base.adjoint(A::AbstractUnitfulDimMatrix) = rebuild(A,adjoint(parent(A)),(Units(unitdomain(A).^-1), Units(unitrange(A).^-1)),(last(dims(A)),first(dims(A))))
+# Base.adjoint(a::AbstractUnitfulDimVector) = rebuild(a,adjoint(parent(a)),(Units([NoUnits]), Units(unitrange(a).^-1)),(:empty,first(dims(a))))
 
 # Currently untested
 Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
@@ -252,80 +254,80 @@ Base.similar(A::AbstractUnitfulVecOrMat{T}) where T <: Number =
 # NOTE: Base.getproperty is also expanded but stored next to relevant linear algebra functions.
 
 ## start of UnitfulDimMatrix methods
-Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,B)
+# # Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,B)
 
-function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector)
-    # compare unitdims
-    DimensionalData.comparedims(last(unitdims(A)), first(unitdims(B)); val=true)
+# function DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector)
+#     # compare unitdims
+#     DimensionalData.comparedims(last(unitdims(A)), first(unitdims(B)); val=true)
 
-    # compare regular (axis) dims
-    DimensionalData.comparedims(last(dims(A)), first(dims(B)); val=true)
+#     # compare regular (axis) dims
+#     DimensionalData.comparedims(last(dims(A)), first(dims(B)); val=true)
     
-    DimensionalData.rebuild(A, parent(A) * parent(B), (first(unitdims(A)),), (first(dims(A)),))
-end
-Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector) = DimensionalData._rebuildmul(A,B)
+#     DimensionalData.rebuild(A, parent(A) * parent(B), (first(unitdims(A)),), (first(dims(A)),))
+# end
+# Base.:*(A::AbstractUnitfulDimMatrix, B::AbstractUnitfulDimVector) = DimensionalData._rebuildmul(A,B)
 
-#copied from ULA.* 
-DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, b::Quantity) = rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
-Base.:*(A::AbstractUnitfulDimMatrix, b::Quantity) = DimensionalData._rebuildmul(A,b)
-Base.:*(b::Quantity, A::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,b)
-Base.:*(A::AbstractUnitfulDimMatrix, b::Number) = DimensionalData._rebuildmul(A,b)
-Base.:*(b::Number, A::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,b)
+# #copied from ULA.* 
+# DimensionalData._rebuildmul(A::AbstractUnitfulDimMatrix, b::Quantity) = rebuild(A,parent(A)*ustrip(b),(Units(unitrange(A).*unit(b)),unitdomain(A)))
+# Base.:*(A::AbstractUnitfulDimMatrix, b::Quantity) = DimensionalData._rebuildmul(A,b)
+# Base.:*(b::Quantity, A::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,b)
+# Base.:*(A::AbstractUnitfulDimMatrix, b::Number) = DimensionalData._rebuildmul(A,b)
+# Base.:*(b::Number, A::AbstractUnitfulDimMatrix) = DimensionalData._rebuildmul(A,b)
 
-#from ULA.+ 
-function Base.:+(A::AbstractUnitfulDimVecOrMat,B::AbstractUnitfulDimVecOrMat) 
+# #from ULA.+ 
+# function Base.:+(A::AbstractUnitfulDimVecOrMat,B::AbstractUnitfulDimVecOrMat) 
     
-    # compare unitdims
-    DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
+#     # compare unitdims
+#     DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
 
-    # compare regular (axis) dims
-    DimensionalData.comparedims(last(dims(A)), last(dims(B)); val=true)
+#     # compare regular (axis) dims
+#     DimensionalData.comparedims(last(dims(A)), last(dims(B)); val=true)
     
-    bothexact = exact(A) && exact(B)
-    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
-        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
-        return rebuild(A,parent(A)+parent(B),(unitrange(A),unitdomain(A))) 
-    else
-        error("matrices not dimensionally conformable for addition")
-    end
-end
+#     bothexact = exact(A) && exact(B)
+#     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
+#         ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
+#         return rebuild(A,parent(A)+parent(B),(unitrange(A),unitdomain(A))) 
+#     else
+#         error("matrices not dimensionally conformable for addition")
+#     end
+# end
 
-function Base.:-(A::AbstractUnitfulDimVecOrMat,B::AbstractUnitfulDimVecOrMat)
+# function Base.:-(A::AbstractUnitfulDimVecOrMat,B::AbstractUnitfulDimVecOrMat)
     
-    # compare unitdims
-    DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
+#     # compare unitdims
+#     DimensionalData.comparedims(first(unitdims(A)), first(unitdims(B)); val=true)
 
-    # compare regular (axis) dims
-    DimensionalData.comparedims(last(dims(A)), last(dims(B)); val=true)
+#     # compare regular (axis) dims
+#     DimensionalData.comparedims(last(dims(A)), last(dims(B)); val=true)
     
-    bothexact = exact(A) && exact(B)
-    if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
-        ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
-        return rebuild(A,parent(A)-parent(B),(unitrange(A),unitdomain(A))) 
-    else
-        error("matrices not dimensionally conformable for subtraction")
-    end
-end
+#     bothexact = exact(A) && exact(B)
+#     if (unitrange(A) == unitrange(B) && unitdomain(A) == unitdomain(B)) ||
+#         ( unitrange(A) ∥ unitrange(B) && unitdomain(A) ∥ unitdomain(B) && ~bothexact)
+#         return rebuild(A,parent(A)-parent(B),(unitrange(A),unitdomain(A))) 
+#     else
+#         error("matrices not dimensionally conformable for subtraction")
+#     end
+# end
 
-#this is probably bad - automatically broadcasts because I don't know how to override
-#the dot syntax
-function Base.:+(A::AbstractUnitfulDimVecOrMat,b::Quantity) 
-    if unitrange(A)[1] == unit(b)
-        println("broadcasting!")
-        return rebuild(A, parent(A) .+ ustrip(b), (unitrange(A), unitdomain(A)))
-    else
-        error("matrix and scalar are not dimensionally conformable for subtraction")
-    end
-end
+# #this is probably bad - automatically broadcasts because I don't know how to override
+# #the dot syntax
+# function Base.:+(A::AbstractUnitfulDimVecOrMat,b::Quantity) 
+#     if unitrange(A)[1] == unit(b)
+#         println("broadcasting!")
+#         return rebuild(A, parent(A) .+ ustrip(b), (unitrange(A), unitdomain(A)))
+#     else
+#         error("matrix and scalar are not dimensionally conformable for subtraction")
+#     end
+# end
 
-function Base.:-(A::AbstractUnitfulDimVecOrMat,b::Quantity) 
-    if unitrange(A)[1] == unit(b)
-        println("broadcasting!")
-        return rebuild(A, parent(A) .- ustrip(b), (unitrange(A), unitdomain(A)))
-    else
-        error("matrix and scalar are not dimensionally conformable for subtraction")
-    end
-end
+# function Base.:-(A::AbstractUnitfulDimVecOrMat,b::Quantity) 
+#     if unitrange(A)[1] == unit(b)
+#         println("broadcasting!")
+#         return rebuild(A, parent(A) .- ustrip(b), (unitrange(A), unitdomain(A)))
+#     else
+#         error("matrix and scalar are not dimensionally conformable for subtraction")
+#     end
+# end
 
 Base.sum(A::AbstractUnitfulType) = Base.sum(Matrix(A))
 

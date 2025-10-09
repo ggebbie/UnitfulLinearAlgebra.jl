@@ -9,7 +9,7 @@
     Hart, pp. 205. 
 """
 LinearAlgebra.inv(A::AbstractUnitfulMatrix) = rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A)))
-LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
+# LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
 
 """
     function det
@@ -112,15 +112,15 @@ function LinearAlgebra.cholesky(A::AbstractUnitfulMatrix)
         error("requires unit symmetric matrix")
     end
 end
-function LinearAlgebra.cholesky(A::AbstractUnitfulDimMatrix)
-    if unit_symmetric(A)
-        C = LinearAlgebra.cholesky(parent(A))
-        factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)),(:Normalspace,last(dims(A))))
-        return Cholesky(factors,C.uplo,C.info)
-    else
-        error("requires unit symmetric matrix")
-    end
-end
+# function LinearAlgebra.cholesky(A::AbstractUnitfulDimMatrix)
+#     if unit_symmetric(A)
+#         C = LinearAlgebra.cholesky(parent(A))
+#         factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)),(:Normalspace,last(dims(A))))
+#         return Cholesky(factors,C.uplo,C.info)
+#     else
+#         error("requires unit symmetric matrix")
+#     end
+# end
 
 # Move to base.jl? 
 function Base.getproperty(C::Cholesky{T,<:AbstractUnitfulMatrix}, d::Symbol) where T 
@@ -208,12 +208,13 @@ LinearAlgebra.diagm(v::AbstractVector,r::Units,d::Units; exact = false) = Unitfu
 
     Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
  """
-function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDimMatrix{T}}) where T <: Number
+function LinearAlgebra.diag(A::AbstractUnitfulMatrix{T}) where T <: Number
+# function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDimMatrix{T}}) where T <: Number
     m,n = size(A)
     ndiag = max(m,n)
     # bugfix: unitless -> dimensionless, is ternary operator needed any more?
     # error because other operations always want a UnitfulMatrix output
-    #dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
+    # dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
     unitless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
     for nd in 1:ndiag
         vdiag[nd] = getindexqty(A,nd,nd)
@@ -261,21 +262,22 @@ LinearAlgebra.Diagonal(v::AbstractVector,
 
     Unitful matrix determinant.
 """
-function LinearAlgebra.det(A::AbstractUnitfulDimMatrix)
-    if square(A)
-        detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
-        return Quantity(det(parent(A)),detunit)
-    else
-        error("Determinant requires square matrix")
-    end
-end
+# function LinearAlgebra.det(A::AbstractUnitfulDimMatrix)
+#     if square(A)
+#         detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
+#         return Quantity(det(parent(A)),detunit)
+#     else
+#         error("Determinant requires square matrix")
+#     end
+# end
 
 """
     function dot
 
     Unitful vector (inner) dot product.
 """
-function LinearAlgebra.dot(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector})
+# function LinearAlgebra.dot(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector})
+function LinearAlgebra.dot(a::AbstractUnitfulVector,b::AbstractUnitfulVector)
     if dottable(a,b)
         dotunit = unitrange(a)[1]*unitrange(b)[1] 
         return Quantity(parent(a) ⋅ parent(b),dotunit)

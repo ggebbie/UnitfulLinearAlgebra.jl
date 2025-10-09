@@ -56,7 +56,8 @@ function allequal(itr)
 end
 
 # not consistent in that it should be an element-wise function
-Unitful.dimension(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = dimension.(unitrange(a)) 
+#Unitful.dimension(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = dimension.(unitrange(a))
+Unitful.dimension(a::AbstractUnitfulVector) = dimension.(unitrange(a)) 
 
 """
     function uniform(a)
@@ -112,7 +113,8 @@ end
      Not all dimensionless matrices have
      dimensionless domain and range.
 """
-dimensionless(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(A) && dimension(getindexqty(A,1,1)) == NoDims
+# dimensionless(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(A) && dimension(getindexqty(A,1,1)) == NoDims # 
+dimensionless(A::AbstractUnitfulMatrix) = uniform(A) && dimension(getindexqty(A,1,1)) == NoDims # 
 dimensionless(A::AbstractMatrix) = uniform(A) && dimension(A[1,1]) == NoDims
 dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
 
@@ -121,7 +123,8 @@ dimensionless(A::T) where T <: Number = (dimension(A) == NoDims)
 
     Some quantities are dimensionless but still have units.
 """
-unitless(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(A) && unit(getindexqty(A,1,1)) == NoUnits
+# unitless(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = uniform(A) && unit(getindexqty(A,1,1)) == NoUnits
+unitless(A::AbstractUnitfulMatrix) = uniform(A) && unit(getindexqty(A,1,1)) == NoUnits
 unitless(A::AbstractMatrix) = uniform(A) && unit(A[1,1]) == NoUnits
 unitless(A::T) where T <: Number = (unit(A) == NoUnits)
 
@@ -162,22 +165,23 @@ end
 """
     function invdimension
 
-    Dimensional inverse
+Dimensional inverse
       
-    pp. 64, Hart, `a~` in his notation
+pp. 64, Hart, `a~` in his notation
 """
 #invdimension(a) = dimension.(1 ./ a)
 invdimension(a) = dimension.(a).^-1
-invdimension(a:: Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = dimension(a).^-1
+invdimension(a:: Union{AbstractUnitfulVector}) = dimension(a).^-1
+# invdimension(a:: Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = dimension(a).^-1
 
 """
     function dottable(a,b)
 
-    Are two quantities dimensionally compatible
-    to take a dot product?
+Are two quantities dimensionally compatible to take a dot product?
 """
 dottable(a,b) = parallel(a, 1 ./ b)
-function dottable(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
+# function dottable(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector})
+function dottable(a::Union{AbstractUnitfulVector},b::Union{AbstractUnitfulVector}) 
 
     if isequal(length(a),length(b))
         if length(a) == 1
@@ -216,15 +220,15 @@ function convert_unitdomain(A::AbstractUnitfulMatrix, newdomain::Units)
     end
 end
 
-function convert_unitdomain(A::AbstractUnitfulDimMatrix, newdomain::Units) 
-    if unitdomain(A) ∥ newdomain
-        newrange = Units(unitrange(A).*(newdomain[1]/unitdomain(A)[1]))
-        # change exact to true
-        return rebuild(A, parent(A), (newrange, newdomain), dims(A), refdims(A), name(A), metadata(A), true)
-    else
-        error("New unit domain not parallel to unit domain of UnitfulDimMatrix")
-    end
-end
+# function convert_unitdomain(A::AbstractUnitfulDimMatrix, newdomain::Units) 
+#     if unitdomain(A) ∥ newdomain
+#         newrange = Units(unitrange(A).*(newdomain[1]/unitdomain(A)[1]))
+#         # change exact to true
+#         return rebuild(A, parent(A), (newrange, newdomain), dims(A), refdims(A), name(A), metadata(A), true)
+#     else
+#         error("New unit domain not parallel to unit domain of UnitfulDimMatrix")
+#     end
+# end
 
 """
     function convert_unitrange(A, newrange)
@@ -266,16 +270,19 @@ function unitdims(A::AbstractUnitfulVecOrMat) = dims(A)
     for UnitfulMatrix, unit information overrides the `dims` function.
 """
 unitdims(A::AbstractUnitfulVecOrMat) = dims(A)
-unitdims(A::AbstractUnitfulDimVecOrMat) = A.unitdims
+# unitdims(A::AbstractUnitfulDimVecOrMat) = A.unitdims
 
 """
     function unitdomain(A)
 
     Find the dimensional (unit) domain of a matrix
 """
-unitdomain(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = last(unitdims(A))
+unitdomain(A::AbstractUnitfulMatrix) = last(unitdims(A))
+# unitdomain(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = last(unitdims(A))
+
 # this line may affect matrix multiplication
-unitdomain(A::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = Units([NoUnits]) # kludge for a nondimensional scalar 
+unitdomain(A::AbstractUnitfulVector) = Units([NoUnits]) # kludge for a nondimensional scalar 
+# unitdomain(A::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) = Units([NoUnits]) # kludge for a nondimensional scalar 
 
 """
     function unitrange(A)
@@ -358,8 +365,11 @@ endomorphic(A::Number) = dimensionless(A) # scalars must be dimensionless to be 
     Get entry value of matrix including units.
     Note: Calling B::UnitfulMatrix[i,j] doesn't currently return the units.
 """
-getindexqty(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix},i::Int,j::Int) = Quantity.(parent(A)[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
-getindexqty(A::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},i::Int) = Quantity.(parent(A)[i],unitrange(A)[i]) 
+getindexqty(A::AbstractUnitfulMatrix,i::Int,j::Int) = Quantity.(parent(A)[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+getindexqty(A::AbstractUnitfulVector,i::Int) = Quantity.(parent(A)[i],unitrange(A)[i]) 
+
+# getindexqty(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix},i::Int,j::Int) = Quantity.(parent(A)[i,j],unitrange(A)[i]./unitdomain(A)[j]) 
+# getindexqty(A::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},i::Int) = Quantity.(parent(A)[i],unitrange(A)[i]) 
 
 """
     function setindex!(A::AbstractUnitfulMatrix,v,i,j)
@@ -388,7 +398,8 @@ end
     Useful for tests, display
     pp. 193, Hart
 """
-function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
+function Matrix(A::AbstractUnitfulMatrix) 
+# function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
     M,N = size(A)
     if uniform(A)
         T2 = typeof(getindexqty(A,1,1))
@@ -405,7 +416,8 @@ function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix})
     end
     return B
 end
-function Matrix(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
+function Matrix(a::AbstractUnitfulVector) 
+# function Matrix(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
     M, = size(a)
     if uniform(a)
         T2 = typeof(getindexqty(a,1))
@@ -425,7 +437,8 @@ end
 
     Is a square matrix singular? If no, then it is invertible.
 """
-singular(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = iszero(ustrip(det(A)))
+# singular(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) = iszero(ustrip(det(A)))
+singular(A::AbstractUnitfulMatrix) = iszero(ustrip(det(A)))
 
 """
     function trace(A)

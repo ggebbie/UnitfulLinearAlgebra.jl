@@ -26,8 +26,8 @@ include("test_functions.jl")
         include("test_UnitfulMatrix.jl")
     end
 
-    @testset "UnitfulDimMatrix" begin
-        include("test_UnitfulDimMatrix.jl")
-    end
+    # @testset "UnitfulDimMatrix" begin
+    #     include("test_UnitfulDimMatrix.jl")
+    # end
     
 end
