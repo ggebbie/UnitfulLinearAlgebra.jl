@@ -1,6 +1,5 @@
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
 
-using Revise
 using UnitfulLinearAlgebra
 using Unitful
 using LinearAlgebra
