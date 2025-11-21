@@ -22,6 +22,7 @@ end
     # simply testing that it runs
     U,σ,V = dsvd(A,Pr,Pd)
     F = dsvd(A,Pr,Pd) 
+
 end
 
 @testset "static arrays" begin
@@ -34,6 +35,7 @@ end
     x = [1,2,3]
     y = A * x
     @test isequal(UnitfulMatrix(A) \ y,x)
+        
 end
 
 @testset "adjoint" begin
@@ -340,8 +342,8 @@ end
     y = E*x
     y2 = E2*UnitfulMatrix(x)
     x̃ = E2\y2 
-    # x̃2 = inv(F2)*y # find particular solution # fails Julia 1.12, Issue 115
-    #@test within(x̃2,x,1e-10) # Issue 115
+    x̃2 = pinv(F2)*y # find particular solution # fails Julia 1.12, Issue 115
+    @test within(x̃2,x,1e-10) # Issue 115
 
     #             K = length(λ) # rank
     # 	    y = 5randn(3)u"s"
