@@ -22,7 +22,6 @@ end
     # simply testing that it runs
     U,σ,V = dsvd(A,Pr,Pd)
     F = dsvd(A,Pr,Pd) 
-
 end
 
 @testset "static arrays" begin
@@ -35,7 +34,6 @@ end
     x = [1,2,3]
     y = A * x
     @test isequal(UnitfulMatrix(A) \ y,x)
-        
 end
 
 @testset "adjoint" begin

@@ -9,7 +9,7 @@
     Hart, pp. 205. 
 """
 LinearAlgebra.inv(A::AbstractUnitfulMatrix) = rebuild(A,inv(parent(A)),(unitdomain(A),unitrange(A)))
-LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
+# LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
 
 """
     function det
@@ -110,34 +110,15 @@ function LinearAlgebra.cholesky(A::AbstractUnitfulMatrix)
         error("requires unit symmetric matrix")
     end
 end
-function LinearAlgebra.cholesky(A::AbstractUnitfulDimMatrix)
-    if unit_symmetric(A)
-        C = LinearAlgebra.cholesky(parent(A))
-        factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)),(:Normalspace,last(dims(A))))
-        return Cholesky(factors,C.uplo,C.info)
-    else
-        error("requires unit symmetric matrix")
-    end
-end
-
-# Move to base.jl? 
-function Base.getproperty(C::Cholesky{T,<:AbstractUnitfulMatrix}, d::Symbol) where T 
-    Cfactors = getfield(C, :factors)
-    Cuplo    = getfield(C, :uplo)
-    if d === :U
-        numbers = UpperTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? parent(Cfactors) : copy(transpose(parent(Cfactors))))
-        return rebuild(Cfactors,numbers,(unitrange(Cfactors),unitdomain(Cfactors)))
-    elseif d === :L
-        numbers = LowerTriangular(Cuplo === LinearAlgebra.char_uplo(d) ? parent(Cfactors) : copy(transpose(parent(Cfactors))))
-        # use transpose to get units right
-        return rebuild(Cfactors,numbers,(Units(unitdomain(Cfactors).^-1),Units(unitrange(Cfactors).^-1)))
-    elseif d === :UL
-        (Cuplo === 'U') ? (return rebuild(Cfactors,UpperTriangular(parent(Cfactors)))) : (return rebuild(Cfactors,LowerTriangular(parent(Cfactors)),(unitdomain(Cfactors).^-1,unitrange(Cfactors).^-1)))
-    else
-        #println("caution: fallback not tested")
-        return getfield(C, d)
-    end
-end
+# function LinearAlgebra.cholesky(A::AbstractUnitfulDimMatrix)
+#     if unit_symmetric(A)
+#         C = LinearAlgebra.cholesky(parent(A))
+#         factors = rebuild(A,C.factors,(Units(unitdomain(A)./unitdomain(A)),unitdomain(A)),(:Normalspace,last(dims(A))))
+#         return Cholesky(factors,C.uplo,C.info)
+#     else
+#         error("requires unit symmetric matrix")
+#     end
+# end
 
 """
     function lu(A::AbstractUnitfulVecOrMat{T})
@@ -152,42 +133,7 @@ end
 function LinearAlgebra.lu(A::AbstractUnitfulVecOrMat)
     F̂ = lu(parent(A))
     factors = rebuild(A,parent(F̂.factors),(unitrange(A),unitdomain(A)))
-    #factors = MMatrix(F̂.factors, unitrange(A), unitdomain(A), exact=exact(A))
-    F = LU(factors,F̂.ipiv,F̂.info)
-    return F
-end
-
-"""
-    function getproperty(F::LU{T,<:AbstractMultipliableMatrix,Vector{Int64}}, d::Symbol) where T
-
-    Extend LinearAlgebra.getproperty for AbstractUnitfulVecOrMat.
-
-    LU factorization stores L and U together.
-    Extract L and U while keeping consistent
-    with dimensional domain and range.
-"""
-function Base.getproperty(F::LU{T,<:AbstractUnitfulVecOrMat,Vector{Int64}}, d::Symbol) where T
-    m, n = size(F)
-    if d === :L
-        mmatrix = getfield(F, :factors)
-        numbers = parent(mmatrix)
-        #numbers = getfield(mmatrix,:numbers)
-        # add ustrip to get numerical values
-        Lnum = tril!(numbers[1:m, 1:min(m,n)])
-        for i = 1:min(m,n); Lnum[i,i] = one(T); end
-        return rebuild(mmatrix,Lnum,(unitrange(mmatrix),unitrange(mmatrix)))
-    elseif d === :U
-        mmatrix = getfield(F, :factors)
-        numbers = parent(mmatrix)
-        Unum = triu!(numbers[1:min(m,n), 1:n])
-        return rebuild(mmatrix,Unum,(unitrange(mmatrix),unitdomain(mmatrix)))
-    elseif d === :p
-        return LinearAlgebra.ipiv2perm(getfield(F, :ipiv), m)
-    elseif d === :P
-        return Matrix{T}(I, m, m)[:,LinearAlgebra.invperm(F.p)]
-    else
-        getfield(F, d)
-    end
+    return LU(factors,F̂.ipiv,F̂.info) 
 end
 
 """
@@ -206,12 +152,13 @@ LinearAlgebra.diagm(v::AbstractVector,r::Units,d::Units; exact = false) = Unitfu
 
     Usual `LinearAlgebra.diag` function is not working due to different type elements on diagonal
  """
-function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDimMatrix{T}}) where T <: Number
+function LinearAlgebra.diag(A::AbstractUnitfulMatrix{T}) where T <: Number
+# function LinearAlgebra.diag(A::Union{AbstractUnitfulMatrix{T},AbstractUnitfulDimMatrix{T}}) where T <: Number
     m,n = size(A)
     ndiag = max(m,n)
     # bugfix: unitless -> dimensionless, is ternary operator needed any more?
     # error because other operations always want a UnitfulMatrix output
-    #dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
+    # dimensionless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
     unitless(A) ? vdiag = Vector{T}(undef,ndiag) : vdiag = Vector{Quantity}(undef,ndiag)
     for nd in 1:ndiag
         vdiag[nd] = getindexqty(A,nd,nd)
@@ -259,21 +206,22 @@ LinearAlgebra.Diagonal(v::AbstractVector,
 
     Unitful matrix determinant.
 """
-function LinearAlgebra.det(A::AbstractUnitfulDimMatrix)
-    if square(A)
-        detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
-        return Quantity(det(parent(A)),detunit)
-    else
-        error("Determinant requires square matrix")
-    end
-end
+# function LinearAlgebra.det(A::AbstractUnitfulDimMatrix)
+#     if square(A)
+#         detunit = prod([unitrange(A)[i]/unitdomain(A)[i] for i = 1:size(A)[1]])
+#         return Quantity(det(parent(A)),detunit)
+#     else
+#         error("Determinant requires square matrix")
+#     end
+# end
 
 """
     function dot
 
     Unitful vector (inner) dot product.
 """
-function LinearAlgebra.dot(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector})
+# function LinearAlgebra.dot(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector},b::Union{AbstractUnitfulVector,AbstractUnitfulDimVector})
+function LinearAlgebra.dot(a::AbstractUnitfulVector,b::AbstractUnitfulVector)
     if dottable(a,b)
         dotunit = unitrange(a)[1]*unitrange(b)[1] 
         return Quantity(parent(a) ⋅ parent(b),dotunit)

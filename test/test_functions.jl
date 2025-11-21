@@ -60,27 +60,27 @@ function random_UnitfulMatrix_vector_pairs(i)
     return A,B,r,q
 end
 
-function random_UnitfulDimMatrix_vector_pairs(i)
-    # A - B matrix pairs
-    # r - q vector pairs
-    if i == 1
-        p = [1.0m, 9.0s]
-        #q̃ = [-1.0K, 2.0]
-        q̃ = [-1.0K, 2.0m]
-    elseif i == 2
-        p = [1.0m, 3.0s, 5.0u"m/s"]
-        q̃ = [-1.0K]
-    elseif i == 3
-        p = [1.0m, 3.0s]
-        q̃ = [-1.0, 2.0]
-    end
-    q = ustrip.(q̃).*unit.(1 ./q̃)
-    A = p*q̃'
+# function random_UnitfulDimMatrix_vector_pairs(i)
+#     # A - B matrix pairs
+#     # r - q vector pairs
+#     if i == 1
+#         p = [1.0m, 9.0s]
+#         #q̃ = [-1.0K, 2.0]
+#         q̃ = [-1.0K, 2.0m]
+#     elseif i == 2
+#         p = [1.0m, 3.0s, 5.0u"m/s"]
+#         q̃ = [-1.0K]
+#     elseif i == 3
+#         p = [1.0m, 3.0s]
+#         q̃ = [-1.0, 2.0]
+#     end
+#     q = ustrip.(q̃).*unit.(1 ./q̃)
+#     A = p*q̃'
 
-    B = UnitfulDimMatrix(ustrip.(A),unit.(p),unit.(q),dims=(:sealevel,:coefficients))
-    r = UnitfulDimMatrix(ustrip.(q),unit.(q),dims=(:coefficients),exact=false)
-    return A,B,r,q
-end
+#     B = UnitfulDimMatrix(ustrip.(A),unit.(p),unit.(q),dims=(:sealevel,:coefficients))
+#     r = UnitfulDimMatrix(ustrip.(q),unit.(q),dims=(:coefficients),exact=false)
+#     return A,B,r,q
+# end
 
 # function test_cat()
 # vcat and hcat fail, both sides of equation fail
@@ -119,35 +119,35 @@ function test_interface(x::AbstractUnitfulVecOrMat)
     end
 end
 
-function test_interface(x::AbstractUnitfulDimVecOrMat)
-    @testset "types" begin
-        @test parent(x) isa AbstractArray # Is this absolutely necessary?
-        @test unitdims(x) isa DimensionalData.DimTuple
-        @test dims(x) isa DimensionalData.DimTuple
-        @test refdims(x) isa Tuple
-    end
+# function test_interface(x::AbstractUnitfulDimVecOrMat)
+#     @testset "types" begin
+#         @test parent(x) isa AbstractArray # Is this absolutely necessary?
+#         @test unitdims(x) isa DimensionalData.DimTuple
+#         @test dims(x) isa DimensionalData.DimTuple
+#         @test refdims(x) isa Tuple
+#     end
 
-    @testset "size" begin
-        @test length(unitdims(x)) == ndims(x)
-        @test length(dims(x)) == ndims(x)
-        @test map(length, dims(x)) === size(x) == size(parent(x))
-        @test map(length, unitdims(x)) === size(x) == size(parent(x))
-    end
+#     @testset "size" begin
+#         @test length(unitdims(x)) == ndims(x)
+#         @test length(dims(x)) == ndims(x)
+#         @test map(length, dims(x)) === size(x) == size(parent(x))
+#         @test map(length, unitdims(x)) === size(x) == size(parent(x))
+#     end
 
-    @testset "rebuild" begin
-        # argument version
-        x1 = rebuild(x, parent(x), unitdims(x)) #, exact=exact(x))
-        # keyword version, will work magically using ConstructionBase.jl if you use the same fieldnames.
-        # If not, define it and remap these names to your fields.
-        x2 = rebuild(x; data=parent(x), unitdims= unitdims(x), dims=dims(x))
-        # all should be identical. If any fields are not used, they will always be `nothing` or `()` for `refdims`
-        @test parent(x) === parent(x1) === parent(x2)
-        @test dims(x) === dims(x1) === dims(x2)
-        @test unitdims(x) === unitdims(x1) === unitdims(x2)
-        @test refdims(x) === refdims(x1) === refdims(x2)
-        @test metadata(x) === metadata(x1) === metadata(x2)
-    end
-end
+#     @testset "rebuild" begin
+#         # argument version
+#         x1 = rebuild(x, parent(x), unitdims(x)) #, exact=exact(x))
+#         # keyword version, will work magically using ConstructionBase.jl if you use the same fieldnames.
+#         # If not, define it and remap these names to your fields.
+#         x2 = rebuild(x; data=parent(x), unitdims= unitdims(x), dims=dims(x))
+#         # all should be identical. If any fields are not used, they will always be `nothing` or `()` for `refdims`
+#         @test parent(x) === parent(x1) === parent(x2)
+#         @test dims(x) === dims(x1) === dims(x2)
+#         @test unitdims(x) === unitdims(x1) === unitdims(x2)
+#         @test refdims(x) === refdims(x1) === refdims(x2)
+#         @test metadata(x) === metadata(x1) === metadata(x2)
+#     end
+# end
 
 function Unitful_dimensionless_pair(i)
     # Not all dimensionless matrices have
@@ -164,21 +164,21 @@ function Unitful_dimensionless_pair(i)
     B = UnitfulMatrix(ustrip.(A),unit.(p),unit.(q))
     return A,B
 end
-function UnitfulDim_dimensionless_pair(i)
-    # Not all dimensionless matrices have
-    # dimensionless domain and range
-    if i == 1
-        p = [1.0m², 3.0m²]
-    elseif i ==2
-        p = [1.0m², 3.0u"m^3"]
-    end
-    q̃ = [-1.0u"m^-2", 2.0u"m^-2"]
-    q = ustrip.(q̃).*unit.(1 ./q̃)
-    # outer product to make a multipliable matrix
-    A = p*q̃'
-    B = UnitfulDimMatrix(ustrip.(A),unit.(p),unit.(q),dims=(:one,:two))
-    return A,B
-end
+# function UnitfulDim_dimensionless_pair(i)
+#     # Not all dimensionless matrices have
+#     # dimensionless domain and range
+#     if i == 1
+#         p = [1.0m², 3.0m²]
+#     elseif i ==2
+#         p = [1.0m², 3.0u"m^3"]
+#     end
+#     q̃ = [-1.0u"m^-2", 2.0u"m^-2"]
+#     q = ustrip.(q̃).*unit.(1 ./q̃)
+#     # outer product to make a multipliable matrix
+#     A = p*q̃'
+#     B = UnitfulDimMatrix(ustrip.(A),unit.(p),unit.(q),dims=(:one,:two))
+#     return A,B
+# end
 
 function test_dimensionless(i,A,B)
     if i == 1
@@ -212,16 +212,16 @@ function vandermonde_UnitfulMatrix_vector_pair(uy,ux)
     x = UnitfulMatrix(randn(k,1),[u1,u2,u3],[NoUnits])
     return E,x
 end
-function vandermonde_UnitfulDimMatrix_vector_pair(uy,ux)
-    u1 = uy
-    u2 = uy/ux
-    u3 = uy/ux/ux
-    k = 3
-    Eparent = hcat(randn(k),randn(k),randn(k))
-    E = UnitfulDimMatrix(Eparent,fill(m,k),[u1,u2,u3],dims=(:sealevel,:coefficients))
-    x = UnitfulDimMatrix(randn(k,1),[u1,u2,u3],[NoUnits],dims=(:coefficients,:nothing))
-    return E,x
-end
+# function vandermonde_UnitfulDimMatrix_vector_pair(uy,ux)
+#     u1 = uy
+#     u2 = uy/ux
+#     u3 = uy/ux/ux
+#     k = 3
+#     Eparent = hcat(randn(k),randn(k),randn(k))
+#     E = UnitfulDimMatrix(Eparent,fill(m,k),[u1,u2,u3],dims=(:sealevel,:coefficients))
+#     x = UnitfulDimMatrix(randn(k,1),[u1,u2,u3],[NoUnits],dims=(:coefficients,:nothing))
+#     return E,x
+# end
 
 function solve_polynomial(y,E,x)
     # E should be exact

@@ -5,8 +5,8 @@ using LinearAlgebra
 using DimensionalData
 using Statistics
 
-export UnitfulMatrix, UnitfulDimMatrix
-export AbstractUnitfulVecOrMat, AbstractUnitfulDimVecOrMat
+export UnitfulMatrix#, UnitfulDimMatrix
+export AbstractUnitfulVecOrMat# , AbstractUnitfulDimVecOrMat
 export DSVD
 export similarity, ∥, parallel
 export uniform, left_uniform, right_uniform
@@ -37,7 +37,7 @@ abstract type AbstractUnitfulType{T,N,D,A} <: AbstractDimArray{T,N,D,A} end
 include("UnitfulMatrix.jl")
 
 # constructor for expanded struct based on DimensionalData.DimArray
-include("UnitfulDimMatrix.jl")
+# include("UnitfulDimMatrix.jl")
 
 # new methods
 include("multipliablematrices.jl")
