@@ -12,6 +12,31 @@ LinearAlgebra.inv(A::AbstractUnitfulMatrix) = rebuild(A,inv(parent(A)),(unitdoma
 # LinearAlgebra.inv(A::AbstractUnitfulDimMatrix) = rebuild(A,inv(parent(A)), (unitdomain(A),unitrange(A)), (last(dims(A)),first(dims(A)) ))
 
 """
+    pinv(A::AbstractUnitfulMatrix; kwargs...)
+
+    Moore-Penrose pseudoinverse of a Unitful Matrix.
+    Only defined for left uniform matrices, i.e., dimensions that can be factored as 𝟏bᵀ.
+    Pseudoinverse reverses mapping from unitdomain to range, analogous to inverse.
+
+    # Example
+    ```julia
+    using UnitfulLinearAlgebra, Unitful
+    # Left left uniform matrix: each column has fixed units [1], [m], and [m/s], respectively.
+    A = UnitfulMatrix([rand(4) rand(4).*m rand(4).*m/s])
+    parent(A * pinv(A)) ≈ I  # `pinv(A)` is right uniform
+    ```
+
+    Hart, pp. 108.
+"""
+function LinearAlgebra.pinv(A::AbstractUnitfulMatrix; kwargs...)
+    if left_uniform(A)
+        return rebuild(A, pinv(parent(A); kwargs...), (unitdomain(A), unitrange(A)))
+    else
+        error("Pseudoinverse requires left uniform matrix (Hart, pp. 108)")
+    end
+end
+
+"""
     function det
 
     Unitful matrix determinant.
