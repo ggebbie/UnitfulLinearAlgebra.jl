@@ -382,13 +382,13 @@ function setindex!(A::AbstractUnitfulMatrix,v::Quantity,i::Int,j::Int)
 end
 
 """
-    function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
+    function Base.Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
 
     Expand A into array form
     Useful for tests, display
     pp. 193, Hart
 """
-function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
+function Base.Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
     M,N = size(A)
     if uniform(A)
         T2 = typeof(getindexqty(A,1,1))
@@ -405,7 +405,7 @@ function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix})
     end
     return B
 end
-function Matrix(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
+function Base.Matrix(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
     M, = size(a)
     if uniform(a)
         T2 = typeof(getindexqty(a,1))
