@@ -392,47 +392,6 @@ function setindex!(A::AbstractUnitfulMatrix,v::Quantity,i::Int,j::Int)
 end
 
 """
-    function Base.Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
-
-    Expand A into array form
-    Useful for tests, display
-    pp. 193, Hart
-"""
-function Matrix(A::AbstractUnitfulMatrix) 
-# function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
-    M,N = size(A)
-    if uniform(A)
-        T2 = typeof(getindexqty(A,1,1))
-        B = Matrix{T2}(undef,M,N)
-    else
-        T2 = eltype(parent(A))
-        B = Matrix{Quantity{T2}}(undef,M,N)
-    end
-    for m = 1:M
-        for n = 1:N
-            # for uniform case, this is overkill, it is already known that the unit is the same for all entries.
-            B[m,n] = Quantity.(getindex(A,m,n),unitrange(A)[m]./unitdomain(A)[n])
-        end
-    end
-    return B
-end
-
-function Base.Matrix(a::AbstractUnitfulVector) 
-    M, = size(a)
-    if uniform(a)
-        T2 = typeof(getindexqty(a,1))
-        b = Vector{T2}(undef,M)
-    else
-        T2 = eltype(parent(a))
-        b = Vector{Quantity{T2}}(undef,M)
-    end
-    for m = 1:M
-        b[m] = Quantity.(getindex(a,m),unitrange(a)[m])
-    end
-    return b
-end
-
-"""
     function singular(A)
 
     Is a square matrix singular? If no, then it is invertible.
