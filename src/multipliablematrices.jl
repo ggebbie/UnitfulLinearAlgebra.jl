@@ -392,7 +392,7 @@ function setindex!(A::AbstractUnitfulMatrix,v::Quantity,i::Int,j::Int)
 end
 
 """
-    function Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
+    function Base.Matrix(A::Union{AbstractUnitfulMatrix,AbstractUnitfulDimMatrix}) 
 
     Expand A into array form
     Useful for tests, display
@@ -416,8 +416,8 @@ function Matrix(A::AbstractUnitfulMatrix)
     end
     return B
 end
-function Matrix(a::AbstractUnitfulVector) 
-# function Matrix(a::Union{AbstractUnitfulVector,AbstractUnitfulDimVector}) 
+
+function Base.Matrix(a::AbstractUnitfulVector) 
     M, = size(a)
     if uniform(a)
         T2 = typeof(getindexqty(a,1))
