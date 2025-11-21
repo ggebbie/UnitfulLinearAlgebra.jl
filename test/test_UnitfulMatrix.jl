@@ -355,6 +355,36 @@ end
 
 end
 
+@testset "pseudoinverse (pinv)" begin
+    m = u"m"
+    s = u"s";
+
+    @testset for k in [2, 3, 4]
+        # Test 1: Left uniform matrix (overdetermined system)
+        A = [rand(k) m.*rand(k) m/s .*rand(k)] |> UnitfulMatrix;
+        @test left_uniform(A)
+        @test !right_uniform(A)
+        @test !uniform(A)
+
+        Apinv = pinv(A)
+        @test size(Apinv) == (3, k)
+
+        # Check unit swapping
+        @test DimensionalData.comparedims(unitdomain(Apinv), unitrange(A))
+        @test DimensionalData.comparedims(unitrange(Apinv), unitdomain(A))
+
+        # Verify Moore-Penrose property: A*pinv(A)*A ≈ A
+        @test (A * Apinv * A) ≈ A rtol=1e-10
+        if size(A, 1) <= size(A, 2)
+            @test parent(A * Apinv) ≈ I
+        end
+
+        # Test 4: Non-left-uniform matrix should error
+        @test !left_uniform(A')
+        @test_throws ErrorException pinv(A')
+    end
+end
+
 @testset "dimensioned svd (DSVD)" begin
     s = u"s"
     m = u"m"
