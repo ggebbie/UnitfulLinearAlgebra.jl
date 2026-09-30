@@ -255,6 +255,7 @@ function LinearAlgebra.dot(a::AbstractUnitfulVector,b::AbstractUnitfulVector)
     end
 end
 
+# Causes precompilation error in Julia 1.13. Remove for now. Any breakage?
 # see https://github.com/JuliaLang/LinearAlgebra.jl/issues/1487#issuecomment-3563611086
 function LinearAlgebra.pinv(F::SVD{T}) where T
     @inbounds for i in eachindex(F.S)
