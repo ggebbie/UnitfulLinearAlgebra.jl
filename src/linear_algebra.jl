@@ -257,10 +257,10 @@ end
 
 # Causes precompilation error in Julia 1.13. Remove for now. Any breakage?
 # see https://github.com/JuliaLang/LinearAlgebra.jl/issues/1487#issuecomment-3563611086
-function LinearAlgebra.pinv(F::SVD{T}) where T
+function LinearAlgebra.pinv(F::SVD{T1, T2}) where T1 where T2 <: Quantity
     @inbounds for i in eachindex(F.S)
         iszero(F.S[i]) && throw(SingularException(i))
     end
-    k = searchsortedlast(F.S, eps(real(T))*F.S[1], rev=true)
+    k = searchsortedlast(F.S, eps(real(T1))*F.S[1], rev=true)
     @views (F.S[1:k] .\ F.Vt[1:k, :])' * F.U[:,1:k]'
 end
