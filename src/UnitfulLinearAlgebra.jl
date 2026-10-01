@@ -31,6 +31,8 @@ import DimensionalData: @dim, dims, DimArray, AbstractDimArray, NoName, NoMetada
 
 @dim Units "units"
 
+__precompile__(false)
+
 abstract type AbstractUnitfulType{T,N,D,A} <: AbstractDimArray{T,N,D,A} end
 
 # constructor for streamlined struct based on DimensionalData.DimArray
